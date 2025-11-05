@@ -5,6 +5,9 @@
             android:id="@+id/nav_save_location"
             android:title="@string/save_location" />
         <item
+            android:id="@+id/nav_manage_waypoints"
+            android:title="@string/manage_waypoints" />
+        <item
             android:id="@+id/nav_manage_routes"
             android:title="@string/manage_routes" />
         <item

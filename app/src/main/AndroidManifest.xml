@@ -42,6 +42,10 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".CreateRouteActivity"
+            android:screenOrientation="portrait" />
+
         <!-- 高德地图服务 -->
         <service android:name="com.amap.api.location.APSService" />
     </application>

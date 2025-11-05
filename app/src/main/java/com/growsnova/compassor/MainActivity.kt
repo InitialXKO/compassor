@@ -32,8 +32,6 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     private lateinit var mapView: MapView
     private lateinit var aMap: AMap
     private lateinit var radarView: RadarCompassView
-    private lateinit var searchEditText: EditText
-    private lateinit var searchButton: Button
     private lateinit var drawerLayout: androidx.drawerlayout.widget.DrawerLayout
     private lateinit var navigationView: com.google.android.material.navigation.NavigationView
     private lateinit var toolbar: androidx.appcompat.widget.Toolbar
@@ -60,6 +58,8 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     companion object {
         private const val LOCATION_PERMISSION_REQUEST_CODE = 1001
         private const val PICK_SKIN_FILE_REQUEST_CODE = 1002
+        private const val CREATE_ROUTE_REQUEST_CODE = 1003
+        private const val EDIT_ROUTE_REQUEST_CODE = 1004
         private const val DATA_FILENAME = "compassor_data.json"
         private const val PREFS_NAME = "CompassorPrefs"
         private const val PREF_SKIN_NAME = "SkinName"
@@ -84,16 +84,6 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
 
         // 请求权限
         checkAndRequestPermissions()
-
-        // 设置搜索按钮点击事件
-        searchButton.setOnClickListener {
-            val keyword = searchEditText.text.toString().trim()
-            if (keyword.isNotEmpty()) {
-                searchPOI(keyword)
-            } else {
-                Toast.makeText(this, "请输入搜索关键词", Toast.LENGTH_SHORT).show()
-            }
-        }
     }
 
     private fun initViews(savedInstanceState: Bundle?) {
@@ -116,8 +106,6 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
 
         mapView = findViewById(R.id.mapView)
         radarView = findViewById(R.id.radarView)
-        searchEditText = findViewById(R.id.searchEditText)
-        searchButton = findViewById(R.id.searchButton)
 
         // 初始化地图
         mapView.onCreate(savedInstanceState)
@@ -245,12 +233,19 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                                 setTargetLocation(LatLng(nextWaypoint.latitude, nextWaypoint.longitude), nextWaypoint.name)
                                 Toast.makeText(this, "已到达路点，前往下一个: ${nextWaypoint.name}", Toast.LENGTH_SHORT).show()
                             } else {
-                                // 路线结束
-                                Toast.makeText(this, "已完成路线: ${route.name}", Toast.LENGTH_SHORT).show()
-                                currentRoute = null
-                                currentWaypointIndex = -1
-                                routePolyline?.remove()
-                                routePolyline = null
+                                if (route.isLooping) {
+                                    currentWaypointIndex = 0
+                                    val firstWaypoint = route.waypoints[0]
+                                    setTargetLocation(LatLng(firstWaypoint.latitude, firstWaypoint.longitude), firstWaypoint.name)
+                                    Toast.makeText(this, "路线循环，返回起点: ${firstWaypoint.name}", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    // 路线结束
+                                    Toast.makeText(this, "已完成路线: ${route.name}", Toast.LENGTH_SHORT).show()
+                                    currentRoute = null
+                                    currentWaypointIndex = -1
+                                    routePolyline?.remove()
+                                    routePolyline = null
+                                }
                             }
                         }
                     }
@@ -467,55 +462,6 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
         }
     }
 
-    private fun showRouteCreationDialog(routeToEdit: Route?) {
-        val dialogView = layoutInflater.inflate(R.layout.dialog_create_route, null)
-        val routeNameEditText = dialogView.findViewById<EditText>(R.id.routeNameEditText)
-        val waypointsRecyclerView = dialogView.findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.waypointsRecyclerView)
-
-        // Populate route name if editing
-        routeToEdit?.let { routeNameEditText.setText(it.name) }
-
-        // Setup RecyclerView with waypoints
-        val waypointAdapter = WaypointSelectionAdapter(waypoints, routeToEdit?.waypoints ?: mutableListOf())
-        waypointsRecyclerView.adapter = waypointAdapter
-        waypointsRecyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
-
-        waypointAdapter.onSelectionChanged = {
-            if (it.size >= 2) {
-                routeNameEditText.setText("${it.first().name} 到 ${it.last().name}")
-            }
-        }
-
-        AlertDialog.Builder(this)
-            .setTitle(if (routeToEdit == null) "创建路线" else "编辑路线")
-            .setView(dialogView)
-            .setPositiveButton(R.string.save) { _, _ ->
-                val routeName = routeNameEditText.text.toString().trim()
-                val selectedWaypoints = waypointAdapter.getSelectedWaypoints()
-
-                if (routeName.isNotEmpty() && selectedWaypoints.isNotEmpty()) {
-                    if (routeToEdit == null) {
-                        // Create new route
-                        val newRoute = Route(id = System.currentTimeMillis(), name = routeName, waypoints = selectedWaypoints)
-                        routes.add(newRoute)
-                        Toast.makeText(this, "路线已创建", Toast.LENGTH_SHORT).show()
-                    } else {
-                        // Update existing route
-                        routeToEdit.name = routeName
-                        routeToEdit.waypoints.clear()
-                        routeToEdit.waypoints.addAll(selectedWaypoints)
-                        Toast.makeText(this, "路线已更新", Toast.LENGTH_SHORT).show()
-                    }
-                    saveData()
-                    drawRouteOnMap(selectedWaypoints)
-                } else {
-                    Toast.makeText(this, "路线名称和路点不能为空", Toast.LENGTH_SHORT).show()
-                }
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
-    }
-
     private fun showRouteManagementDialog() {
         val routeNames = routes.map { it.name }.toTypedArray()
 
@@ -525,7 +471,12 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                 showRouteOptionsDialog(routes[which])
             }
             .setPositiveButton(R.string.create_route) { _, _ ->
-                showRouteCreationDialog(null)
+                val intent = android.content.Intent(this, CreateRouteActivity::class.java)
+                intent.putExtra("waypoints", ArrayList(waypoints))
+                myCurrentLatLng?.let {
+                    intent.putExtra("current_latlng", it)
+                }
+                startActivityForResult(intent, CREATE_ROUTE_REQUEST_CODE)
             }
             .setNegativeButton(R.string.cancel, null)
 
@@ -548,7 +499,15 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
             .setItems(options) { _, which ->
                 when (which) {
                     0 -> startRouteNavigation(route)
-                    1 -> showRouteCreationDialog(route)
+                    1 -> {
+                        val intent = android.content.Intent(this, CreateRouteActivity::class.java)
+                        intent.putExtra("route_to_edit", route)
+                        intent.putExtra("waypoints", ArrayList(waypoints))
+                        myCurrentLatLng?.let {
+                            intent.putExtra("current_latlng", it)
+                        }
+                        startActivityForResult(intent, EDIT_ROUTE_REQUEST_CODE)
+                    }
                     2 -> deleteRoute(route)
                     3 -> {
                         if (route.waypoints.isNotEmpty()) {
@@ -675,6 +634,9 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                     Toast.makeText(this, "無法獲取當前位置", Toast.LENGTH_SHORT).show()
                 }
             }
+            R.id.nav_manage_waypoints -> {
+                showWaypointManagementDialog()
+            }
             R.id.nav_manage_routes -> {
                 showRouteManagementDialog()
             }
@@ -684,6 +646,47 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
         }
         drawerLayout.closeDrawer(androidx.core.view.GravityCompat.START)
         return true
+    }
+
+    private fun showSearchDialog() {
+        val editText = EditText(this)
+        editText.hint = "输入搜索关键词"
+        AlertDialog.Builder(this)
+            .setTitle("搜索地点")
+            .setView(editText)
+            .setPositiveButton("搜索") { _, _ ->
+                val keyword = editText.text.toString().trim()
+                if (keyword.isNotEmpty()) {
+                    searchPOI(keyword)
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showWaypointOptionsDialog(waypoint: Waypoint) {
+        val options = arrayOf("设为目的地", "编辑名称", "删除")
+        AlertDialog.Builder(this)
+            .setTitle(waypoint.name)
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> setTargetLocation(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
+                    1 -> showSaveWaypointDialog(LatLng(waypoint.latitude, waypoint.longitude), waypoint)
+                    2 -> deleteWaypoint(waypoint)
+                }
+            }
+            .show()
+    }
+
+    private fun showWaypointManagementDialog() {
+        val waypointNames = waypoints.map { it.name }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle("管理路点")
+            .setItems(waypointNames) { _, which ->
+                showWaypointOptionsDialog(waypoints[which])
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun showSkinSelectionDialog() {
@@ -727,9 +730,32 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == PICK_SKIN_FILE_REQUEST_CODE && resultCode == RESULT_OK) {
-            data?.data?.also { uri ->
-                importSkinFromFile(uri)
+        if (resultCode == RESULT_OK && data != null) {
+            when (requestCode) {
+                CREATE_ROUTE_REQUEST_CODE -> {
+                    val newRoute = data.getSerializableExtra("new_route") as? Route
+                    newRoute?.let {
+                        routes.add(it)
+                        saveData()
+                        Toast.makeText(this, "Route '${it.name}' saved", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                EDIT_ROUTE_REQUEST_CODE -> {
+                    val updatedRoute = data.getSerializableExtra("new_route") as? Route
+                    updatedRoute?.let {
+                        val index = routes.indexOfFirst { r -> r.id == it.id }
+                        if (index != -1) {
+                            routes[index] = it
+                            saveData()
+                            Toast.makeText(this, "Route '${it.name}' updated", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+                PICK_SKIN_FILE_REQUEST_CODE -> {
+                     data.data?.also { uri ->
+                        importSkinFromFile(uri)
+                    }
+                }
             }
         }
     }
@@ -747,6 +773,21 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
         } catch (e: Exception) {
             e.printStackTrace()
             Toast.makeText(this, "Failed to import skin", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_search -> {
+                showSearchDialog()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
         }
     }
 }
