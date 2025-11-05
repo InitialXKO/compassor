@@ -45,6 +45,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
 
     // POI搜索
     private var poiSearch: PoiSearch? = null
+    private var geocodeSearch: com.amap.api.services.geocoder.GeocodeSearch? = null
     private var targetLatLng: LatLng? = null
     private var targetMarker: Marker? = null
 
@@ -105,6 +106,8 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
 
         navigationView.setNavigationItemSelectedListener(this)
 
+        geocodeSearch = com.amap.api.services.geocoder.GeocodeSearch(this)
+
         mapView = findViewById(R.id.mapView)
         radarView = findViewById(R.id.radarView)
         searchEditText = findViewById(R.id.searchEditText)
@@ -133,7 +136,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
 
         // 设置地图长按事件
         aMap.setOnMapLongClickListener { latLng ->
-            showSaveWaypointDialog(latLng)
+            showMapLongClickOptionsDialog(latLng)
         }
     }
 
@@ -348,7 +351,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
             .setNeutralButton("存为路点") { _, _ ->
                 selectedPoi?.let {
                     val latLng = LatLng(it.latLonPoint.latitude, it.latLonPoint.longitude)
-                    showSaveWaypointDialog(latLng, waypointToEdit = null)
+                    showSaveWaypointDialog(latLng, waypointToEdit = null, defaultName = it.title)
                 }
             }
             .setNegativeButton(R.string.cancel, null)
@@ -377,10 +380,14 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
         Toast.makeText(this, "路点已保存: $name", Toast.LENGTH_SHORT).show()
     }
 
-    private fun showSaveWaypointDialog(latLng: LatLng, waypointToEdit: Waypoint? = null) {
+    private fun showSaveWaypointDialog(latLng: LatLng, waypointToEdit: Waypoint? = null, defaultName: String? = null) {
         val editText = EditText(this)
         editText.hint = getString(R.string.waypoint_name_hint)
-        waypointToEdit?.let { editText.setText(it.name) }
+        if (waypointToEdit != null) {
+            editText.setText(waypointToEdit.name)
+        } else if (defaultName != null) {
+            editText.setText(defaultName)
+        }
 
         val builder = AlertDialog.Builder(this)
             .setTitle(if (waypointToEdit == null) "保存路点" else "编辑路点")
@@ -406,6 +413,21 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
         }
 
         builder.show()
+    }
+
+    private fun showMapLongClickOptionsDialog(latLng: LatLng) {
+        val options = arrayOf("增加路点", "设为目的地")
+        AlertDialog.Builder(this)
+            .setTitle("选择操作")
+            .setItems(options) { _, which ->
+                reverseGeocode(latLng) { name ->
+                    when (which) {
+                        0 -> showSaveWaypointDialog(latLng, waypointToEdit = null)
+                        1 -> setTargetLocation(latLng, name)
+                    }
+                }
+            }
+            .show()
     }
 
     private fun updateWaypoint(waypoint: Waypoint, newName: String) {
@@ -451,6 +473,12 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
         val waypointAdapter = WaypointSelectionAdapter(waypoints, routeToEdit?.waypoints ?: mutableListOf())
         waypointsRecyclerView.adapter = waypointAdapter
         waypointsRecyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this)
+
+        waypointAdapter.onSelectionChanged = {
+            if (it.size >= 2) {
+                routeNameEditText.setText("${it.first().name} 到 ${it.last().name}")
+            }
+        }
 
         AlertDialog.Builder(this)
             .setTitle(if (routeToEdit == null) "创建路线" else "编辑路线")
@@ -605,6 +633,31 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         mapView.onSaveInstanceState(outState)
+    }
+
+    private fun reverseGeocode(latLng: LatLng, callback: (String) -> Unit) {
+        val query = com.amap.api.services.geocoder.RegeocodeQuery(
+            LatLonPoint(latLng.latitude, latLng.longitude),
+            200f,
+            com.amap.api.services.geocoder.GeocodeSearch.AMAP
+        )
+        geocodeSearch?.setOnGeocodeSearchListener(object : com.amap.api.services.geocoder.GeocodeSearch.OnGeocodeSearchListener {
+            override fun onRegeocodeSearched(result: com.amap.api.services.geocoder.RegeocodeResult?, rCode: Int) {
+                if (rCode == 1000) {
+                    val address = result?.regeocodeAddress?.formatAddress
+                    if (!address.isNullOrEmpty()) {
+                        callback(address)
+                    } else {
+                        callback("自定义位置")
+                    }
+                } else {
+                    callback("自定义位置")
+                }
+            }
+
+            override fun onGeocodeSearched(result: com.amap.api.services.geocoder.GeocodeResult?, rCode: Int) {}
+        })
+        geocodeSearch?.getFromLocationAsyn(query)
     }
 
     override fun onNavigationItemSelected(item: android.view.MenuItem): Boolean {

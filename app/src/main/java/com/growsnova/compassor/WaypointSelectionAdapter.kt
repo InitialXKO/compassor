@@ -12,6 +12,8 @@ class WaypointSelectionAdapter(
     private val selectedWaypoints: MutableList<Waypoint>
 ) : RecyclerView.Adapter<WaypointSelectionAdapter.ViewHolder>() {
 
+    var onSelectionChanged: ((List<Waypoint>) -> Unit)? = null
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_waypoint_selection, parent, false)
@@ -35,6 +37,7 @@ class WaypointSelectionAdapter(
             } else {
                 selectedWaypoints.remove(waypoint)
             }
+            onSelectionChanged?.invoke(selectedWaypoints)
         }
     }
 
