@@ -129,7 +129,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
         aMap.setOnMarkerClickListener { marker ->
             val waypoint = waypoints.find { it.latitude == marker.position.latitude && it.longitude == marker.position.longitude }
             if (waypoint != null) {
-                showSaveWaypointDialog(marker.position, waypoint)
+                showWaypointOptionsDialog(waypoint)
             }
             true
         }
@@ -364,25 +364,45 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     }
 
     private fun addWaypoint(latLng: LatLng, name: String) {
-        val waypoint = Waypoint(
-            id = System.currentTimeMillis(),
-            name = name,
-            latitude = latLng.latitude,
-            longitude = latLng.longitude
-        )
-        waypoints.add(waypoint)
+        val distance = FloatArray(1)
+        val existingWaypoint = waypoints.find {
+            Location.distanceBetween(latLng.latitude, latLng.longitude, it.latitude, it.longitude, distance)
+            // Name check is case-insensitive and also checks for partial matches
+            (it.name.equals(name, ignoreCase = true) || it.name.contains(name, ignoreCase = true) || name.contains(it.name, ignoreCase = true)) && distance[0] < 10
+        }
 
-        // 在地图上添加标记
-        val marker = aMap.addMarker(
-            MarkerOptions()
-                .position(latLng)
-                .title(name)
-                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
-        )
-        waypointMarkers.add(marker)
-        saveData()
+        if (existingWaypoint != null) {
+            // If a similar waypoint exists, ask the user if they want to update it
+            AlertDialog.Builder(this)
+                .setTitle("更新路点")
+                .setMessage("附近已存在一个相似的路点 '${existingWaypoint.name}'。您想用新的位置和名称 '$name' 更新它吗？")
+                .setPositiveButton("更新") { _, _ ->
+                    updateWaypoint(existingWaypoint, name, newLatLng = latLng)
+                }
+                .setNegativeButton("取消", null)
+                .show()
+        } else {
+            // If no similar waypoint exists, add a new one
+            val waypoint = Waypoint(
+                id = System.currentTimeMillis(),
+                name = name,
+                latitude = latLng.latitude,
+                longitude = latLng.longitude
+            )
+            waypoints.add(waypoint)
 
-        Toast.makeText(this, "路点已保存: $name", Toast.LENGTH_SHORT).show()
+            // 在地图上添加标记
+            val marker = aMap.addMarker(
+                MarkerOptions()
+                    .position(latLng)
+                    .title(name)
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+            )
+            waypointMarkers.add(marker)
+            saveData()
+
+            Toast.makeText(this, "路点已保存: $name", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun showSaveWaypointDialog(latLng: LatLng, waypointToEdit: Waypoint? = null, defaultName: String? = null) {
@@ -437,13 +457,46 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
             .show()
     }
 
-    private fun updateWaypoint(waypoint: Waypoint, newName: String) {
+    private fun updateWaypoint(waypoint: Waypoint, newName: String, newLatLng: LatLng? = null) {
+        // Check for potential duplicates before updating
+        val otherWaypoints = waypoints.filter { it.id != waypoint.id }
+        val distance = FloatArray(1)
+        val potentialDuplicate = otherWaypoints.find {
+            val checkLatLng = newLatLng ?: LatLng(waypoint.latitude, waypoint.longitude)
+            Location.distanceBetween(checkLatLng.latitude, checkLatLng.longitude, it.latitude, it.longitude, distance)
+            it.name.equals(newName, ignoreCase = true) && distance[0] < 10
+        }
+
+        if (potentialDuplicate != null) {
+            Toast.makeText(this, "附近已存在同名路点，无法更新", Toast.LENGTH_SHORT).show()
+            return // Abort update
+        }
+
         val oldName = waypoint.name
         waypoint.name = newName
+
         val marker = waypointMarkers.find { it.position.latitude == waypoint.latitude && it.position.longitude == waypoint.longitude }
+
+        if (newLatLng != null) {
+            waypoint.latitude = newLatLng.latitude
+            waypoint.longitude = newLatLng.longitude
+            marker?.position = newLatLng
+        }
+
         marker?.title = newName
+
+        // Update routes that contain this waypoint and redraw if necessary
+        routes.forEach { route ->
+            if (route.waypoints.any { it.id == waypoint.id }) {
+                // If the route is currently displayed, redraw it
+                if (currentRoute?.id == route.id || routePolyline?.points?.size == route.waypoints.size) {
+                    drawRouteOnMap(route.waypoints)
+                }
+            }
+        }
+
         saveData()
-        Toast.makeText(this, "路点已更新", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "路点 '$oldName' 已更新为 '$newName'", Toast.LENGTH_SHORT).show()
     }
 
     private fun deleteWaypointSafely(waypoint: Waypoint) {
@@ -731,6 +784,35 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
             .show()
     }
 
+    private fun showWaypointOptionsDialog(waypoint: Waypoint) {
+        val options = arrayOf("设为目的地", "编辑名称", "删除")
+        AlertDialog.Builder(this)
+            .setTitle(waypoint.name)
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> setTargetLocation(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
+                    1 -> showSaveWaypointDialog(LatLng(waypoint.latitude, waypoint.longitude), waypoint)
+                    2 -> {
+                        val routesContainingWaypoint = routes.filter { it.waypoints.contains(waypoint) }
+                        if (routesContainingWaypoint.isNotEmpty()) {
+                            val routeNames = routesContainingWaypoint.joinToString { it.name }
+                            AlertDialog.Builder(this)
+                                .setTitle("确认删除")
+                                .setMessage("该路点正在被路线: $routeNames 使用。删除该路点将同时从这些路线中移除，并可能导致路线被删除。是否确认删除？")
+                                .setPositiveButton("确认") { _, _ ->
+                                    deleteWaypointSafely(waypoint)
+                                }
+                                .setNegativeButton("取消", null)
+                                .show()
+                        } else {
+                            deleteWaypointSafely(waypoint)
+                        }
+                    }
+                }
+            }
+            .show()
+    }
+
     private fun showSkinSelectionDialog() {
         val skinNames = arrayOf("Default", "Forest", "Ocean")
         AlertDialog.Builder(this)
@@ -790,6 +872,10 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                             routes[index] = it
                             saveData()
                             Toast.makeText(this, "Route '${it.name}' updated", Toast.LENGTH_SHORT).show()
+                            // If the updated route is the one currently displayed, redraw it
+                            if (currentRoute?.id == it.id) {
+                                drawRouteOnMap(it.waypoints)
+                            }
                         }
                     }
                 }
