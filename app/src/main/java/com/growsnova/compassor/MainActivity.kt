@@ -53,6 +53,8 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     private val waypointMarkers = mutableListOf<Marker>()
     private val routes = mutableListOf<Route>()
     private var routePolyline: Polyline? = null
+    private var currentRoute: Route? = null
+    private var currentWaypointIndex: Int = -1
 
     companion object {
         private const val LOCATION_PERMISSION_REQUEST_CODE = 1001
@@ -214,6 +216,35 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                 // 更新雷达视图
                 targetLatLng?.let { target ->
                     radarView.updateTarget(myCurrentLatLng!!, target)
+                }
+
+                // 检查是否在路线导航中
+                currentRoute?.let { route ->
+                    if (currentWaypointIndex != -1) {
+                        val currentTargetWaypoint = route.waypoints[currentWaypointIndex]
+                        val distance = FloatArray(1)
+                        Location.distanceBetween(
+                            myCurrentLatLng!!.latitude, myCurrentLatLng!!.longitude,
+                            currentTargetWaypoint.latitude, currentTargetWaypoint.longitude,
+                            distance
+                        )
+
+                        if (distance[0] < 20) { // 20米阈值
+                            currentWaypointIndex++
+                            if (currentWaypointIndex < route.waypoints.size) {
+                                val nextWaypoint = route.waypoints[currentWaypointIndex]
+                                setTargetLocation(LatLng(nextWaypoint.latitude, nextWaypoint.longitude), nextWaypoint.name)
+                                Toast.makeText(this, "已到达路点，前往下一个: ${nextWaypoint.name}", Toast.LENGTH_SHORT).show()
+                            } else {
+                                // 路线结束
+                                Toast.makeText(this, "已完成路线: ${route.name}", Toast.LENGTH_SHORT).show()
+                                currentRoute = null
+                                currentWaypointIndex = -1
+                                routePolyline?.remove()
+                                routePolyline = null
+                            }
+                        }
+                    }
                 }
             } else {
                 Toast.makeText(
@@ -457,45 +488,54 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
         val builder = AlertDialog.Builder(this)
             .setTitle("管理路线")
             .setItems(routeNames) { _, which ->
-                showRouteCreationDialog(routes[which])
+                showRouteOptionsDialog(routes[which])
             }
             .setPositiveButton(R.string.create_route) { _, _ ->
                 showRouteCreationDialog(null)
             }
             .setNegativeButton(R.string.cancel, null)
 
-        if (routes.isNotEmpty()) {
-            builder.setNeutralButton("删除路线") { _, _ ->
-                showDeleteRouteDialog()
-            }
-        }
-
         builder.show()
     }
 
-    private fun showDeleteRouteDialog() {
-        val routeNames = routes.map { it.name }.toTypedArray()
-        var selectedRoute: Route? = null
+    private fun startRouteNavigation(route: Route) {
+        currentRoute = route
+        currentWaypointIndex = 0
+        val firstWaypoint = route.waypoints[0]
+        setTargetLocation(LatLng(firstWaypoint.latitude, firstWaypoint.longitude), firstWaypoint.name)
+        drawRouteOnMap(route.waypoints)
+        Toast.makeText(this, "开始路线导航: ${route.name}", Toast.LENGTH_SHORT).show()
+    }
 
+    private fun showRouteOptionsDialog(route: Route) {
+        val options = arrayOf("开始导航", "编辑", "删除", "设为目的地")
         AlertDialog.Builder(this)
-            .setTitle("删除路线")
-            .setSingleChoiceItems(routeNames, -1) { _, which ->
-                selectedRoute = routes[which]
-            }
-            .setPositiveButton(R.string.delete) { _, _ ->
-                selectedRoute?.let { routeToDelete ->
-                    // If the deleted route is currently displayed, remove the polyline
-                    if (routePolyline?.points?.map { LatLng(it.latitude, it.longitude) } == routeToDelete.waypoints.map { LatLng(it.latitude, it.longitude) }) {
-                        routePolyline?.remove()
-                        routePolyline = null
+            .setTitle(route.name)
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> startRouteNavigation(route)
+                    1 -> showRouteCreationDialog(route)
+                    2 -> deleteRoute(route)
+                    3 -> {
+                        if (route.waypoints.isNotEmpty()) {
+                            val waypoint = route.waypoints[0]
+                            setTargetLocation(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
+                        }
                     }
-                    routes.remove(routeToDelete)
-                    saveData()
-                    Toast.makeText(this, "路线已删除", Toast.LENGTH_SHORT).show()
                 }
             }
-            .setNegativeButton(R.string.cancel, null)
             .show()
+    }
+
+    private fun deleteRoute(route: Route) {
+        // If the deleted route is currently displayed, remove the polyline
+        if (routePolyline?.points?.map { LatLng(it.latitude, it.longitude) } == route.waypoints.map { LatLng(it.latitude, it.longitude) }) {
+            routePolyline?.remove()
+            routePolyline = null
+        }
+        routes.remove(route)
+        saveData()
+        Toast.makeText(this, "路线已删除", Toast.LENGTH_SHORT).show()
     }
 
     private data class DataBundle(
