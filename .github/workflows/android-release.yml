@@ -10,7 +10,8 @@ on:
         description: '版本号 (例: 1.0.0)'
         required: true
         default: '1.0.0'
-
+permissions:
+  contents: write   # 关键：允许创建 Release
 jobs:
   build-release:
     runs-on: ubuntu-latest
