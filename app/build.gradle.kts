@@ -93,6 +93,10 @@ dependencies {
     // RecyclerView for waypoint selection
     implementation("androidx.recyclerview:recyclerview:1.3.2")
 
+    // ViewModel and LiveData KTX libraries
+    implementation("androidx.activity:activity-ktx:1.8.2")
+    implementation("androidx.fragment:fragment-ktx:1.6.2")
+
     // 测试库（保留但不强制使用）
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
