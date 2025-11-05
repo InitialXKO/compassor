@@ -356,7 +356,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
             .setNeutralButton("存为路点") { _, _ ->
                 selectedPoi?.let {
                     val latLng = LatLng(it.latLonPoint.latitude, it.latLonPoint.longitude)
-                    showSaveWaypointDialog(latLng, waypointToEdit = null, defaultName = it.title)
+                    addWaypoint(latLng, it.title)
                 }
             }
             .setNegativeButton(R.string.cancel, null)
@@ -472,10 +472,10 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
             return // Abort update
         }
 
-        val oldName = waypoint.name
+        var oldName = waypoint.name
         waypoint.name = newName
 
-        val marker = waypointMarkers.find { it.position.latitude == waypoint.latitude && it.position.longitude == waypoint.longitude }
+        var marker = waypointMarkers.find { it.position.latitude == waypoint.latitude && it.position.longitude == waypoint.longitude }
 
         if (newLatLng != null) {
             waypoint.latitude = newLatLng.latitude
@@ -732,35 +732,6 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                 }
             }
             .setNegativeButton(R.string.cancel, null)
-            .show()
-    }
-
-    private fun showWaypointOptionsDialog(waypoint: Waypoint) {
-        val options = arrayOf("设为目的地", "编辑名称", "删除")
-        AlertDialog.Builder(this)
-            .setTitle(waypoint.name)
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> setTargetLocation(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
-                    1 -> showSaveWaypointDialog(LatLng(waypoint.latitude, waypoint.longitude), waypoint)
-                    2 -> {
-                        val routesContainingWaypoint = routes.filter { it.waypoints.contains(waypoint) }
-                        if (routesContainingWaypoint.isNotEmpty()) {
-                            val routeNames = routesContainingWaypoint.joinToString { it.name }
-                            AlertDialog.Builder(this)
-                                .setTitle("确认删除")
-                                .setMessage("该路点正在被路线: $routeNames 使用。删除该路点将同时从这些路线中移除，并可能导致路线被删除。是否确认删除？")
-                                .setPositiveButton("确认") { _, _ ->
-                                    deleteWaypointSafely(waypoint)
-                                }
-                                .setNegativeButton("取消", null)
-                                .show()
-                        } else {
-                            deleteWaypointSafely(waypoint)
-                        }
-                    }
-                }
-            }
             .show()
     }
 
