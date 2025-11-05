@@ -59,7 +59,10 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
 
     companion object {
         private const val LOCATION_PERMISSION_REQUEST_CODE = 1001
+        private const val PICK_SKIN_FILE_REQUEST_CODE = 1002
         private const val DATA_FILENAME = "compassor_data.json"
+        private const val PREFS_NAME = "CompassorPrefs"
+        private const val PREF_SKIN_NAME = "SkinName"
         private val REQUIRED_PERMISSIONS = arrayOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION
@@ -75,6 +78,9 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
 
         // 加载数据
         loadData()
+
+        // 加载皮肤
+        loadSkinPreference()
 
         // 请求权限
         checkAndRequestPermissions()
@@ -672,8 +678,75 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
             R.id.nav_manage_routes -> {
                 showRouteManagementDialog()
             }
+            R.id.nav_change_skin -> {
+                showSkinSelectionDialog()
+            }
         }
         drawerLayout.closeDrawer(androidx.core.view.GravityCompat.START)
         return true
+    }
+
+    private fun showSkinSelectionDialog() {
+        val skinNames = arrayOf("Default", "Forest", "Ocean")
+        AlertDialog.Builder(this)
+            .setTitle("Select Skin")
+            .setItems(skinNames) { _, which ->
+                val selectedSkin = DefaultSkins.skins[which]
+                radarView.setSkin(selectedSkin)
+                saveSkinPreference(skinNames[which])
+            }
+            .setPositiveButton("Import Skin") { _, _ ->
+                openFilePicker()
+            }
+            .show()
+    }
+
+    private fun saveSkinPreference(skinName: String) {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        prefs.edit().putString(PREF_SKIN_NAME, skinName).apply()
+    }
+
+    private fun loadSkinPreference() {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val skinName = prefs.getString(PREF_SKIN_NAME, "Default")
+        val skin = when (skinName) {
+            "Forest" -> DefaultSkins.forest
+            "Ocean" -> DefaultSkins.ocean
+            else -> DefaultSkins.default
+        }
+        radarView.setSkin(skin)
+    }
+
+    private fun openFilePicker() {
+        val intent = android.content.Intent(android.content.Intent.ACTION_OPEN_DOCUMENT).apply {
+            addCategory(android.content.Intent.CATEGORY_OPENABLE)
+            type = "application/json"
+        }
+        startActivityForResult(intent, PICK_SKIN_FILE_REQUEST_CODE)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == PICK_SKIN_FILE_REQUEST_CODE && resultCode == RESULT_OK) {
+            data?.data?.also { uri ->
+                importSkinFromFile(uri)
+            }
+        }
+    }
+
+    private fun importSkinFromFile(uri: android.net.Uri) {
+        try {
+            contentResolver.openInputStream(uri)?.use { inputStream ->
+                val json = inputStream.reader().readText()
+                val skin = com.google.gson.Gson().fromJson(json, RadarSkin::class.java)
+                // Here you would typically save the skin to a list of custom skins
+                // For simplicity, we'll just apply it directly for now
+                radarView.setSkin(skin)
+                Toast.makeText(this, "Skin imported and applied", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Toast.makeText(this, "Failed to import skin", Toast.LENGTH_SHORT).show()
+        }
     }
 }

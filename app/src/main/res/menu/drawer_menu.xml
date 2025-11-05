@@ -7,5 +7,8 @@
         <item
             android:id="@+id/nav_manage_routes"
             android:title="@string/manage_routes" />
+        <item
+            android:id="@+id/nav_change_skin"
+            android:title="@string/change_skin" />
     </group>
 </menu>
