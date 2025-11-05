@@ -37,15 +37,15 @@ class RadarCompassView @JvmOverloads constructor(
     private val rotationMatrix = FloatArray(9)
     private val orientation = FloatArray(3)
 
+    private var skin: RadarSkin = RadarSkin()
+
     // 画笔 - FPS游戏风格
     private val backgroundPaint = Paint().apply {
-        color = Color.parseColor("#0D1117")
         style = Paint.Style.FILL
     }
 
     // 指南针外环
     private val compassRingPaint = Paint().apply {
-        color = Color.parseColor("#58A6FF")
         style = Paint.Style.STROKE
         strokeWidth = 4f
         alpha = 180
@@ -54,7 +54,6 @@ class RadarCompassView @JvmOverloads constructor(
 
     // 内环（更细的辅助环）
     private val innerRingPaint = Paint().apply {
-        color = Color.parseColor("#21262D")
         style = Paint.Style.STROKE
         strokeWidth = 2f
         alpha = 120
@@ -63,7 +62,6 @@ class RadarCompassView @JvmOverloads constructor(
 
     // 中心十字准星
     private val crosshairPaint = Paint().apply {
-        color = Color.parseColor("#F0F6FC")
         style = Paint.Style.STROKE
         strokeWidth = 3f
         isAntiAlias = true
@@ -71,14 +69,12 @@ class RadarCompassView @JvmOverloads constructor(
 
     // 目标点主色（橙色警告色）
     private val targetPaint = Paint().apply {
-        color = Color.parseColor("#FF9500")
         style = Paint.Style.FILL
         isAntiAlias = true
     }
 
     // 目标点外圈
     private val targetRingPaint = Paint().apply {
-        color = Color.parseColor("#FF9500")
         style = Paint.Style.STROKE
         strokeWidth = 3f
         alpha = 150
@@ -87,7 +83,6 @@ class RadarCompassView @JvmOverloads constructor(
 
     // 目标指示线
     private val targetLinePaint = Paint().apply {
-        color = Color.parseColor("#FF9500")
         style = Paint.Style.STROKE
         strokeWidth = 3f
         alpha = 200
@@ -97,7 +92,6 @@ class RadarCompassView @JvmOverloads constructor(
 
     // 距离文本
     private val distanceTextPaint = Paint().apply {
-        color = Color.parseColor("#F0F6FC")
         textSize = 48f
         textAlign = Paint.Align.CENTER
         isAntiAlias = true
@@ -106,7 +100,6 @@ class RadarCompassView @JvmOverloads constructor(
 
     // 辅助信息文本
     private val infoTextPaint = Paint().apply {
-        color = Color.parseColor("#8B949E")
         textSize = 28f
         textAlign = Paint.Align.CENTER
         isAntiAlias = true
@@ -114,7 +107,6 @@ class RadarCompassView @JvmOverloads constructor(
 
     // 方向标记文本（N/E/S/W）
     private val directionTextPaint = Paint().apply {
-        color = Color.parseColor("#58A6FF")
         textSize = 36f
         textAlign = Paint.Align.CENTER
         isAntiAlias = true
@@ -123,15 +115,31 @@ class RadarCompassView @JvmOverloads constructor(
 
     // 刻度线
     private val tickPaint = Paint().apply {
-        color = Color.parseColor("#30363D")
         style = Paint.Style.STROKE
         strokeWidth = 2f
         isAntiAlias = true
     }
 
     init {
+        setSkin(this.skin)
         // 注册传感器监听
         registerSensors()
+    }
+
+    fun setSkin(skin: RadarSkin) {
+        this.skin = skin
+        backgroundPaint.color = skin.backgroundColor
+        compassRingPaint.color = skin.compassRingColor
+        innerRingPaint.color = skin.innerRingColor
+        crosshairPaint.color = skin.crosshairColor
+        targetPaint.color = skin.targetColor
+        targetRingPaint.color = skin.targetRingColor
+        targetLinePaint.color = skin.targetLineColor
+        distanceTextPaint.color = skin.distanceTextColor
+        infoTextPaint.color = skin.infoTextColor
+        directionTextPaint.color = skin.directionTextColor
+        tickPaint.color = skin.tickColor
+        invalidate()
     }
 
     private fun registerSensors() {
