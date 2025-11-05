@@ -37,54 +37,95 @@ class RadarCompassView @JvmOverloads constructor(
     private val rotationMatrix = FloatArray(9)
     private val orientation = FloatArray(3)
 
-    // 画笔
-    private val radarBackgroundPaint = Paint().apply {
-        color = Color.parseColor("#1A1A1A")
+    // 画笔 - FPS游戏风格
+    private val backgroundPaint = Paint().apply {
+        color = Color.parseColor("#0D1117")
         style = Paint.Style.FILL
     }
 
-    private val radarCirclePaint = Paint().apply {
-        color = Color.parseColor("#00FF00")
-        style = Paint.Style.STROKE
-        strokeWidth = 2f
-        alpha = 100
-    }
-
-    private val radarLinePaint = Paint().apply {
-        color = Color.parseColor("#00FF00")
-        style = Paint.Style.STROKE
-        strokeWidth = 3f
-    }
-
-    private val targetPaint = Paint().apply {
-        color = Color.parseColor("#FF0000")
-        style = Paint.Style.FILL
-    }
-
-    private val targetLinePaint = Paint().apply {
-        color = Color.parseColor("#FFFF00")
+    // 指南针外环
+    private val compassRingPaint = Paint().apply {
+        color = Color.parseColor("#58A6FF")
         style = Paint.Style.STROKE
         strokeWidth = 4f
-    }
-
-    private val textPaint = Paint().apply {
-        color = Color.WHITE
-        textSize = 40f
-        textAlign = Paint.Align.CENTER
+        alpha = 180
         isAntiAlias = true
     }
 
-    private val smallTextPaint = Paint().apply {
-        color = Color.WHITE
-        textSize = 32f
-        textAlign = Paint.Align.CENTER
+    // 内环（更细的辅助环）
+    private val innerRingPaint = Paint().apply {
+        color = Color.parseColor("#21262D")
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
+        alpha = 120
         isAntiAlias = true
     }
 
-    private val directionTextPaint = Paint().apply {
-        color = Color.parseColor("#00FF00")
+    // 中心十字准星
+    private val crosshairPaint = Paint().apply {
+        color = Color.parseColor("#F0F6FC")
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+        isAntiAlias = true
+    }
+
+    // 目标点主色（橙色警告色）
+    private val targetPaint = Paint().apply {
+        color = Color.parseColor("#FF9500")
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+
+    // 目标点外圈
+    private val targetRingPaint = Paint().apply {
+        color = Color.parseColor("#FF9500")
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+        alpha = 150
+        isAntiAlias = true
+    }
+
+    // 目标指示线
+    private val targetLinePaint = Paint().apply {
+        color = Color.parseColor("#FF9500")
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+        alpha = 200
+        isAntiAlias = true
+        pathEffect = DashPathEffect(floatArrayOf(10f, 5f), 0f)
+    }
+
+    // 距离文本
+    private val distanceTextPaint = Paint().apply {
+        color = Color.parseColor("#F0F6FC")
+        textSize = 48f
+        textAlign = Paint.Align.CENTER
+        isAntiAlias = true
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    }
+
+    // 辅助信息文本
+    private val infoTextPaint = Paint().apply {
+        color = Color.parseColor("#8B949E")
         textSize = 28f
         textAlign = Paint.Align.CENTER
+        isAntiAlias = true
+    }
+
+    // 方向标记文本（N/E/S/W）
+    private val directionTextPaint = Paint().apply {
+        color = Color.parseColor("#58A6FF")
+        textSize = 36f
+        textAlign = Paint.Align.CENTER
+        isAntiAlias = true
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    }
+
+    // 刻度线
+    private val tickPaint = Paint().apply {
+        color = Color.parseColor("#30363D")
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
         isAntiAlias = true
     }
 
@@ -149,17 +190,13 @@ class RadarCompassView @JvmOverloads constructor(
         val radius = minOf(centerX, centerY) * 0.7f
 
         // 1. 绘制背景
-        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), radarBackgroundPaint)
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), backgroundPaint)
 
-        // 2. 绘制同心圆雷达背景
-        for (i in 1..4) {
-            val circleRadius = radius * i / 4
-            canvas.drawCircle(centerX, centerY, circleRadius, radarCirclePaint)
-        }
+        // 2. 绘制指南针环和刻度
+        drawCompassRing(canvas, centerX, centerY, radius)
 
-        // 3. 绘制十字扫描线
-        canvas.drawLine(centerX, centerY - radius, centerX, centerY + radius, radarLinePaint)
-        canvas.drawLine(centerX - radius, centerY, centerX + radius, centerY, radarLinePaint)
+        // 3. 绘制中心十字准星
+        drawCrosshair(canvas, centerX, centerY)
 
         // 4. 绘制方向标识（N, S, E, W）
         drawDirectionMarkers(canvas, centerX, centerY, radius)
@@ -169,60 +206,159 @@ class RadarCompassView @JvmOverloads constructor(
         if (relativeBearing < 0) relativeBearing += 360f
         if (relativeBearing >= 360) relativeBearing -= 360f
 
-        // 6. 根据相对方位角绘制目标指示线
-        val radian = Math.toRadians(relativeBearing.toDouble())
-        val targetX = centerX + radius * 0.8f * sin(radian).toFloat()
-        val targetY = centerY - radius * 0.8f * cos(radian).toFloat()
+        // 6. 绘制目标路点指示器
+        if (distance > 0) {
+            drawTargetWaypoint(canvas, centerX, centerY, radius, relativeBearing)
+        }
 
-        // 绘制指向目标的线
+        // 7. 显示距离和方位信息
+        drawInfoPanel(canvas, centerX, centerY, radius, relativeBearing)
+    }
+
+    private fun drawCompassRing(canvas: Canvas, centerX: Float, centerY: Float, radius: Float) {
+        // 绘制外环
+        canvas.drawCircle(centerX, centerY, radius, compassRingPaint)
+
+        // 绘制内环
+        canvas.drawCircle(centerX, centerY, radius * 0.85f, innerRingPaint)
+
+        // 绘制刻度线（每10度一个小刻度，每90度一个大刻度）
+        for (angle in 0 until 360 step 10) {
+            val adjustedAngle = angle - deviceAzimuth
+            val radian = Math.toRadians(adjustedAngle.toDouble())
+
+            val startRadius: Float
+            val endRadius: Float
+            val paint: Paint
+
+            if (angle % 90 == 0) {
+                // 主方向刻度（N/E/S/W）更长更粗
+                startRadius = radius * 0.92f
+                endRadius = radius * 1.0f
+                paint = compassRingPaint
+            } else {
+                // 普通刻度
+                startRadius = radius * 0.95f
+                endRadius = radius * 1.0f
+                paint = tickPaint
+            }
+
+            val startX = centerX + startRadius * sin(radian).toFloat()
+            val startY = centerY - startRadius * cos(radian).toFloat()
+            val endX = centerX + endRadius * sin(radian).toFloat()
+            val endY = centerY - endRadius * cos(radian).toFloat()
+
+            canvas.drawLine(startX, startY, endX, endY, paint)
+        }
+    }
+
+    private fun drawCrosshair(canvas: Canvas, centerX: Float, centerY: Float) {
+        val crossSize = 25f
+        val gap = 8f
+
+        // 上
+        canvas.drawLine(centerX, centerY - gap, centerX, centerY - gap - crossSize, crosshairPaint)
+        // 下
+        canvas.drawLine(centerX, centerY + gap, centerX, centerY + gap + crossSize, crosshairPaint)
+        // 左
+        canvas.drawLine(centerX - gap, centerY, centerX - gap - crossSize, centerY, crosshairPaint)
+        // 右
+        canvas.drawLine(centerX + gap, centerY, centerX + gap + crossSize, centerY, crosshairPaint)
+
+        // 中心点
+        canvas.drawCircle(centerX, centerY, 3f, crosshairPaint)
+    }
+
+    private fun drawTargetWaypoint(canvas: Canvas, centerX: Float, centerY: Float, radius: Float, relativeBearing: Float) {
+        val radian = Math.toRadians(relativeBearing.toDouble())
+        val targetRadius = radius * 0.75f
+        val targetX = centerX + targetRadius * sin(radian).toFloat()
+        val targetY = centerY - targetRadius * cos(radian).toFloat()
+
+        // 绘制指向目标的虚线
         canvas.drawLine(centerX, centerY, targetX, targetY, targetLinePaint)
 
-        // 绘制目标点
-        canvas.drawCircle(targetX, targetY, 20f, targetPaint)
+        // 绘制目标点外圈（脉冲效果）
+        canvas.drawCircle(targetX, targetY, 25f, targetRingPaint)
+        canvas.drawCircle(targetX, targetY, 20f, targetRingPaint)
 
-        // 7. 显示距离信息
+        // 绘制目标点中心
+        canvas.drawCircle(targetX, targetY, 12f, targetPaint)
+
+        // 在目标点上方显示距离
+        val distanceText = if (distance < 1000) {
+            "${distance.toInt()}m"
+        } else {
+            "%.1fkm".format(distance / 1000)
+        }
+
+        val textY = targetY - 35f
+        canvas.drawText(distanceText, targetX, textY, distanceTextPaint)
+    }
+
+    private fun drawInfoPanel(canvas: Canvas, centerX: Float, centerY: Float, radius: Float, relativeBearing: Float) {
+        val infoY = centerY + radius + 80
+
+        // 主要距离信息
         val distanceText = formatDistance(distance)
-        canvas.drawText(distanceText, centerX, centerY + radius + 60, textPaint)
+        canvas.drawText(distanceText, centerX, infoY, distanceTextPaint)
 
-        // 8. 显示方位角信息
-        val bearingText = "方位: ${bearing.toInt()}°"
-        canvas.drawText(bearingText, centerX, centerY + radius + 100, smallTextPaint)
+        // 方位角信息
+        val bearingText = "${bearing.toInt()}°"
+        canvas.drawText(bearingText, centerX, infoY + 50, infoTextPaint)
 
-        // 9. 显示相对方位
-        val relativeText = "相对: ${relativeBearing.toInt()}°"
-        canvas.drawText(relativeText, centerX, centerY + radius + 140, smallTextPaint)
+        // 相对方位信息（小字）
+        val relativeText = getRelativeDirection(relativeBearing)
+        canvas.drawText(relativeText, centerX, infoY + 85, infoTextPaint)
+    }
+
+    private fun getRelativeDirection(angle: Float): String {
+        return when {
+            angle < 22.5 || angle >= 337.5 -> "正前方"
+            angle < 67.5 -> "右前方"
+            angle < 112.5 -> "右侧"
+            angle < 157.5 -> "右后方"
+            angle < 202.5 -> "正后方"
+            angle < 247.5 -> "左后方"
+            angle < 292.5 -> "左侧"
+            angle < 337.5 -> "左前方"
+            else -> "未知"
+        }
     }
 
     private fun drawDirectionMarkers(canvas: Canvas, centerX: Float, centerY: Float, radius: Float) {
-        val textRadius = radius + 30
+        val textRadius = radius + 45
 
-        // 北 (N) - 考虑设备朝向
-        var northAngle = -deviceAzimuth
-        var northRad = Math.toRadians(northAngle.toDouble())
-        var northX = centerX + textRadius * sin(northRad).toFloat()
-        var northY = centerY - textRadius * cos(northRad).toFloat()
-        canvas.drawText("N", northX, northY, directionTextPaint)
+        // 定义方向及其角度
+        val directions = listOf(
+            Pair("N", 0f),
+            Pair("E", 90f),
+            Pair("S", 180f),
+            Pair("W", 270f)
+        )
 
-        // 东 (E)
-        var eastAngle = 90 - deviceAzimuth
-        var eastRad = Math.toRadians(eastAngle.toDouble())
-        var eastX = centerX + textRadius * sin(eastRad).toFloat()
-        var eastY = centerY - textRadius * cos(eastRad).toFloat()
-        canvas.drawText("E", eastX, eastY, directionTextPaint)
+        for ((direction, baseAngle) in directions) {
+            val adjustedAngle = baseAngle - deviceAzimuth
+            val radian = Math.toRadians(adjustedAngle.toDouble())
 
-        // 南 (S)
-        var southAngle = 180 - deviceAzimuth
-        var southRad = Math.toRadians(southAngle.toDouble())
-        var southX = centerX + textRadius * sin(southRad).toFloat()
-        var southY = centerY - textRadius * cos(southRad).toFloat()
-        canvas.drawText("S", southX, southY, directionTextPaint)
+            val x = centerX + textRadius * sin(radian).toFloat()
+            val y = centerY - textRadius * cos(radian).toFloat() + 12f // 微调文字垂直位置
 
-        // 西 (W)
-        var westAngle = 270 - deviceAzimuth
-        var westRad = Math.toRadians(westAngle.toDouble())
-        var westX = centerX + textRadius * sin(westRad).toFloat()
-        var westY = centerY - textRadius * cos(westRad).toFloat()
-        canvas.drawText("W", westX, westY, directionTextPaint)
+            // 北方向使用高亮色
+            val paint = if (direction == "N") {
+                directionTextPaint.apply {
+                    color = Color.parseColor("#58A6FF")
+                    alpha = 255
+                }
+            } else {
+                directionTextPaint.apply {
+                    color = Color.parseColor("#8B949E")
+                    alpha = 180
+                }
+            }
+
+            canvas.drawText(direction, x, y, paint)
+        }
     }
 
     private fun formatDistance(distanceInMeters: Float): String {
