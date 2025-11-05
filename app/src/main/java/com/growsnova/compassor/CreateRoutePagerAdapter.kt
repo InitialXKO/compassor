@@ -15,7 +15,7 @@ class CreateRoutePagerAdapter(
 
     override fun createFragment(position: Int): Fragment {
         return when (position) {
-            0 -> SavedWaypointsFragment.newInstance(ArrayList(waypoints))
+            0 -> SavedWaypointsFragment.newInstance(WaypointListWrapper(ArrayList(waypoints)))
             1 -> NearbyPoisFragment.newInstance(currentLatLng)
             else -> SearchFragment.newInstance(currentLatLng)
         }

@@ -40,6 +40,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     private var locationClient: AMapLocationClient? = null
     private var locationOption: AMapLocationClientOption? = null
     private var myCurrentLatLng: LatLng? = null
+    private var isFirstLocation = true
 
     // POI搜索
     private var poiSearch: PoiSearch? = null
@@ -71,6 +72,11 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Update AMap privacy policies first
+        AMapLocationClient.updatePrivacyShow(this, true, true)
+        AMapLocationClient.updatePrivacyAgree(this, true)
+
         setContentView(R.layout.activity_main)
 
         // 初始化视图
@@ -169,9 +175,6 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
 
     private fun setupLocation() {
         // 初始化定位客户端
-        AMapLocationClient.updatePrivacyShow(this, true, true)
-        AMapLocationClient.updatePrivacyAgree(this, true)
-
         locationClient = AMapLocationClient(applicationContext)
         locationOption = AMapLocationClientOption()
 
@@ -206,8 +209,9 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                 myCurrentLatLng = LatLng(it.latitude, it.longitude)
 
                 // 第一次定位时移动相机
-                if (targetLatLng == null) {
+                if (isFirstLocation) {
                     aMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myCurrentLatLng, 15f))
+                    isFirstLocation = false
                 }
 
                 // 更新雷达视图
@@ -409,7 +413,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
 
         if (waypointToEdit != null) {
             builder.setNeutralButton(R.string.delete) { _, _ ->
-                deleteWaypoint(waypointToEdit)
+                deleteWaypointSafely(waypointToEdit)
             }
         }
 
@@ -421,10 +425,12 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
         AlertDialog.Builder(this)
             .setTitle("选择操作")
             .setItems(options) { _, which ->
-                reverseGeocode(latLng) { name ->
-                    when (which) {
-                        0 -> showSaveWaypointDialog(latLng, waypointToEdit = null)
-                        1 -> setTargetLocation(latLng, name)
+                when (which) {
+                    0 -> reverseGeocode(latLng) { name ->
+                        showSaveWaypointDialog(latLng, defaultName = name)
+                    }
+                    1 -> reverseGeocode(latLng) { name ->
+                        setTargetLocation(latLng, name)
                     }
                 }
             }
@@ -440,11 +446,21 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
         Toast.makeText(this, "路点已更新", Toast.LENGTH_SHORT).show()
     }
 
-    private fun deleteWaypoint(waypoint: Waypoint) {
+    private fun deleteWaypointSafely(waypoint: Waypoint) {
+        // Remove waypoint from all routes that contain it
+        val routesToClean = routes.filter { it.waypoints.contains(waypoint) }
+        routesToClean.forEach { it.waypoints.remove(waypoint) }
+
+        // Delete routes that have become invalid (less than 2 waypoints)
+        val routesToDelete = routes.filter { it.waypoints.size < 2 }
+        routes.removeAll(routesToDelete)
+
+        // Finally, delete the waypoint itself
         waypoints.remove(waypoint)
         val markerToRemove = waypointMarkers.find { it.position.latitude == waypoint.latitude && it.position.longitude == waypoint.longitude }
         markerToRemove?.remove()
         waypointMarkers.remove(markerToRemove)
+
         saveData()
         Toast.makeText(this, "路点已删除", Toast.LENGTH_SHORT).show()
     }
@@ -472,7 +488,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
             }
             .setPositiveButton(R.string.create_route) { _, _ ->
                 val intent = android.content.Intent(this, CreateRouteActivity::class.java)
-                intent.putExtra("waypoints", ArrayList(waypoints))
+                intent.putExtra("waypoints_wrapper", WaypointListWrapper(ArrayList(waypoints)))
                 myCurrentLatLng?.let {
                     intent.putExtra("current_latlng", it)
                 }
@@ -502,7 +518,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                     1 -> {
                         val intent = android.content.Intent(this, CreateRouteActivity::class.java)
                         intent.putExtra("route_to_edit", route)
-                        intent.putExtra("waypoints", ArrayList(waypoints))
+                        intent.putExtra("waypoints_wrapper", WaypointListWrapper(ArrayList(waypoints)))
                         myCurrentLatLng?.let {
                             intent.putExtra("current_latlng", it)
                         }
@@ -629,7 +645,9 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
         when (item.itemId) {
             R.id.nav_save_location -> {
                 myCurrentLatLng?.let { latLng ->
-                    showSaveWaypointDialog(latLng)
+                    reverseGeocode(latLng) { name ->
+                        showSaveWaypointDialog(latLng, defaultName = name)
+                    }
                 } ?: run {
                     Toast.makeText(this, "無法獲取當前位置", Toast.LENGTH_SHORT).show()
                 }
@@ -672,17 +690,41 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                 when (which) {
                     0 -> setTargetLocation(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
                     1 -> showSaveWaypointDialog(LatLng(waypoint.latitude, waypoint.longitude), waypoint)
-                    2 -> deleteWaypoint(waypoint)
+                    2 -> {
+                        val routesContainingWaypoint = routes.filter { it.waypoints.contains(waypoint) }
+                        if (routesContainingWaypoint.isNotEmpty()) {
+                            val routeNames = routesContainingWaypoint.joinToString { it.name }
+                            AlertDialog.Builder(this)
+                                .setTitle("确认删除")
+                                .setMessage("该路点正在被路线: $routeNames 使用。删除该路点将同时从这些路线中移除，并可能导致路线被删除。是否确认删除？")
+                                .setPositiveButton("确认") { _, _ ->
+                                    deleteWaypointSafely(waypoint)
+                                }
+                                .setNegativeButton("取消", null)
+                                .show()
+                        } else {
+                            deleteWaypointSafely(waypoint)
+                        }
+                    }
                 }
             }
             .show()
     }
 
     private fun showWaypointManagementDialog() {
-        val waypointNames = waypoints.map { it.name }.toTypedArray()
+        val waypointDisplayInfo = waypoints.map { waypoint ->
+            val routesContainingWaypoint = routes.filter { it.waypoints.contains(waypoint) }
+            val routeNames = if (routesContainingWaypoint.isNotEmpty()) {
+                " (In routes: ${routesContainingWaypoint.joinToString { it.name }})"
+            } else {
+                ""
+            }
+            waypoint.name + routeNames
+        }.toTypedArray()
+
         AlertDialog.Builder(this)
             .setTitle("管理路点")
-            .setItems(waypointNames) { _, which ->
+            .setItems(waypointDisplayInfo) { _, which ->
                 showWaypointOptionsDialog(waypoints[which])
             }
             .setNegativeButton(R.string.cancel, null)

@@ -25,7 +25,8 @@ class CreateRouteActivity : AppCompatActivity() {
             viewModel.selectedWaypoints.value = routeToEdit.waypoints
         }
 
-        waypoints = intent.getSerializableExtra("waypoints") as? ArrayList<Waypoint> ?: arrayListOf()
+        val waypointWrapper = intent.getSerializableExtra("waypoints_wrapper") as? WaypointListWrapper
+        waypoints = waypointWrapper?.waypoints ?: arrayListOf()
         currentLatLng = intent.getParcelableExtra("current_latlng")
 
         val viewPager = findViewById<androidx.viewpager2.widget.ViewPager2>(R.id.viewPager)

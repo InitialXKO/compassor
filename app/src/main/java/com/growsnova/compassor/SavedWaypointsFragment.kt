@@ -18,7 +18,8 @@ class SavedWaypointsFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         arguments?.let {
-            waypoints = it.getSerializable(ARG_WAYPOINTS) as? ArrayList<Waypoint> ?: arrayListOf()
+            val waypointWrapper = it.getSerializable(ARG_WAYPOINTS) as? WaypointListWrapper
+            waypoints = waypointWrapper?.waypoints ?: arrayListOf()
         }
     }
 
@@ -39,10 +40,10 @@ class SavedWaypointsFragment : Fragment() {
         private const val ARG_WAYPOINTS = "waypoints"
 
         @JvmStatic
-        fun newInstance(waypoints: ArrayList<Waypoint>) =
+        fun newInstance(waypointsWrapper: WaypointListWrapper) =
             SavedWaypointsFragment().apply {
                 arguments = Bundle().apply {
-                    putSerializable(ARG_WAYPOINTS, waypoints)
+                    putSerializable(ARG_WAYPOINTS, waypointsWrapper)
                 }
             }
     }
