@@ -87,6 +87,9 @@ dependencies {
     // 协程支持（用于异步操作）
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
+    // JSON序列化
+    implementation("com.google.code.gson:gson:2.10.1")
+
     // 测试库（保留但不强制使用）
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

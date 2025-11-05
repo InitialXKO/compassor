@@ -8,4 +8,13 @@
     <string name="location_permission_denied">定位权限被拒绝</string>
     <string name="searching">搜索中...</string>
     <string name="no_result">未找到结果</string>
+    <string name="save_location">保存位置</string>
+    <string name="waypoint_name_hint">输入路点名称</string>
+    <string name="save">保存</string>
+    <string name="cancel">取消</string>
+    <string name="delete">删除</string>
+    <string name="edit">编辑</string>
+    <string name="manage_routes">管理路线</string>
+    <string name="create_route">创建路线</string>
+    <string name="route_name_hint">输入路线名称</string>
 </resources>
