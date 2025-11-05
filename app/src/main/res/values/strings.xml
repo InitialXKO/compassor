@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Compassor</string>
+    <string name="search_hint">搜索目的地</string>
+    <string name="search_button">搜索</string>
+    <string name="distance_format">距离: %.1f米</string>
+    <string name="bearing_format">方位: %.1f°</string>
+    <string name="location_permission_denied">定位权限被拒绝</string>
+    <string name="searching">搜索中...</string>
+    <string name="no_result">未找到结果</string>
+</resources>

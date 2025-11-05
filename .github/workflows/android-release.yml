@@ -1,0 +1,139 @@
+name: Android Release - Build & Deploy
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号 (例: 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 设置JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: 设置Gradle Wrapper
+      uses: gradle/gradle-build-action@v2
+
+    - name: 授予Gradle执行权限
+      run: chmod +x gradlew
+      
+    - name: Check for required secrets
+      id: check_secrets
+      run: |
+          if [ -n "${{ secrets.KEYSTORE_FILE }}" ] && [ -n "${{ secrets.KEYSTORE_ALIAS }}" ] && [ -n "${{ secrets.KEYSTORE_PASSWORD }}" ] && [ -n "${{ secrets.KEY_PASSWORD }}" ]; then
+            echo "result=success" >> $GITHUB_OUTPUT
+            echo "has_secrets=true" >> $GITHUB_OUTPUT
+          else
+            echo "result=failure" >> $GITHUB_OUTPUT
+            echo "has_secrets=false" >> $GITHUB_OUTPUT
+            echo "Some required secrets are missing." >&2
+          fi
+      shell: bash
+    - name: Decode and Save Keystore
+      if: steps.check_secrets.outputs.has_secrets == 'true'
+      run: |
+          echo "${{ secrets.KEYSTORE_FILE }}" | base64 --decode > app/compassor-release.jks
+    # 方案1：使用GitHub Secrets配置签名（推荐）
+    - name: 配置签名密钥
+      if: steps.check_secrets.outputs.has_secrets == 'true'
+      run: |
+        # 解码base64编码的密钥文件
+        echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > compassor-release.jks
+
+        # 创建keystore.properties
+        echo "storeFile=compassor-release.jks" > keystore.properties
+        echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" >> keystore.properties
+        echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> keystore.properties
+        echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> keystore.properties
+
+    # 方案2：未配置签名时构建未签名APK
+    - name: 构建发布版APK
+      run: |
+        if [ -f "keystore.properties" ]; then
+          echo "使用签名配置构建..."
+          ./gradlew assembleRelease --stacktrace
+        else
+          echo "⚠️ 未配置签名，构建调试版APK..."
+          ./gradlew assembleDebug --stacktrace
+          cp app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/release/app-release.apk || true
+        fi
+
+    - name: 重命名APK
+      run: |
+        cd app/build/outputs/apk/release
+        if [ -f "app-release.apk" ]; then
+          VERSION="${{ github.event.inputs.version }}"
+          if [ -z "$VERSION" ]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          fi
+          mv app-release.apk "compassor-v${VERSION}.apk"
+          echo "APK_NAME=compassor-v${VERSION}.apk" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+        fi
+
+    - name: 生成变更日志
+      id: changelog
+      run: |
+        echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+        echo "## 🚀 Compassor v${{ env.VERSION }}" >> $GITHUB_OUTPUT
+        echo "" >> $GITHUB_OUTPUT
+        echo "### 📱 应用信息" >> $GITHUB_OUTPUT
+        echo "- **版本号**: ${{ env.VERSION }}" >> $GITHUB_OUTPUT
+        echo "- **包名**: com.growsnova.compassor" >> $GITHUB_OUTPUT
+        echo "- **最低版本**: Android 7.0 (API 24)" >> $GITHUB_OUTPUT
+        echo "" >> $GITHUB_OUTPUT
+        echo "### ✨ 功能特性" >> $GITHUB_OUTPUT
+        echo "- 高德地图集成" >> $GITHUB_OUTPUT
+        echo "- 实时GPS定位" >> $GITHUB_OUTPUT
+        echo "- 雷达指南针导航" >> $GITHUB_OUTPUT
+        echo "- 地点搜索功能" >> $GITHUB_OUTPUT
+        echo "" >> $GITHUB_OUTPUT
+        echo "### 📥 安装说明" >> $GITHUB_OUTPUT
+        echo "1. 下载 APK 文件" >> $GITHUB_OUTPUT
+        echo "2. 在设备上启用"未知来源"安装" >> $GITHUB_OUTPUT
+        echo "3. 安装并授予定位权限" >> $GITHUB_OUTPUT
+        echo "4. 配置高德地图 API Key（参见文档）" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+    - name: 创建GitHub Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        files: app/build/outputs/apk/release/${{ env.APK_NAME }}
+        body: ${{ steps.changelog.outputs.CHANGELOG }}
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 上传Release APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: compassor-release
+        path: app/build/outputs/apk/release/${{ env.APK_NAME }}
+
+    - name: 构建完成通知
+      run: |
+        echo "🎉 发布版本构建完成！"
+        echo "📱 应用包名: com.growsnova.compassor"
+        echo "🏷️  版本: ${{ env.VERSION }}"
+        if [ -f "keystore.properties" ]; then
+          echo "✅ 签名: 已签名"
+        else
+          echo "⚠️  签名: 未签名（请配置GitHub Secrets）"
+        fi
