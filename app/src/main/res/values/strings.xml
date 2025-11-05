@@ -17,4 +17,6 @@
     <string name="manage_routes">管理路线</string>
     <string name="create_route">创建路线</string>
     <string name="route_name_hint">输入路线名称</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
 </resources>

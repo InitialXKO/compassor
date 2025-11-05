@@ -24,8 +24,9 @@ import com.amap.api.services.core.LatLonPoint
 import com.amap.api.services.core.PoiItem
 import com.amap.api.services.poisearch.PoiResult
 import com.amap.api.services.poisearch.PoiSearch
+import com.google.android.material.navigation.NavigationView
 
-class MainActivity : AppCompatActivity(), AMapLocationListener {
+class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.OnNavigationItemSelectedListener {
 
     // 视图组件
     private lateinit var mapView: MapView
@@ -33,8 +34,9 @@ class MainActivity : AppCompatActivity(), AMapLocationListener {
     private lateinit var radarView: RadarCompassView
     private lateinit var searchEditText: EditText
     private lateinit var searchButton: Button
-    private lateinit var saveLocationButton: Button
-    private lateinit var manageRoutesButton: Button
+    private lateinit var drawerLayout: androidx.drawerlayout.widget.DrawerLayout
+    private lateinit var navigationView: com.google.android.material.navigation.NavigationView
+    private lateinit var toolbar: androidx.appcompat.widget.Toolbar
 
     // 定位组件
     private var locationClient: AMapLocationClient? = null
@@ -83,27 +85,28 @@ class MainActivity : AppCompatActivity(), AMapLocationListener {
                 Toast.makeText(this, "请输入搜索关键词", Toast.LENGTH_SHORT).show()
             }
         }
-
-        saveLocationButton.setOnClickListener {
-            myCurrentLatLng?.let { latLng ->
-                showSaveWaypointDialog(latLng)
-            } ?: run {
-                Toast.makeText(this, "无法获取当前位置", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        manageRoutesButton.setOnClickListener {
-            showRouteManagementDialog()
-        }
     }
 
     private fun initViews(savedInstanceState: Bundle?) {
+        toolbar = findViewById(R.id.toolbar)
+        setSupportActionBar(toolbar)
+
+        drawerLayout = findViewById(R.id.drawer_layout)
+        navigationView = findViewById(R.id.nav_view)
+
+        val toggle = androidx.appcompat.app.ActionBarDrawerToggle(
+            this, drawerLayout, toolbar,
+            R.string.navigation_drawer_open, R.string.navigation_drawer_close
+        )
+        drawerLayout.addDrawerListener(toggle)
+        toggle.syncState()
+
+        navigationView.setNavigationItemSelectedListener(this)
+
         mapView = findViewById(R.id.mapView)
         radarView = findViewById(R.id.radarView)
         searchEditText = findViewById(R.id.searchEditText)
         searchButton = findViewById(R.id.searchButton)
-        saveLocationButton = findViewById(R.id.saveLocationButton)
-        manageRoutesButton = findViewById(R.id.manageRoutesButton)
 
         // 初始化地图
         mapView.onCreate(savedInstanceState)
@@ -562,5 +565,22 @@ class MainActivity : AppCompatActivity(), AMapLocationListener {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         mapView.onSaveInstanceState(outState)
+    }
+
+    override fun onNavigationItemSelected(item: android.view.MenuItem): Boolean {
+        when (item.itemId) {
+            R.id.nav_save_location -> {
+                myCurrentLatLng?.let { latLng ->
+                    showSaveWaypointDialog(latLng)
+                } ?: run {
+                    Toast.makeText(this, "無法獲取當前位置", Toast.LENGTH_SHORT).show()
+                }
+            }
+            R.id.nav_manage_routes -> {
+                showRouteManagementDialog()
+            }
+        }
+        drawerLayout.closeDrawer(androidx.core.view.GravityCompat.START)
+        return true
     }
 }
