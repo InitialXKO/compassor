@@ -253,6 +253,10 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                             }
                         }
                     }
+                    val waypointWrapper = data.getSerializableExtra("waypoints_wrapper") as? WaypointListWrapper
+                    waypointWrapper?.waypoints?.forEach { waypoint ->
+                        addWaypoint(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
+                    }
                 }
             } else {
                 Toast.makeText(

@@ -79,23 +79,30 @@ class CreateRouteActivity : AppCompatActivity() {
 
             val editText = android.widget.EditText(this)
             editText.hint = "Enter route name"
-            if (selectedWaypoints.size >= 2) {
+
+            // If editing, pre-fill the existing route name
+            val routeToEdit = intent.getSerializableExtra("route_to_edit") as? Route
+            if (routeToEdit != null) {
+                editText.setText(routeToEdit.name)
+            } else if (selectedWaypoints.size >= 2) {
                 editText.setText("${selectedWaypoints.first().name} to ${selectedWaypoints.last().name}")
             }
 
             android.app.AlertDialog.Builder(this)
-                .setTitle("Save Route")
+                .setTitle(if (routeToEdit == null) "Save Route" else "Update Route")
                 .setView(editText)
                 .setPositiveButton("Save") { _, _ ->
                     val routeName = editText.text.toString().trim()
                     if (routeName.isNotEmpty()) {
-                        val route = Route(
-                            id = System.currentTimeMillis(),
+                        val newRoute = Route(
+                            id = routeToEdit?.id ?: System.currentTimeMillis(),
                             name = routeName,
-                            waypoints = selectedWaypoints
+                            waypoints = selectedWaypoints,
+                            isLooping = routeToEdit?.isLooping ?: false
                         )
                         val resultIntent = android.content.Intent()
-                        resultIntent.putExtra("new_route", route)
+                        resultIntent.putExtra("new_route", newRoute)
+                        resultIntent.putExtra("waypoints_wrapper", WaypointListWrapper(ArrayList(selectedWaypoints)))
                         setResult(RESULT_OK, resultIntent)
                         finish()
                     } else {
