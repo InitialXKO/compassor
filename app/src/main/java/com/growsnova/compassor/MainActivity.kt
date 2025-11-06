@@ -630,27 +630,93 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
         }
 
         try {
-            val json = file.reader().readText()
+            val json = file.reader().use { it.readText() }
             Log.d(TAG, "Loading data: $json")
             if (json.isBlank()) {
                 Log.d(TAG, "Data file is blank.")
                 return
             }
 
-            val dataBundle = com.google.gson.Gson().fromJson(json, DataBundle::class.java)
+            val gson = com.google.gson.Gson()
+            val jsonElement = com.google.gson.JsonParser.parseString(json)
+            var legacyFormatLoaded = false
 
-            // Defensive check for nulls, though default values should prevent this.
-            val loadedWaypoints = dataBundle.waypoints ?: emptyList()
-            val loadedRoutes = dataBundle.routes ?: emptyList()
+            val loadedWaypoints: List<Waypoint>
+            val loadedRoutes: List<Route>
+
+            if (jsonElement.isJsonObject) {
+                val dataBundle = gson.fromJson(jsonElement, DataBundle::class.java) ?: DataBundle()
+                loadedWaypoints = dataBundle.waypoints
+                loadedRoutes = dataBundle.routes
+            } else if (jsonElement.isJsonArray) {
+                val waypointType = object : com.google.gson.reflect.TypeToken<List<Waypoint>>() {}.type
+                loadedWaypoints = gson.fromJson(jsonElement, waypointType)
+                loadedRoutes = emptyList()
+                legacyFormatLoaded = true
+                Log.d(TAG, "Legacy waypoint data detected.")
+            } else {
+                Log.w(TAG, "Unsupported data format encountered: $jsonElement")
+                return
+            }
+
+            val existingIds = mutableListOf<Long>()
+            existingIds.addAll(loadedWaypoints.map { it.id })
+            loadedRoutes.forEach { route ->
+                existingIds.addAll(route.waypoints.map { it.id })
+            }
+            val maxExistingId = existingIds.filter { it > 0 }.maxOrNull() ?: 0L
+            val startingPoint = if (System.currentTimeMillis() > maxExistingId) System.currentTimeMillis() else maxExistingId
+            var nextGeneratedId = startingPoint + 1
+
+            fun allocateId(): Long {
+                return nextGeneratedId++
+            }
+
+            val waypointIdMap = mutableMapOf<String, Long>()
+            var dataUpdated = legacyFormatLoaded
+
+            val sanitizedWaypoints = loadedWaypoints.map { waypoint ->
+                val key = waypointKey(waypoint)
+                val targetId = waypointIdMap[key] ?: run {
+                    val determinedId = if (waypoint.id != 0L) waypoint.id else allocateId()
+                    waypointIdMap[key] = determinedId
+                    determinedId
+                }
+                waypointIdMap[key] = targetId
+                if (waypoint.id != targetId) {
+                    dataUpdated = true
+                    waypoint.copy(id = targetId)
+                } else {
+                    waypoint
+                }
+            }
+
+            val sanitizedRoutes = loadedRoutes.map { route ->
+                val sanitizedRouteWaypoints = route.waypoints.map { waypoint ->
+                    val key = waypointKey(waypoint)
+                    val targetId = waypointIdMap[key] ?: run {
+                        val determinedId = if (waypoint.id != 0L) waypoint.id else allocateId()
+                        waypointIdMap[key] = determinedId
+                        determinedId
+                    }
+                    waypointIdMap[key] = targetId
+                    if (waypoint.id != targetId) {
+                        dataUpdated = true
+                        waypoint.copy(id = targetId)
+                    } else {
+                        waypoint
+                    }
+                }.toMutableList()
+                route.copy(waypoints = sanitizedRouteWaypoints)
+            }
 
             waypoints.clear()
-            waypoints.addAll(loadedWaypoints)
+            waypoints.addAll(sanitizedWaypoints)
             routes.clear()
-            routes.addAll(loadedRoutes)
+            routes.addAll(sanitizedRoutes)
 
             Log.d(TAG, "Loaded ${waypoints.size} waypoints and ${routes.size} routes.")
 
-            // Redraw waypoints on the map
             waypointMarkers.forEach { it.remove() }
             waypointMarkers.clear()
             waypoints.forEach { waypoint ->
@@ -662,13 +728,21 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                 )
                 waypointMarkers.add(marker)
             }
+
+            if (dataUpdated) {
+                saveData()
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to load data", e)
             Toast.makeText(this, "Failed to load data", Toast.LENGTH_SHORT).show()
-            // In case of error, delete the corrupted file to start fresh next time.
-             file.delete()
+            file.delete()
         }
     }
+
+    private fun waypointKey(waypoint: Waypoint): String {
+        return "${waypoint.latitude.toBits()}|${waypoint.longitude.toBits()}"
+    }
+
     // 地图生命周期管理
     override fun onResume() {
         super.onResume()
