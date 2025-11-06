@@ -616,7 +616,6 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                 it.write(json.toByteArray())
             }
             Log.d(TAG, "Data saved successfully.")
-            Toast.makeText(this, "Data saved", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to save data", e)
             Toast.makeText(this, "Failed to save data: ${e.message}", Toast.LENGTH_LONG).show()
@@ -624,38 +623,50 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     }
 
     private fun loadData() {
-        try {
-            val file = getFileStreamPath(DATA_FILENAME)
-            if (file.exists()) {
-                val json = file.reader().readText()
-                Log.d(TAG, "Loading data: $json")
-                if (json.isNotBlank()) {
-                    val dataBundle = com.google.gson.Gson().fromJson(json, DataBundle::class.java)
-                    waypoints.clear()
-                    dataBundle.waypoints?.let { waypoints.addAll(it) }
-                    routes.clear()
-                    dataBundle.routes?.let { routes.addAll(it) }
-                    Log.d(TAG, "Loaded ${waypoints.size} waypoints and ${routes.size} routes.")
+        val file = getFileStreamPath(DATA_FILENAME)
+        if (!file.exists()) {
+            Log.d(TAG, "Data file does not exist. No data to load.")
+            return
+        }
 
-                    // Redraw waypoints on the map
-                    waypoints.forEach { waypoint ->
-                        val marker = aMap.addMarker(
-                            MarkerOptions()
-                                .position(LatLng(waypoint.latitude, waypoint.longitude))
-                                .title(waypoint.name)
-                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
-                        )
-                        waypointMarkers.add(marker)
-                    }
-                } else {
-                    Log.d(TAG, "Data file is blank.")
-                }
-            } else {
-                Log.d(TAG, "Data file does not exist.")
+        try {
+            val json = file.reader().readText()
+            Log.d(TAG, "Loading data: $json")
+            if (json.isBlank()) {
+                Log.d(TAG, "Data file is blank.")
+                return
+            }
+
+            val dataBundle = com.google.gson.Gson().fromJson(json, DataBundle::class.java)
+
+            // Defensive check for nulls, though default values should prevent this.
+            val loadedWaypoints = dataBundle.waypoints ?: emptyList()
+            val loadedRoutes = dataBundle.routes ?: emptyList()
+
+            waypoints.clear()
+            waypoints.addAll(loadedWaypoints)
+            routes.clear()
+            routes.addAll(loadedRoutes)
+
+            Log.d(TAG, "Loaded ${waypoints.size} waypoints and ${routes.size} routes.")
+
+            // Redraw waypoints on the map
+            waypointMarkers.forEach { it.remove() }
+            waypointMarkers.clear()
+            waypoints.forEach { waypoint ->
+                val marker = aMap.addMarker(
+                    MarkerOptions()
+                        .position(LatLng(waypoint.latitude, waypoint.longitude))
+                        .title(waypoint.name)
+                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+                )
+                waypointMarkers.add(marker)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Failed to load data", e)
             Toast.makeText(this, "Failed to load data", Toast.LENGTH_SHORT).show()
+            // In case of error, delete the corrupted file to start fresh next time.
+             file.delete()
         }
     }
     // 地图生命周期管理
