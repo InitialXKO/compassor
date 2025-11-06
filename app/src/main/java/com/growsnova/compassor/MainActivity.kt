@@ -253,10 +253,6 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                             }
                         }
                     }
-                    val waypointWrapper = data.getSerializableExtra("waypoints_wrapper") as? WaypointListWrapper
-                    waypointWrapper?.waypoints?.forEach { waypoint ->
-                        addWaypoint(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
-                    }
                 }
             } else {
                 Toast.makeText(
@@ -837,6 +833,10 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                         routes.add(it)
                         saveData()
                         Toast.makeText(this, "Route '${it.name}' saved", Toast.LENGTH_SHORT).show()
+                    }
+                    val waypointWrapper = data.getSerializableExtra("waypoints_wrapper") as? WaypointListWrapper
+                    waypointWrapper?.waypoints?.forEach { waypoint ->
+                        addWaypoint(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
                     }
                 }
                 EDIT_ROUTE_REQUEST_CODE -> {
