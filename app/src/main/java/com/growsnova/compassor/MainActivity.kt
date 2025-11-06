@@ -11,6 +11,7 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.amap.api.location.AMapLocation
@@ -51,7 +52,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     private var targetLatLng: LatLng? = null
     private var targetMarker: Marker? = null
 
-    // 路点和路线
+    // 收藏地点和路线
     private val waypoints = mutableListOf<Waypoint>()
     private val waypointMarkers = mutableListOf<Marker>()
     private val routes = mutableListOf<Route>()
@@ -68,6 +69,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
         private const val EDIT_ROUTE_REQUEST_CODE = 1004
         private const val PREFS_NAME = "CompassorPrefs"
         private const val PREF_SKIN_NAME = "SkinName"
+        private const val PREF_THEME_MODE = "ThemeMode"
         private val REQUIRED_PERMISSIONS = arrayOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION
@@ -75,6 +77,9 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Load theme preference before super.onCreate
+        loadThemePreference()
+        
         super.onCreate(savedInstanceState)
 
         // Update AMap privacy policies first
@@ -239,7 +244,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                             if (currentWaypointIndex < route.waypoints.size) {
                                 val nextWaypoint = route.waypoints[currentWaypointIndex]
                                 setTargetLocation(LatLng(nextWaypoint.latitude, nextWaypoint.longitude), nextWaypoint.name)
-                                Toast.makeText(this, "已到达路点，前往下一个: ${nextWaypoint.name}", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this, "已到达地点，前往下一个: ${nextWaypoint.name}", Toast.LENGTH_SHORT).show()
                             } else {
                                 if (route.isLooping) {
                                     currentWaypointIndex = 0
@@ -357,7 +362,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                     setTargetLocation(latLng, it.title)
                 }
             }
-            .setNeutralButton("存为路点") { _, _ ->
+            .setNeutralButton("添加到收藏") { _, _ ->
                 selectedPoi?.let {
                     val latLng = LatLng(it.latLonPoint.latitude, it.latLonPoint.longitude)
                     addWaypoint(latLng, it.title)
@@ -378,8 +383,8 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
             if (existingWaypoint != null) {
                 runOnUiThread {
                     AlertDialog.Builder(this@MainActivity)
-                        .setTitle("更新路点")
-                        .setMessage("附近已存在一个相似的路点 '${existingWaypoint.name}'。您想用新的位置和名称 '$name' 更新它吗？")
+                        .setTitle("更新收藏地点")
+                        .setMessage("附近已存在一个相似的收藏地点 '${existingWaypoint.name}'。您想用新的位置和名称 '$name' 更新它吗？")
                         .setPositiveButton("更新") { _, _ ->
                             updateWaypoint(existingWaypoint, name, newLatLng = latLng)
                         }
@@ -404,7 +409,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                             .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
                     )
                     waypointMarkers.add(marker)
-                    Toast.makeText(this@MainActivity, "路点已保存: $name", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "收藏地点已保存: $name", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -420,7 +425,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
         }
 
         val builder = AlertDialog.Builder(this)
-            .setTitle(if (waypointToEdit == null) "保存路点" else "编辑路点")
+            .setTitle(if (waypointToEdit == null) "保存收藏地点" else "编辑收藏地点")
             .setView(editText)
             .setPositiveButton(R.string.save) { _, _ ->
                 val waypointName = editText.text.toString().trim()
@@ -431,7 +436,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                         updateWaypoint(waypointToEdit, waypointName)
                     }
                 } else {
-                    Toast.makeText(this, "路点名称不能为空", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "地点名称不能为空", Toast.LENGTH_SHORT).show()
                 }
             }
             .setNegativeButton(R.string.cancel, null)
@@ -446,7 +451,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     }
 
     private fun showMapLongClickOptionsDialog(latLng: LatLng) {
-        val options = arrayOf("增加路点", "设为目的地")
+        val options = arrayOf("添加到收藏", "设为目的地")
         AlertDialog.Builder(this)
             .setTitle("选择操作")
             .setItems(options) { _, which ->
@@ -474,7 +479,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
 
             if (potentialDuplicate != null) {
                 runOnUiThread {
-                    Toast.makeText(this@MainActivity, "附近已存在同名路点，无法更新", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "附近已存在同名收藏地点，无法更新", Toast.LENGTH_SHORT).show()
                 }
                 return@launch
             }
@@ -502,7 +507,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                         }
                     }
                 }
-                Toast.makeText(this@MainActivity, "路点 '$oldName' 已更新为 '$newName'", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, "收藏地点 '$oldName' 已更新为 '$newName'", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -526,7 +531,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                 val markerToRemove = waypointMarkers.find { it.position.latitude == waypoint.latitude && it.position.longitude == waypoint.longitude }
                 markerToRemove?.remove()
                 waypointMarkers.remove(markerToRemove)
-                Toast.makeText(this@MainActivity, "路点已删除", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, "收藏地点已删除", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -719,6 +724,9 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
             R.id.nav_change_skin -> {
                 showSkinSelectionDialog()
             }
+            R.id.nav_settings -> {
+                showSettingsDialog()
+            }
         }
         drawerLayout.closeDrawer(androidx.core.view.GravityCompat.START)
         return true
@@ -752,7 +760,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
         }.toTypedArray()
 
         AlertDialog.Builder(this)
-            .setTitle("管理路点")
+            .setTitle("管理收藏地点")
             .setItems(waypointDisplayInfo) { _, which ->
                 showWaypointOptionsDialog(waypoints[which])
             }
@@ -774,7 +782,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                             val routeNames = routesContainingWaypoint.joinToString { it.name }
                             AlertDialog.Builder(this)
                                 .setTitle("确认删除")
-                                .setMessage("该路点正在被路线: $routeNames 使用。删除该路点将同时从这些路线中移除，并可能导致路线被删除。是否确认删除？")
+                                .setMessage("该收藏地点正在被路线: $routeNames 使用。删除该地点将同时从这些路线中移除，并可能导致路线被删除。是否确认删除？")
                                 .setPositiveButton("确认") { _, _ ->
                                     deleteWaypointSafely(waypoint)
                                 }
@@ -818,6 +826,49 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
             else -> DefaultSkins.default
         }
         radarView.setSkin(skin)
+    }
+
+    private fun loadThemePreference() {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val themeMode = prefs.getInt(PREF_THEME_MODE, AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+        AppCompatDelegate.setDefaultNightMode(themeMode)
+    }
+
+    private fun saveThemePreference(mode: Int) {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        prefs.edit().putInt(PREF_THEME_MODE, mode).apply()
+        AppCompatDelegate.setDefaultNightMode(mode)
+    }
+
+    private fun showSettingsDialog() {
+        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+        val currentMode = prefs.getInt(PREF_THEME_MODE, AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+        
+        val themeOptions = arrayOf(
+            getString(R.string.system_default),
+            getString(R.string.light_mode),
+            getString(R.string.dark_mode)
+        )
+        
+        val currentSelection = when (currentMode) {
+            AppCompatDelegate.MODE_NIGHT_NO -> 1
+            AppCompatDelegate.MODE_NIGHT_YES -> 2
+            else -> 0
+        }
+        
+        AlertDialog.Builder(this)
+            .setTitle(R.string.theme_settings)
+            .setSingleChoiceItems(themeOptions, currentSelection) { dialog, which ->
+                val newMode = when (which) {
+                    1 -> AppCompatDelegate.MODE_NIGHT_NO
+                    2 -> AppCompatDelegate.MODE_NIGHT_YES
+                    else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+                }
+                saveThemePreference(newMode)
+                dialog.dismiss()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun openFilePicker() {
