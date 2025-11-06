@@ -601,8 +601,8 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     }
 
     private data class DataBundle(
-        val waypoints: List<Waypoint>,
-        val routes: List<Route>
+        val waypoints: List<Waypoint> = emptyList(),
+        val routes: List<Route> = emptyList()
     )
 
     private fun saveData() {
@@ -623,20 +623,23 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
             val file = getFileStreamPath(DATA_FILENAME)
             if (file.exists()) {
                 val json = file.reader().readText()
-                val dataBundle = com.google.gson.Gson().fromJson(json, DataBundle::class.java)
-                waypoints.clear()
-                waypoints.addAll(dataBundle.waypoints)
-                routes.clear()
-                routes.addAll(dataBundle.routes)
-                // Redraw waypoints on the map
-                waypoints.forEach { waypoint ->
-                    val marker = aMap.addMarker(
-                        MarkerOptions()
-                            .position(LatLng(waypoint.latitude, waypoint.longitude))
-                            .title(waypoint.name)
-                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
-                    )
-                    waypointMarkers.add(marker)
+                if (json.isNotBlank()) {
+                    val dataBundle = com.google.gson.Gson().fromJson(json, DataBundle::class.java)
+                    waypoints.clear()
+                    dataBundle.waypoints?.let { waypoints.addAll(it) }
+                    routes.clear()
+                    dataBundle.routes?.let { routes.addAll(it) }
+
+                    // Redraw waypoints on the map
+                    waypoints.forEach { waypoint ->
+                        val marker = aMap.addMarker(
+                            MarkerOptions()
+                                .position(LatLng(waypoint.latitude, waypoint.longitude))
+                                .title(waypoint.name)
+                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+                        )
+                        waypointMarkers.add(marker)
+                    }
                 }
             }
         } catch (e: Exception) {
