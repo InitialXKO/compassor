@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.location.Location
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
@@ -57,6 +58,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     private var currentWaypointIndex: Int = -1
 
     companion object {
+        private const val TAG = "MainActivity"
         private const val LOCATION_PERMISSION_REQUEST_CODE = 1001
         private const val PICK_SKIN_FILE_REQUEST_CODE = 1002
         private const val CREATE_ROUTE_REQUEST_CODE = 1003
@@ -608,13 +610,16 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     private fun saveData() {
         val dataBundle = DataBundle(waypoints, routes)
         val json = com.google.gson.Gson().toJson(dataBundle)
+        Log.d(TAG, "Saving data: $json")
         try {
             openFileOutput(DATA_FILENAME, MODE_PRIVATE).use {
                 it.write(json.toByteArray())
             }
+            Log.d(TAG, "Data saved successfully.")
+            Toast.makeText(this, "Data saved", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            e.printStackTrace()
-            Toast.makeText(this, "Failed to save data", Toast.LENGTH_SHORT).show()
+            Log.e(TAG, "Failed to save data", e)
+            Toast.makeText(this, "Failed to save data: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -623,12 +628,14 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
             val file = getFileStreamPath(DATA_FILENAME)
             if (file.exists()) {
                 val json = file.reader().readText()
+                Log.d(TAG, "Loading data: $json")
                 if (json.isNotBlank()) {
                     val dataBundle = com.google.gson.Gson().fromJson(json, DataBundle::class.java)
                     waypoints.clear()
                     dataBundle.waypoints?.let { waypoints.addAll(it) }
                     routes.clear()
                     dataBundle.routes?.let { routes.addAll(it) }
+                    Log.d(TAG, "Loaded ${waypoints.size} waypoints and ${routes.size} routes.")
 
                     // Redraw waypoints on the map
                     waypoints.forEach { waypoint ->
@@ -640,10 +647,14 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                         )
                         waypointMarkers.add(marker)
                     }
+                } else {
+                    Log.d(TAG, "Data file is blank.")
                 }
+            } else {
+                Log.d(TAG, "Data file does not exist.")
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e(TAG, "Failed to load data", e)
             Toast.makeText(this, "Failed to load data", Toast.LENGTH_SHORT).show()
         }
     }
