@@ -8,7 +8,7 @@ import java.io.Serializable
 @Entity(tableName = "routes")
 data class Route(
     @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
+    var id: Long = 0,
     var name: String = "",
     @Ignore
     val waypoints: MutableList<Waypoint> = mutableListOf(),

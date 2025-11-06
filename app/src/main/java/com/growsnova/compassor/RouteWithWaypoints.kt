@@ -2,10 +2,18 @@ package com.growsnova.compassor
 
 import androidx.room.Embedded
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.Junction
 import androidx.room.Relation
 
-@Entity(tableName = "route_waypoint_cross_ref", primaryKeys = ["routeId", "waypointId"])
+@Entity(
+    tableName = "route_waypoint_cross_ref",
+    primaryKeys = ["routeId", "waypointId"],
+    indices = [
+        Index(value = ["routeId"]),
+        Index(value = ["waypointId"])
+    ]
+)
 data class RouteWaypointCrossRef(
     val routeId: Long,
     val waypointId: Long
