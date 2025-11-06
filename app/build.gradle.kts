@@ -4,6 +4,7 @@ import java.io.FileInputStream
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("kotlin-kapt")
 }
 
 // 加载签名配置（如果存在）
@@ -96,6 +97,11 @@ dependencies {
     // ViewModel and LiveData KTX libraries
     implementation("androidx.activity:activity-ktx:1.8.2")
     implementation("androidx.fragment:fragment-ktx:1.6.2")
+
+    // Room Persistence Library
+    implementation("androidx.room:room-runtime:2.6.1")
+    kapt("androidx.room:room-compiler:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
 
     // 测试库（保留但不强制使用）
     testImplementation("junit:junit:4.13.2")

@@ -26,6 +26,8 @@ import com.amap.api.services.core.PoiItem
 import com.amap.api.services.poisearch.PoiResult
 import com.amap.api.services.poisearch.PoiSearch
 import com.google.android.material.navigation.NavigationView
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.OnNavigationItemSelectedListener {
 
@@ -56,6 +58,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     private var routePolyline: Polyline? = null
     private var currentRoute: Route? = null
     private var currentWaypointIndex: Int = -1
+    private val db by lazy { AppDatabase.getDatabase(this) }
 
     companion object {
         private const val TAG = "MainActivity"
@@ -63,7 +66,6 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
         private const val PICK_SKIN_FILE_REQUEST_CODE = 1002
         private const val CREATE_ROUTE_REQUEST_CODE = 1003
         private const val EDIT_ROUTE_REQUEST_CODE = 1004
-        private const val DATA_FILENAME = "compassor_data.json"
         private const val PREFS_NAME = "CompassorPrefs"
         private const val PREF_SKIN_NAME = "SkinName"
         private val REQUIRED_PERMISSIONS = arrayOf(
@@ -85,7 +87,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
         initViews(savedInstanceState)
 
         // 加载数据
-        loadData()
+        loadDataFromDb()
 
         // 加载皮肤
         loadSkinPreference()
@@ -366,44 +368,45 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     }
 
     private fun addWaypoint(latLng: LatLng, name: String) {
-        val distance = FloatArray(1)
-        val existingWaypoint = waypoints.find {
-            Location.distanceBetween(latLng.latitude, latLng.longitude, it.latitude, it.longitude, distance)
-            // Name check is case-insensitive and also checks for partial matches
-            (it.name.equals(name, ignoreCase = true) || it.name.contains(name, ignoreCase = true) || name.contains(it.name, ignoreCase = true)) && distance[0] < 10
-        }
+        lifecycleScope.launch {
+            val distance = FloatArray(1)
+            val existingWaypoint = waypoints.find {
+                Location.distanceBetween(latLng.latitude, latLng.longitude, it.latitude, it.longitude, distance)
+                (it.name.equals(name, ignoreCase = true) || it.name.contains(name, ignoreCase = true) || name.contains(it.name, ignoreCase = true)) && distance[0] < 10
+            }
 
-        if (existingWaypoint != null) {
-            // If a similar waypoint exists, ask the user if they want to update it
-            AlertDialog.Builder(this)
-                .setTitle("更新路点")
-                .setMessage("附近已存在一个相似的路点 '${existingWaypoint.name}'。您想用新的位置和名称 '$name' 更新它吗？")
-                .setPositiveButton("更新") { _, _ ->
-                    updateWaypoint(existingWaypoint, name, newLatLng = latLng)
+            if (existingWaypoint != null) {
+                runOnUiThread {
+                    AlertDialog.Builder(this@MainActivity)
+                        .setTitle("更新路点")
+                        .setMessage("附近已存在一个相似的路点 '${existingWaypoint.name}'。您想用新的位置和名称 '$name' 更新它吗？")
+                        .setPositiveButton("更新") { _, _ ->
+                            updateWaypoint(existingWaypoint, name, newLatLng = latLng)
+                        }
+                        .setNegativeButton("取消", null)
+                        .show()
                 }
-                .setNegativeButton("取消", null)
-                .show()
-        } else {
-            // If no similar waypoint exists, add a new one
-            val waypoint = Waypoint(
-                id = System.currentTimeMillis(),
-                name = name,
-                latitude = latLng.latitude,
-                longitude = latLng.longitude
-            )
-            waypoints.add(waypoint)
+            } else {
+                val waypoint = Waypoint(
+                    name = name,
+                    latitude = latLng.latitude,
+                    longitude = latLng.longitude
+                )
+                val newId = db.waypointDao().insert(waypoint)
+                val newWaypoint = waypoint.copy(id = newId)
+                waypoints.add(newWaypoint)
 
-            // 在地图上添加标记
-            val marker = aMap.addMarker(
-                MarkerOptions()
-                    .position(latLng)
-                    .title(name)
-                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
-            )
-            waypointMarkers.add(marker)
-            saveData()
-
-            Toast.makeText(this, "路点已保存: $name", Toast.LENGTH_SHORT).show()
+                runOnUiThread {
+                    val marker = aMap.addMarker(
+                        MarkerOptions()
+                            .position(latLng)
+                            .title(name)
+                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+                    )
+                    waypointMarkers.add(marker)
+                    Toast.makeText(this@MainActivity, "路点已保存: $name", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
@@ -460,64 +463,72 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     }
 
     private fun updateWaypoint(waypoint: Waypoint, newName: String, newLatLng: LatLng? = null) {
-        // Check for potential duplicates before updating
-        val otherWaypoints = waypoints.filter { it.id != waypoint.id }
-        val distance = FloatArray(1)
-        val potentialDuplicate = otherWaypoints.find {
-            val checkLatLng = newLatLng ?: LatLng(waypoint.latitude, waypoint.longitude)
-            Location.distanceBetween(checkLatLng.latitude, checkLatLng.longitude, it.latitude, it.longitude, distance)
-            it.name.equals(newName, ignoreCase = true) && distance[0] < 10
-        }
+        lifecycleScope.launch {
+            val otherWaypoints = waypoints.filter { it.id != waypoint.id }
+            val distance = FloatArray(1)
+            val potentialDuplicate = otherWaypoints.find {
+                val checkLatLng = newLatLng ?: LatLng(waypoint.latitude, waypoint.longitude)
+                Location.distanceBetween(checkLatLng.latitude, checkLatLng.longitude, it.latitude, it.longitude, distance)
+                it.name.equals(newName, ignoreCase = true) && distance[0] < 10
+            }
 
-        if (potentialDuplicate != null) {
-            Toast.makeText(this, "附近已存在同名路点，无法更新", Toast.LENGTH_SHORT).show()
-            return // Abort update
-        }
-
-        var oldName = waypoint.name
-        waypoint.name = newName
-
-        var marker = waypointMarkers.find { it.position.latitude == waypoint.latitude && it.position.longitude == waypoint.longitude }
-
-        if (newLatLng != null) {
-            waypoint.latitude = newLatLng.latitude
-            waypoint.longitude = newLatLng.longitude
-            marker?.position = newLatLng
-        }
-
-        marker?.title = newName
-
-        // Update routes that contain this waypoint and redraw if necessary
-        routes.forEach { route ->
-            if (route.waypoints.any { it.id == waypoint.id }) {
-                // If the route is currently displayed, redraw it
-                if (currentRoute?.id == route.id || routePolyline?.points?.size == route.waypoints.size) {
-                    drawRouteOnMap(route.waypoints)
+            if (potentialDuplicate != null) {
+                runOnUiThread {
+                    Toast.makeText(this@MainActivity, "附近已存在同名路点，无法更新", Toast.LENGTH_SHORT).show()
                 }
+                return@launch
+            }
+
+            val oldName = waypoint.name
+            waypoint.name = newName
+            if (newLatLng != null) {
+                waypoint.latitude = newLatLng.latitude
+                waypoint.longitude = newLatLng.longitude
+            }
+
+            db.waypointDao().update(waypoint)
+
+            runOnUiThread {
+                val marker = waypointMarkers.find { it.position.latitude == waypoint.latitude && it.position.longitude == waypoint.longitude }
+                if (newLatLng != null) {
+                    marker?.position = newLatLng
+                }
+                marker?.title = newName
+
+                routes.forEach { route ->
+                    if (route.waypoints.any { it.id == waypoint.id }) {
+                        if (currentRoute?.id == route.id || routePolyline?.points?.size == route.waypoints.size) {
+                            drawRouteOnMap(route.waypoints)
+                        }
+                    }
+                }
+                Toast.makeText(this@MainActivity, "路点 '$oldName' 已更新为 '$newName'", Toast.LENGTH_SHORT).show()
             }
         }
-
-        saveData()
-        Toast.makeText(this, "路点 '$oldName' 已更新为 '$newName'", Toast.LENGTH_SHORT).show()
     }
 
     private fun deleteWaypointSafely(waypoint: Waypoint) {
-        // Remove waypoint from all routes that contain it
-        val routesToClean = routes.filter { it.waypoints.contains(waypoint) }
-        routesToClean.forEach { it.waypoints.remove(waypoint) }
+        lifecycleScope.launch {
+            val routesContainingWaypoint = routes.filter { route -> route.waypoints.any { it.id == waypoint.id } }
+            for (route in routesContainingWaypoint) {
+                db.routeDao().deleteRouteWaypointCrossRef(RouteWaypointCrossRef(route.id, waypoint.id))
+                route.waypoints.removeIf { it.id == waypoint.id }
+                if (route.waypoints.size < 2) {
+                    db.routeDao().deleteRoute(route)
+                    routes.remove(route)
+                }
+            }
 
-        // Delete routes that have become invalid (less than 2 waypoints)
-        val routesToDelete = routes.filter { it.waypoints.size < 2 }
-        routes.removeAll(routesToDelete)
+            db.waypointDao().delete(waypoint)
+            waypoints.remove(waypoint)
 
-        // Finally, delete the waypoint itself
-        waypoints.remove(waypoint)
-        val markerToRemove = waypointMarkers.find { it.position.latitude == waypoint.latitude && it.position.longitude == waypoint.longitude }
-        markerToRemove?.remove()
-        waypointMarkers.remove(markerToRemove)
-
-        saveData()
-        Toast.makeText(this, "路点已删除", Toast.LENGTH_SHORT).show()
+            runOnUiThread {
+                val markerToRemove = waypointMarkers.find { it.position.latitude == waypoint.latitude && it.position.longitude == waypoint.longitude }
+                markerToRemove?.remove()
+                waypointMarkers.remove(markerToRemove)
+                Toast.makeText(this@MainActivity, "路点已删除", Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     private fun drawRouteOnMap(waypoints: List<Waypoint>) {
@@ -592,81 +603,50 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     }
 
     private fun deleteRoute(route: Route) {
-        // If the deleted route is currently displayed, remove the polyline
-        if (routePolyline?.points?.map { LatLng(it.latitude, it.longitude) } == route.waypoints.map { LatLng(it.latitude, it.longitude) }) {
-            routePolyline?.remove()
-            routePolyline = null
-        }
-        routes.remove(route)
-        saveData()
-        Toast.makeText(this, "路线已删除", Toast.LENGTH_SHORT).show()
-    }
-
-    private data class DataBundle(
-        val waypoints: List<Waypoint> = emptyList(),
-        val routes: List<Route> = emptyList()
-    )
-
-    private fun saveData() {
-        val dataBundle = DataBundle(waypoints, routes)
-        val json = com.google.gson.Gson().toJson(dataBundle)
-        Log.d(TAG, "Saving data: $json")
-        try {
-            openFileOutput(DATA_FILENAME, MODE_PRIVATE).use {
-                it.write(json.toByteArray())
+        lifecycleScope.launch {
+            db.routeDao().deleteRoute(route)
+            route.waypoints.forEach { waypoint ->
+                db.routeDao().deleteRouteWaypointCrossRef(RouteWaypointCrossRef(route.id, waypoint.id))
             }
-            Log.d(TAG, "Data saved successfully.")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to save data", e)
-            Toast.makeText(this, "Failed to save data: ${e.message}", Toast.LENGTH_LONG).show()
+            routes.remove(route)
+
+            runOnUiThread {
+                if (routePolyline?.points?.map { LatLng(it.latitude, it.longitude) } == route.waypoints.map { LatLng(it.latitude, it.longitude) }) {
+                    routePolyline?.remove()
+                    routePolyline = null
+                }
+                Toast.makeText(this@MainActivity, "路线已删除", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
-    private fun loadData() {
-        val file = getFileStreamPath(DATA_FILENAME)
-        if (!file.exists()) {
-            Log.d(TAG, "Data file does not exist. No data to load.")
-            return
-        }
-
-        try {
-            val json = file.reader().readText()
-            Log.d(TAG, "Loading data: $json")
-            if (json.isBlank()) {
-                Log.d(TAG, "Data file is blank.")
-                return
-            }
-
-            val dataBundle = com.google.gson.Gson().fromJson(json, DataBundle::class.java)
-
-            // Defensive check for nulls, though default values should prevent this.
-            val loadedWaypoints = dataBundle.waypoints ?: emptyList()
-            val loadedRoutes = dataBundle.routes ?: emptyList()
-
+    private fun loadDataFromDb() {
+        lifecycleScope.launch {
+            val loadedWaypoints = db.waypointDao().getAllWaypoints()
             waypoints.clear()
             waypoints.addAll(loadedWaypoints)
+
+            val routesWithWaypoints = db.routeDao().getRoutesWithWaypoints()
             routes.clear()
-            routes.addAll(loadedRoutes)
+            routes.addAll(routesWithWaypoints.map {
+                val route = it.route
+                route.waypoints.addAll(it.waypoints)
+                route
+            })
 
-            Log.d(TAG, "Loaded ${waypoints.size} waypoints and ${routes.size} routes.")
-
-            // Redraw waypoints on the map
-            waypointMarkers.forEach { it.remove() }
-            waypointMarkers.clear()
-            waypoints.forEach { waypoint ->
-                val marker = aMap.addMarker(
-                    MarkerOptions()
-                        .position(LatLng(waypoint.latitude, waypoint.longitude))
-                        .title(waypoint.name)
-                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
-                )
-                waypointMarkers.add(marker)
+            runOnUiThread {
+                waypointMarkers.forEach { it.remove() }
+                waypointMarkers.clear()
+                waypoints.forEach { waypoint ->
+                    val marker = aMap.addMarker(
+                        MarkerOptions()
+                            .position(LatLng(waypoint.latitude, waypoint.longitude))
+                            .title(waypoint.name)
+                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+                    )
+                    waypointMarkers.add(marker)
+                }
             }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to load data", e)
-            Toast.makeText(this, "Failed to load data", Toast.LENGTH_SHORT).show()
-            // In case of error, delete the corrupted file to start fresh next time.
-             file.delete()
         }
     }
     // 地图生命周期管理
@@ -854,33 +834,73 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
             when (requestCode) {
                 CREATE_ROUTE_REQUEST_CODE -> {
                     val newRoute = data.getSerializableExtra("new_route") as? Route
-                    newRoute?.let {
-                        routes.add(it)
-                        saveData()
-                        Toast.makeText(this, "Route '${it.name}' saved", Toast.LENGTH_SHORT).show()
-                    }
-                    val waypointWrapper = data.getSerializableExtra("waypoints_wrapper") as? WaypointListWrapper
-                    waypointWrapper?.waypoints?.forEach { waypoint ->
-                        addWaypoint(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
+                    newRoute?.let { route ->
+                        lifecycleScope.launch {
+                            val waypointsWithIds = mutableListOf<Waypoint>()
+                            // First, save any new waypoints to get their database IDs
+                            for (waypoint in route.waypoints) {
+                                if (waypoint.id == 0L) {
+                                    val newId = db.waypointDao().insert(waypoint)
+                                    val savedWaypoint = waypoint.copy(id = newId)
+                                    waypointsWithIds.add(savedWaypoint)
+                                    waypoints.add(savedWaypoint) // Add to main list
+                                    // Draw new waypoint on map
+                                    runOnUiThread {
+                                        val marker = aMap.addMarker(
+                                            MarkerOptions()
+                                                .position(LatLng(savedWaypoint.latitude, savedWaypoint.longitude))
+                                                .title(savedWaypoint.name)
+                                                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
+                                        )
+                                        waypointMarkers.add(marker)
+                                    }
+                                } else {
+                                    waypointsWithIds.add(waypoint) // Existing waypoint
+                                }
+                            }
+
+                            // Now, save the route and its cross-references with correct IDs
+                            val routeId = db.routeDao().insertRoute(route)
+                            waypointsWithIds.forEach { waypoint ->
+                                db.routeDao().insertRouteWaypointCrossRef(RouteWaypointCrossRef(routeId, waypoint.id))
+                            }
+
+                            val finalRoute = route.copy(id = routeId)
+                            finalRoute.waypoints.clear()
+                            finalRoute.waypoints.addAll(waypointsWithIds)
+                            routes.add(finalRoute)
+
+                            runOnUiThread {
+                                Toast.makeText(this@MainActivity, "Route '${route.name}' saved", Toast.LENGTH_SHORT).show()
+                            }
+                        }
                     }
                 }
                 EDIT_ROUTE_REQUEST_CODE -> {
                     val updatedRoute = data.getSerializableExtra("new_route") as? Route
-                    updatedRoute?.let {
-                        val index = routes.indexOfFirst { r -> r.id == it.id }
-                        if (index != -1) {
-                            routes[index] = it
-                            saveData()
-                            Toast.makeText(this, "Route '${it.name}' updated", Toast.LENGTH_SHORT).show()
-                            // If the updated route is the one currently displayed, redraw it
-                            if (currentRoute?.id == it.id) {
-                                drawRouteOnMap(it.waypoints)
+                    updatedRoute?.let { route ->
+                        lifecycleScope.launch {
+                            db.routeDao().updateRoute(route)
+                            db.routeDao().deleteCrossRefsForRoute(route.id)
+                            route.waypoints.forEach { waypoint ->
+                                db.routeDao().insertRouteWaypointCrossRef(RouteWaypointCrossRef(route.id, waypoint.id))
+                            }
+
+                            val index = routes.indexOfFirst { r -> r.id == route.id }
+                            if (index != -1) {
+                                routes[index] = route
+                            }
+                            runOnUiThread {
+                                Toast.makeText(this@MainActivity, "Route '${route.name}' updated", Toast.LENGTH_SHORT).show()
+                                if (currentRoute?.id == route.id) {
+                                    drawRouteOnMap(route.waypoints)
+                                }
                             }
                         }
                     }
                 }
                 PICK_SKIN_FILE_REQUEST_CODE -> {
-                     data.data?.also { uri ->
+                    data.data?.also { uri ->
                         importSkinFromFile(uri)
                     }
                 }
