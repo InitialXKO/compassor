@@ -14,12 +14,12 @@ data class RouteWaypointCrossRef(
 data class RouteWithWaypoints(
     @Embedded val route: Route,
     @Relation(
-        parentColumn = "id",
-        entity = Waypoint::class,
+        parentColumn = "id", // Refers to the primary key of the Route entity
+        entityColumn = "id", // Refers to the primary key of the Waypoint entity
         associateBy = Junction(
             value = RouteWaypointCrossRef::class,
-            parentColumn = "routeId",
-            entityColumn = "waypointId"
+            parentColumn = "routeId", // Column in the junction table that points to the Route
+            entityColumn = "waypointId" // Column in the junction table that points to the Waypoint
         )
     )
     val waypoints: List<Waypoint>
