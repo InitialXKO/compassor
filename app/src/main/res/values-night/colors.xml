@@ -1,6 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- App Theme Colors - Night Mode -->
+    <!-- Material Design 3 Theme Colors - Dark Mode -->
+    <color name="md_theme_light_primary">#AEC6FF</color>
+    <color name="md_theme_light_onPrimary">#003062</color>
+    <color name="md_theme_light_primaryContainer">#00478A</color>
+    <color name="md_theme_light_onPrimaryContainer">#DDE1FF</color>
+    <color name="md_theme_light_secondary">#34D399</color>
+    <color name="md_theme_light_onSecondary">#00391F</color>
+    <color name="md_theme_light_secondaryContainer">#005231</color>
+    <color name="md_theme_light_onSecondaryContainer">#A7F3CA</color>
+    <color name="md_theme_light_tertiary">#C2B5FF</color>
+    <color name="md_theme_light_onTertiary">#4525A0</color>
+    <color name="md_theme_light_tertiaryContainer">#5D3BC7</color>
+    <color name="md_theme_light_onTertiaryContainer">#E9DDFF</color>
+    <color name="md_theme_light_error">#FFB4AB</color>
+    <color name="md_theme_light_onError">#690005</color>
+    <color name="md_theme_light_errorContainer">#93000A</color>
+    <color name="md_theme_light_onErrorContainer">#FFDAD6</color>
+    <color name="md_theme_light_background">#1C1B1F</color>
+    <color name="md_theme_light_onBackground">#E6E1E5</color>
+    <color name="md_theme_light_surface">#1C1B1F</color>
+    <color name="md_theme_light_onSurface">#E6E1E5</color>
+    <color name="md_theme_light_surfaceVariant">#49454F</color>
+    <color name="md_theme_light_onSurfaceVariant">#CAC4D0</color>
+    <color name="md_theme_light_outline">#938F99</color>
+    <color name="md_theme_light_outlineVariant">#49454F</color>
+    <color name="md_theme_light_scrim">#000000</color>
+    <color name="md_theme_light_inverseSurface">#E6E1E5</color>
+    <color name="md_theme_light_inverseOnSurface">#313033</color>
+    <color name="md_theme_light_inversePrimary">#1E3A8A</color>
+
+    <!-- Legacy Colors for Backward Compatibility -->
     <color name="primary">#60A5FA</color>
     <color name="primary_dark">#3B82F6</color>
     <color name="accent">#34D399</color>
@@ -13,7 +43,21 @@
     <color name="radar_line">#60A5FA</color>
     <color name="radar_text">#F9FAFB</color>
 
+    <!-- Status Colors -->
+    <color name="success">#34D399</color>
+    <color name="success_container">#005231</color>
+    <color name="warning">#FCD34D</color>
+    <color name="warning_container">#78350F</color>
+    <color name="info">#60A5FA</color>
+    <color name="info_container">#003062</color>
+
+    <!-- Surface Colors -->
+    <color name="surface_1">#2D3748</color>
+    <color name="surface_2">#1A202C</color>
+    <color name="surface_3">#0F1419</color>
+
     <!-- General UI Colors -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="transparent">#00000000</color>
 </resources>

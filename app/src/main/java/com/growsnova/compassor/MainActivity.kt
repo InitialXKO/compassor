@@ -27,6 +27,7 @@ import com.amap.api.services.core.PoiItem
 import com.amap.api.services.poisearch.PoiResult
 import com.amap.api.services.poisearch.PoiSearch
 import com.google.android.material.navigation.NavigationView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 
@@ -105,6 +106,10 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
         toolbar = findViewById(R.id.toolbar)
         setSupportActionBar(toolbar)
 
+        // Set up toolbar with proper navigation
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.setHomeAsUpIndicator(androidx.appcompat.R.drawable.abc_ic_ab_back_material)
+
         drawerLayout = findViewById(R.id.drawer_layout)
         navigationView = findViewById(R.id.nav_view)
 
@@ -121,6 +126,17 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
 
         mapView = findViewById(R.id.mapView)
         radarView = findViewById(R.id.radarView)
+
+        // Set up Floating Action Button
+        val fabQuickAction = findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.fabQuickAction)
+        fabQuickAction.setOnClickListener {
+            // Quick action: center map on current location
+            myCurrentLatLng?.let { latLng ->
+                aMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
+            } ?: run {
+                DialogUtils.showErrorToast(this, getString(R.string.location_unavailable))
+            }
+        }
 
         // 初始化地图
         mapView.onCreate(savedInstanceState)
@@ -176,7 +192,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                 if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
                     setupLocation()
                 } else {
-                    Toast.makeText(this, R.string.location_permission_denied, Toast.LENGTH_LONG).show()
+                    DialogUtils.showErrorToast(this, getString(R.string.location_permission_denied))
                 }
             }
         }
@@ -409,62 +425,48 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                             .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
                     )
                     waypointMarkers.add(marker)
-                    Toast.makeText(this@MainActivity, "收藏地点已保存: $name", Toast.LENGTH_SHORT).show()
+                    DialogUtils.showSuccessToast(this@MainActivity, "${getString(R.string.waypoint_saved, name)}")
                 }
             }
         }
     }
 
     private fun showSaveWaypointDialog(latLng: LatLng, waypointToEdit: Waypoint? = null, defaultName: String? = null) {
-        val editText = EditText(this)
-        editText.hint = getString(R.string.waypoint_name_hint)
-        if (waypointToEdit != null) {
-            editText.setText(waypointToEdit.name)
-        } else if (defaultName != null) {
-            editText.setText(defaultName)
-        }
-
-        val builder = AlertDialog.Builder(this)
-            .setTitle(if (waypointToEdit == null) "保存收藏地点" else "编辑收藏地点")
-            .setView(editText)
-            .setPositiveButton(R.string.save) { _, _ ->
-                val waypointName = editText.text.toString().trim()
-                if (waypointName.isNotEmpty()) {
-                    if (waypointToEdit == null) {
-                        addWaypoint(latLng, waypointName)
-                    } else {
-                        updateWaypoint(waypointToEdit, waypointName)
-                    }
+        val title = if (waypointToEdit == null) getString(R.string.save_location) else getString(R.string.edit_name)
+        val initialValue = waypointToEdit?.name ?: defaultName ?: ""
+        
+        DialogUtils.showInputDialog(
+            context = this,
+            title = title,
+            hint = getString(R.string.waypoint_name_hint),
+            initialValue = initialValue,
+            onPositive = { waypointName ->
+                if (waypointToEdit == null) {
+                    addWaypoint(latLng, waypointName)
                 } else {
-                    Toast.makeText(this, "地点名称不能为空", Toast.LENGTH_SHORT).show()
+                    updateWaypoint(waypointToEdit, waypointName)
                 }
             }
-            .setNegativeButton(R.string.cancel, null)
-
-        if (waypointToEdit != null) {
-            builder.setNeutralButton(R.string.delete) { _, _ ->
-                deleteWaypointSafely(waypointToEdit)
-            }
-        }
-
-        builder.show()
+        )
     }
 
     private fun showMapLongClickOptionsDialog(latLng: LatLng) {
-        val options = arrayOf("添加到收藏", "设为目的地")
-        AlertDialog.Builder(this)
-            .setTitle("选择操作")
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> reverseGeocode(latLng) { name ->
-                        showSaveWaypointDialog(latLng, defaultName = name)
-                    }
-                    1 -> reverseGeocode(latLng) { name ->
-                        setTargetLocation(latLng, name)
-                    }
+        val options = arrayOf(getString(R.string.save_location), getString(R.string.set_destination))
+        
+        DialogUtils.showOptionsDialog(
+            context = this,
+            title = getString(R.string.select_action),
+            options = options
+        ) { which ->
+            when (which) {
+                0 -> reverseGeocode(latLng) { name ->
+                    showSaveWaypointDialog(latLng, defaultName = name)
+                }
+                1 -> reverseGeocode(latLng) { name ->
+                    setTargetLocation(latLng, name)
                 }
             }
-            .show()
+        }
     }
 
     private fun updateWaypoint(waypoint: Waypoint, newName: String, newLatLng: LatLng? = null) {
@@ -479,7 +481,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
 
             if (potentialDuplicate != null) {
                 runOnUiThread {
-                    Toast.makeText(this@MainActivity, "附近已存在同名收藏地点，无法更新", Toast.LENGTH_SHORT).show()
+                    DialogUtils.showErrorToast(this@MainActivity, getString(R.string.duplicate_waypoint_error))
                 }
                 return@launch
             }
@@ -507,7 +509,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                         }
                     }
                 }
-                Toast.makeText(this@MainActivity, "收藏地点 '$oldName' 已更新为 '$newName'", Toast.LENGTH_SHORT).show()
+                DialogUtils.showSuccessToast(this@MainActivity, getString(R.string.waypoint_updated))
             }
         }
     }
@@ -620,7 +622,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                     routePolyline?.remove()
                     routePolyline = null
                 }
-                Toast.makeText(this@MainActivity, "路线已删除", Toast.LENGTH_SHORT).show()
+                DialogUtils.showSuccessToast(this@MainActivity, getString(R.string.route_deleted))
             }
         }
     }
@@ -712,7 +714,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                         showSaveWaypointDialog(latLng, defaultName = name)
                     }
                 } ?: run {
-                    Toast.makeText(this, "無法獲取當前位置", Toast.LENGTH_SHORT).show()
+                    DialogUtils.showErrorToast(this, getString(R.string.location_unavailable))
                 }
             }
             R.id.nav_manage_waypoints -> {
@@ -733,82 +735,92 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     }
 
     private fun showSearchDialog() {
-        val editText = EditText(this)
-        editText.hint = "输入搜索关键词"
-        AlertDialog.Builder(this)
-            .setTitle("搜索地点")
-            .setView(editText)
-            .setPositiveButton("搜索") { _, _ ->
-                val keyword = editText.text.toString().trim()
-                if (keyword.isNotEmpty()) {
-                    searchPOI(keyword)
-                }
+        DialogUtils.showInputDialog(
+            context = this,
+            title = getString(R.string.search_location),
+            hint = getString(R.string.search_hint),
+            onPositive = { keyword ->
+                searchPOI(keyword)
             }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+        )
     }
 
     private fun showWaypointManagementDialog() {
         val waypointDisplayInfo = waypoints.map { waypoint ->
             val routesContainingWaypoint = routes.filter { it.waypoints.contains(waypoint) }
             val routeNames = if (routesContainingWaypoint.isNotEmpty()) {
-                " (In routes: ${routesContainingWaypoint.joinToString { it.name }})"
+                getString(R.string.in_routes, routesContainingWaypoint.joinToString { it.name })
             } else {
                 ""
             }
             waypoint.name + routeNames
         }.toTypedArray()
 
-        AlertDialog.Builder(this)
-            .setTitle("管理收藏地点")
-            .setItems(waypointDisplayInfo) { _, which ->
-                showWaypointOptionsDialog(waypoints[which])
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+        DialogUtils.showOptionsDialog(
+            context = this,
+            title = getString(R.string.manage_waypoints_title),
+            options = waypointDisplayInfo
+        ) { which ->
+            showWaypointOptionsDialog(waypoints[which])
+        }
     }
 
     private fun showWaypointOptionsDialog(waypoint: Waypoint) {
-        val options = arrayOf("设为目的地", "编辑名称", "删除")
-        AlertDialog.Builder(this)
-            .setTitle(waypoint.name)
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> setTargetLocation(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
-                    1 -> showSaveWaypointDialog(LatLng(waypoint.latitude, waypoint.longitude), waypoint)
-                    2 -> {
-                        val routesContainingWaypoint = routes.filter { it.waypoints.contains(waypoint) }
-                        if (routesContainingWaypoint.isNotEmpty()) {
-                            val routeNames = routesContainingWaypoint.joinToString { it.name }
-                            AlertDialog.Builder(this)
-                                .setTitle("确认删除")
-                                .setMessage("该收藏地点正在被路线: $routeNames 使用。删除该地点将同时从这些路线中移除，并可能导致路线被删除。是否确认删除？")
-                                .setPositiveButton("确认") { _, _ ->
-                                    deleteWaypointSafely(waypoint)
-                                }
-                                .setNegativeButton("取消", null)
-                                .show()
-                        } else {
-                            deleteWaypointSafely(waypoint)
-                        }
+        val options = arrayOf(
+            getString(R.string.set_destination),
+            getString(R.string.edit_name),
+            getString(R.string.delete)
+        )
+        
+        DialogUtils.showOptionsDialog(
+            context = this,
+            title = waypoint.name,
+            options = options
+        ) { which ->
+            when (which) {
+                0 -> setTargetLocation(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
+                1 -> showSaveWaypointDialog(LatLng(waypoint.latitude, waypoint.longitude), waypoint)
+                2 -> {
+                    val routesContainingWaypoint = routes.filter { it.waypoints.contains(waypoint) }
+                    if (routesContainingWaypoint.isNotEmpty()) {
+                        val routeNames = routesContainingWaypoint.joinToString { it.name }
+                        DialogUtils.showConfirmationDialog(
+                            context = this,
+                            title = getString(R.string.confirm_delete),
+                            message = getString(R.string.confirm_delete_waypoint_message, routeNames),
+                            onPositive = {
+                                deleteWaypointSafely(waypoint)
+                            }
+                        )
+                    } else {
+                        deleteWaypointSafely(waypoint)
                     }
                 }
             }
-            .show()
+        }
     }
 
     private fun showSkinSelectionDialog() {
         val skinNames = arrayOf("Default", "Forest", "Ocean")
-        AlertDialog.Builder(this)
-            .setTitle("Select Skin")
-            .setItems(skinNames) { _, which ->
-                val selectedSkin = DefaultSkins.skins[which]
-                radarView.setSkin(selectedSkin)
-                saveSkinPreference(skinNames[which])
-            }
-            .setPositiveButton("Import Skin") { _, _ ->
+        
+        DialogUtils.showOptionsDialog(
+            context = this,
+            title = getString(R.string.select_skin),
+            options = skinNames
+        ) { which ->
+            val selectedSkin = DefaultSkins.skins[which]
+            radarView.setSkin(selectedSkin)
+            saveSkinPreference(skinNames[which])
+        }
+        
+        // Show import option as a separate dialog
+        MaterialAlertDialogBuilder(this)
+            .setTitle(getString(R.string.import_skin))
+            .setMessage(getString(R.string.import_skin_description))
+            .setPositiveButton(getString(R.string.import_skin)) { _, _ ->
                 openFilePicker()
             }
+            .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
@@ -942,7 +954,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                                 routes[index] = route
                             }
                             runOnUiThread {
-                                Toast.makeText(this@MainActivity, "Route '${route.name}' updated", Toast.LENGTH_SHORT).show()
+                                DialogUtils.showSuccessToast(this@MainActivity, getString(R.string.route_updated))
                                 if (currentRoute?.id == route.id) {
                                     drawRouteOnMap(route.waypoints)
                                 }
@@ -967,11 +979,11 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                 // Here you would typically save the skin to a list of custom skins
                 // For simplicity, we'll just apply it directly for now
                 radarView.setSkin(skin)
-                Toast.makeText(this, "Skin imported and applied", Toast.LENGTH_SHORT).show()
+                DialogUtils.showSuccessToast(this, getString(R.string.skin_imported))
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(this, "Failed to import skin", Toast.LENGTH_SHORT).show()
+            DialogUtils.showErrorToast(this, getString(R.string.skin_import_failed))
         }
     }
 

@@ -1,0 +1,126 @@
+package com.growsnova.compassor
+
+import android.content.Context
+import android.view.LayoutInflater
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
+
+/**
+ * Utility class for creating Material Design 3 compliant dialogs
+ */
+object DialogUtils {
+
+    /**
+     * Shows a Material Design 3 input dialog
+     */
+    fun showInputDialog(
+        context: Context,
+        title: String,
+        hint: String,
+        initialValue: String = "",
+        onPositive: (String) -> Unit,
+        onNegative: () -> Unit = {}
+    ) {
+        val view = LayoutInflater.from(context).inflate(R.layout.dialog_input, null)
+        val textInputLayout = view.findViewById<TextInputLayout>(R.id.textInputLayout)
+        val editText = view.findViewById<TextInputEditText>(R.id.editText)
+        
+        editText.setText(initialValue)
+        textInputLayout.hint = hint
+        
+        MaterialAlertDialogBuilder(context)
+            .setTitle(title)
+            .setView(view)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val input = editText.text.toString().trim()
+                if (input.isNotEmpty()) {
+                    onPositive(input)
+                }
+            }
+            .setNegativeButton(R.string.cancel) { _, _ ->
+                onNegative()
+            }
+            .show()
+    }
+
+    /**
+     * Shows a Material Design 3 options dialog
+     */
+    fun showOptionsDialog(
+        context: Context,
+        title: String,
+        options: Array<String>,
+        onOptionSelected: (Int) -> Unit
+    ) {
+        MaterialAlertDialogBuilder(context)
+            .setTitle(title)
+            .setItems(options) { _, which ->
+                onOptionSelected(which)
+            }
+            .show()
+    }
+
+    /**
+     * Shows a Material Design 3 confirmation dialog
+     */
+    fun showConfirmationDialog(
+        context: Context,
+        title: String,
+        message: String,
+        onPositive: () -> Unit,
+        onNegative: () -> Unit = {}
+    ) {
+        MaterialAlertDialogBuilder(context)
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton(R.string.confirm) { _, _ ->
+                onPositive()
+            }
+            .setNegativeButton(R.string.cancel) { _, _ ->
+                onNegative()
+            }
+            .show()
+    }
+
+    /**
+     * Shows a Material Design 3 info dialog
+     */
+    fun showInfoDialog(
+        context: Context,
+        title: String,
+        message: String,
+        onDismiss: () -> Unit = {}
+    ) {
+        MaterialAlertDialogBuilder(context)
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton(R.string.confirm) { _, _ ->
+                onDismiss()
+            }
+            .show()
+    }
+
+    /**
+     * Shows a simple toast message
+     */
+    fun showToast(context: Context, message: String, duration: Int = Toast.LENGTH_SHORT) {
+        Toast.makeText(context, message, duration).show()
+    }
+
+    /**
+     * Shows a success toast
+     */
+    fun showSuccessToast(context: Context, message: String) {
+        showToast(context, message)
+    }
+
+    /**
+     * Shows an error toast
+     */
+    fun showErrorToast(context: Context, message: String) {
+        showToast(context, message)
+    }
+}
