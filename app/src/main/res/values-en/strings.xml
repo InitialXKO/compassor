@@ -41,6 +41,7 @@
     <string name="location_unavailable">Unable to get current location</string>
     <string name="custom_location">Custom Location</string>
     <string name="search_location">Search Location</string>
+    <string name="search_results">Search Results</string>
     <string name="manage_waypoints_title">Manage Favorite Locations</string>
     <string name="in_routes"> (In routes: %s)</string>
     <string name="import_skin">Import Skin</string>

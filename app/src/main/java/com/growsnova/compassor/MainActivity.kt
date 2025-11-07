@@ -859,7 +859,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
         // 创建包含描述的选项列表
         val optionsWithDescriptions = skinNames.mapIndexed { index, name ->
             "${name} - ${skinDescriptions[index]}"
-        }
+        }.toTypedArray()
         
         DialogUtils.showOptionsDialog(
             context = this,

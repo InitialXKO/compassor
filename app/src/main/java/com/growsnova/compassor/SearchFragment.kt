@@ -51,7 +51,7 @@ class SearchFragment : Fragment(), PoiSearch.OnPoiSearchListener {
     ): View? {
         val view = inflater.inflate(R.layout.fragment_search, container, false)
         recyclerView = view.findViewById(R.id.searchResultsRecyclerView)
-        searchEditText = view.findViewById(R.id.searchEditText)
+        searchEditText = view.findViewById(R.id.editText)
         searchButton = view.findViewById(R.id.searchButton)
         clearHistoryButton = view.findViewById(R.id.clearHistoryButton)
         historyRecyclerView = view.findViewById(R.id.historyRecyclerView)
