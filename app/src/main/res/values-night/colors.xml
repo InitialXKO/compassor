@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Theme Colors - Night Mode -->
+    <color name="primary">#60A5FA</color>
+    <color name="primary_dark">#3B82F6</color>
+    <color name="accent">#34D399</color>
+    <color name="text_primary">#F9FAFB</color>
+    <color name="text_secondary">#D1D5DB</color>
+    <color name="background">#111827</color>
+
+    <!-- Radar Colors - Night Mode -->
+    <color name="radar_background">#1F2937</color>
+    <color name="radar_line">#60A5FA</color>
+    <color name="radar_text">#F9FAFB</color>
+
+    <!-- General UI Colors -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+</resources>
