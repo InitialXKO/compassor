@@ -1,5 +1,6 @@
 package com.growsnova.compassor
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -111,7 +112,13 @@ class CreateRouteActivity : AppCompatActivity() {
                         resultIntent.putExtra("new_route", newRoute)
                         resultIntent.putExtra("waypoints_wrapper", WaypointListWrapper(ArrayList(selectedWaypoints)))
                         setResult(RESULT_OK, resultIntent)
-                        finish()
+                        
+                        // Ask if user wants to start navigation for new routes
+                        if (routeToEdit == null) {
+                            askToStartNavigation(newRoute)
+                        } else {
+                            finish()
+                        }
                     } else {
                         Toast.makeText(this, getString(R.string.waypoint_name_empty), Toast.LENGTH_SHORT).show()
                     }
@@ -119,5 +126,23 @@ class CreateRouteActivity : AppCompatActivity() {
                 .setNegativeButton(getString(R.string.cancel), null)
                 .show()
         }
+    }
+
+    private fun askToStartNavigation(route: Route) {
+        android.app.AlertDialog.Builder(this)
+            .setTitle(getString(R.string.start_navigation))
+            .setMessage("是否开始导航路线: ${route.name}?")
+            .setPositiveButton(getString(R.string.confirm)) { _, _ ->
+                // Start navigation in MainActivity
+                val intent = Intent(this, MainActivity::class.java)
+                intent.putExtra("start_navigation_route", route)
+                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
+                startActivity(intent)
+                finish()
+            }
+            .setNegativeButton(getString(R.string.cancel)) { _, _ ->
+                finish()
+            }
+            .show()
     }
 }

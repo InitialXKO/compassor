@@ -41,6 +41,7 @@
     <string name="location_unavailable">无法获取当前位置</string>
     <string name="custom_location">自定义位置</string>
     <string name="search_location">搜索地点</string>
+    <string name="search_results">搜索结果</string>
     <string name="manage_waypoints_title">管理收藏地点</string>
     <string name="in_routes"> (在路线中: %s)</string>
     <string name="import_skin">导入皮肤</string>
