@@ -206,9 +206,11 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
         // 配置定位选项
         locationOption?.apply {
             locationMode = AMapLocationClientOption.AMapLocationMode.Hight_Accuracy
-            interval = 2000 // 定位间隔2秒
+            interval = 3000 // 定位间隔3秒，减少频率以提高稳定性
             isNeedAddress = true
             isOnceLocation = false
+            // 启用GPS传感器和WiFi定位混合模式
+            locationMode = AMapLocationClientOption.AMapLocationMode.Hight_Accuracy
         }
 
         // 设置定位参数
@@ -230,12 +232,29 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     override fun onLocationChanged(location: AMapLocation?) {
         location?.let {
             if (it.errorCode == 0) {
-                // 定位成功
-                myCurrentLatLng = LatLng(it.latitude, it.longitude)
+                // 定位成功，添加防抖尼处理
+                val newLatLng = LatLng(it.latitude, it.longitude)
+                
+                // 检查位置变化距离，只有移动超过一定距离才更新
+                val distance = FloatArray(1)
+                myCurrentLatLng?.let { current ->
+                    Location.distanceBetween(
+                        current.latitude, current.longitude,
+                        newLatLng.latitude, newLatLng.longitude,
+                        distance
+                    )
+                }
+                
+                // 只有距离变化超过5米或首次定位才更新UI
+                if (myCurrentLatLng == null || distance[0] > 5f || isFirstLocation) {
+                    myCurrentLatLng = newLatLng
 
-                // 第一次定位时移动相机
-                if (isFirstLocation) {
-                    aMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myCurrentLatLng, 15f))
+                    // 平滑移动相机而不是跳跃
+                    if (isFirstLocation) {
+                        aMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myCurrentLatLng!!, 15f))
+                    } else {
+                        aMap.animateCamera(CameraUpdateFactory.newLatLngZoom(myCurrentLatLng!!, 15f))
+                    }
                     isFirstLocation = false
                 }
 
@@ -517,12 +536,16 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     private fun deleteWaypointSafely(waypoint: Waypoint) {
         lifecycleScope.launch {
             val routesContainingWaypoint = routes.filter { route -> route.waypoints.any { it.id == waypoint.id } }
+            val affectedRoutes = mutableListOf<Route>()
+            
             for (route in routesContainingWaypoint) {
                 db.routeDao().deleteRouteWaypointCrossRef(RouteWaypointCrossRef(route.id, waypoint.id))
                 route.waypoints.removeIf { it.id == waypoint.id }
                 if (route.waypoints.size < 2) {
                     db.routeDao().deleteRoute(route)
                     routes.remove(route)
+                } else {
+                    affectedRoutes.add(route)
                 }
             }
 
@@ -533,7 +556,15 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                 val markerToRemove = waypointMarkers.find { it.position.latitude == waypoint.latitude && it.position.longitude == waypoint.longitude }
                 markerToRemove?.remove()
                 waypointMarkers.remove(markerToRemove)
-                Toast.makeText(this@MainActivity, "收藏地点已删除", Toast.LENGTH_SHORT).show()
+                
+                // 如果删除的收藏地点影响了当前导航的路线，重绘路线
+                if (affectedRoutes.any { it.id == currentRoute?.id }) {
+                    currentRoute?.let { currentRoute ->
+                        drawRouteOnMap(currentRoute.waypoints)
+                    }
+                }
+                
+                DialogUtils.showSuccessToast(this@MainActivity, getString(R.string.waypoint_deleted))
             }
         }
     }
@@ -555,7 +586,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
         val routeNames = routes.map { it.name }.toTypedArray()
 
         val builder = AlertDialog.Builder(this)
-            .setTitle("管理路线")
+            .setTitle(getString(R.string.manage_routes))
             .setItems(routeNames) { _, which ->
                 showRouteOptionsDialog(routes[which])
             }
@@ -569,6 +600,16 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
             }
             .setNegativeButton(R.string.cancel, null)
 
+        // 添加创建路线按钮
+        .setPositiveButton(getString(R.string.create_route)) { _, _ ->
+            val intent = android.content.Intent(this, CreateRouteActivity::class.java)
+            intent.putExtra("waypoints_wrapper", WaypointListWrapper(ArrayList(waypoints)))
+            myCurrentLatLng?.let {
+                intent.putExtra("current_latlng", it)
+            }
+            startActivityForResult(intent, CREATE_ROUTE_REQUEST_CODE)
+        }
+
         builder.show()
     }
 
@@ -578,18 +619,26 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
         val firstWaypoint = route.waypoints[0]
         setTargetLocation(LatLng(firstWaypoint.latitude, firstWaypoint.longitude), firstWaypoint.name)
         drawRouteOnMap(route.waypoints)
-        Toast.makeText(this, "开始路线导航: ${route.name}", Toast.LENGTH_SHORT).show()
+        DialogUtils.showSuccessToast(this, getString(R.string.navigation_started, route.name))
     }
 
     private fun showRouteOptionsDialog(route: Route) {
-        val options = arrayOf("开始导航", "编辑", "删除", "设为目的地")
-        AlertDialog.Builder(this)
-            .setTitle(route.name)
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> startRouteNavigation(route)
-                    1 -> {
-                        val intent = android.content.Intent(this, CreateRouteActivity::class.java)
+        val options = arrayOf(
+            getString(R.string.start_navigation),
+            getString(R.string.edit_route),
+            getString(R.string.delete_route),
+            getString(R.string.set_destination)
+        )
+        
+        DialogUtils.showOptionsDialog(
+            context = this,
+            title = route.name,
+            options = options
+        ) { which ->
+            when (which) {
+                0 -> startRouteNavigation(route)
+                1 -> {
+                    val intent = android.content.Intent(this, CreateRouteActivity::class.java)
                         intent.putExtra("route_to_edit", route)
                         intent.putExtra("waypoints_wrapper", WaypointListWrapper(ArrayList(waypoints)))
                         myCurrentLatLng?.let {
@@ -597,16 +646,15 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                         }
                         startActivityForResult(intent, EDIT_ROUTE_REQUEST_CODE)
                     }
-                    2 -> deleteRoute(route)
-                    3 -> {
-                        if (route.waypoints.isNotEmpty()) {
-                            val waypoint = route.waypoints[0]
-                            setTargetLocation(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
-                        }
+                2 -> deleteRoute(route)
+                3 -> {
+                    if (route.waypoints.isNotEmpty()) {
+                        val waypoint = route.waypoints[0]
+                        setTargetLocation(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
                     }
                 }
             }
-            .show()
+        }
     }
 
     private fun deleteRoute(route: Route) {
@@ -802,18 +850,33 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
 
     private fun showSkinSelectionDialog() {
         val skinNames = arrayOf("Default", "Forest", "Ocean")
+        val skinDescriptions = arrayOf(
+            "默认蓝色主题",
+            "森林绿色主题", 
+            "海洋蓝色主题"
+        )
+        
+        // 创建包含描述的选项列表
+        val optionsWithDescriptions = skinNames.mapIndexed { index, name ->
+            "${name} - ${skinDescriptions[index]}"
+        }
         
         DialogUtils.showOptionsDialog(
             context = this,
             title = getString(R.string.select_skin),
-            options = skinNames
+            options = optionsWithDescriptions
         ) { which ->
-            val selectedSkin = DefaultSkins.skins[which]
+            val skinIndex = which % 3 // 确保索引在范围内
+            val selectedSkin = DefaultSkins.skins[skinIndex]
             radarView.setSkin(selectedSkin)
-            saveSkinPreference(skinNames[which])
+            saveSkinPreference(skinNames[skinIndex])
+            
+            // 显示导入选项的单独对话框
+            showImportSkinDialog()
         }
-        
-        // Show import option as a separate dialog
+    }
+    
+    private fun showImportSkinDialog() {
         MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.import_skin))
             .setMessage(getString(R.string.import_skin_description))

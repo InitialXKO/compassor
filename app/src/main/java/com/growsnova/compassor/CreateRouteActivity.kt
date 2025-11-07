@@ -21,7 +21,7 @@ class CreateRouteActivity : AppCompatActivity() {
 
         val routeToEdit = intent.getSerializableExtra("route_to_edit") as? Route
         if (routeToEdit != null) {
-            title = "Edit Route"
+            title = getString(R.string.edit_route)
             viewModel.selectedWaypoints.value = routeToEdit.waypoints
         }
 
@@ -36,9 +36,9 @@ class CreateRouteActivity : AppCompatActivity() {
 
         com.google.android.material.tabs.TabLayoutMediator(tabLayout, viewPager) { tab, position ->
             tab.text = when (position) {
-                0 -> "Saved"
-                1 -> "Nearby"
-                else -> "Search"
+                0 -> getString(R.string.saved_waypoints)
+                1 -> getString(R.string.nearby_pois)
+                else -> getString(R.string.search_location)
             }
         }.attach()
 
@@ -59,7 +59,14 @@ class CreateRouteActivity : AppCompatActivity() {
             }
 
             override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
-                viewModel.moveWaypoint(viewHolder.adapterPosition, target.adapterPosition)
+                val fromPosition = viewHolder.adapterPosition
+                val toPosition = target.adapterPosition
+                viewModel.moveWaypoint(fromPosition, toPosition)
+                
+                // 添加滑动反馈
+                recyclerView.post {
+                    adapter.notifyItemMoved(fromPosition, toPosition)
+                }
                 return true
             }
 
@@ -73,25 +80,25 @@ class CreateRouteActivity : AppCompatActivity() {
         saveRouteButton.setOnClickListener {
             val selectedWaypoints = viewModel.selectedWaypoints.value
             if (selectedWaypoints.isNullOrEmpty() || selectedWaypoints.size < 2) {
-                Toast.makeText(this, "Please select at least two waypoints", Toast.LENGTH_SHORT).show()
+                DialogUtils.showErrorToast(this, "需要至少选择2个收藏地点来保存路线")
                 return@setOnClickListener
             }
 
             val editText = android.widget.EditText(this)
-            editText.hint = "Enter route name"
+            editText.hint = getString(R.string.route_name_hint)
 
             // If editing, pre-fill the existing route name
             val routeToEdit = intent.getSerializableExtra("route_to_edit") as? Route
             if (routeToEdit != null) {
                 editText.setText(routeToEdit.name)
             } else if (selectedWaypoints.size >= 2) {
-                editText.setText("${selectedWaypoints.first().name} to ${selectedWaypoints.last().name}")
+                editText.setText(getString(R.string.save_route_hint, selectedWaypoints.first().name, selectedWaypoints.last().name))
             }
 
             android.app.AlertDialog.Builder(this)
-                .setTitle(if (routeToEdit == null) "Save Route" else "Update Route")
+                .setTitle(if (routeToEdit == null) getString(R.string.create_route) else getString(R.string.edit_route))
                 .setView(editText)
-                .setPositiveButton("Save") { _, _ ->
+                .setPositiveButton(getString(R.string.save)) { _, _ ->
                     val routeName = editText.text.toString().trim()
                     if (routeName.isNotEmpty()) {
                         val newRoute = Route(
@@ -106,10 +113,10 @@ class CreateRouteActivity : AppCompatActivity() {
                         setResult(RESULT_OK, resultIntent)
                         finish()
                     } else {
-                        Toast.makeText(this, "Route name cannot be empty", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, getString(R.string.waypoint_name_empty), Toast.LENGTH_SHORT).show()
                     }
                 }
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(getString(R.string.cancel), null)
                 .show()
         }
     }

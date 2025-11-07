@@ -47,6 +47,7 @@
     <string name="select_skin">选择皮肤</string>
     <string name="confirm">确认</string>
     <string name="selected_waypoints">已选择的收藏地点</string>
+    <string name="saved_waypoints">已保存的收藏地点</string>
     <string name="save_route">保存路线</string>
     <string name="no_waypoints_saved">暂无保存的收藏地点</string>
     <string name="add_first_waypoint">添加第一个收藏地点</string>
@@ -70,4 +71,10 @@
     <string name="skin_imported">皮肤已导入并应用</string>
     <string name="skin_import_failed">皮肤导入失败</string>
     <string name="route_updated">路线已更新</string>
+    <string name="start_navigation">开始导航</string>
+    <string name="edit_route">编辑路线</string>
+    <string name="delete_route">删除路线</string>
+    <string name="navigation_started">开始路线导航: %s</string>
+    <string name="need_at_least_two_waypoints">需要至少选择2个收藏地点来保存路线</string>
+    <string name="save_route_hint">从 %1$s 到 %2$s</string>
 </resources>
