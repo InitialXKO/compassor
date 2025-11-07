@@ -531,6 +531,14 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                 val markerToRemove = waypointMarkers.find { it.position.latitude == waypoint.latitude && it.position.longitude == waypoint.longitude }
                 markerToRemove?.remove()
                 waypointMarkers.remove(markerToRemove)
+
+                if (routesContainingWaypoint.any { it.id == currentRoute?.id }) {
+                    currentRoute?.let { route ->
+                        route.waypoints.removeIf { it.id == waypoint.id }
+                        drawRouteOnMap(route.waypoints)
+                    }
+                }
+
                 Toast.makeText(this@MainActivity, "收藏地点已删除", Toast.LENGTH_SHORT).show()
             }
         }
@@ -659,6 +667,9 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
         super.onResume()
         mapView.onResume()
         locationClient?.startLocation()
+        myCurrentLatLng?.let {
+            aMap.moveCamera(CameraUpdateFactory.newLatLngZoom(it, 15f))
+        }
     }
 
     override fun onPause() {
@@ -922,7 +933,14 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                             routes.add(finalRoute)
 
                             runOnUiThread {
-                                Toast.makeText(this@MainActivity, "Route '${route.name}' saved", Toast.LENGTH_SHORT).show()
+                                AlertDialog.Builder(this@MainActivity)
+                                    .setTitle("Route Saved")
+                                    .setMessage("Route '${route.name}' has been saved. Do you want to start navigation now?")
+                                    .setPositiveButton("Yes") { _, _ ->
+                                        startRouteNavigation(finalRoute)
+                                    }
+                                    .setNegativeButton("No", null)
+                                    .show()
                             }
                         }
                     }

@@ -23,9 +23,16 @@ class RadarCompassView @JvmOverloads constructor(
     private var myLocation: LatLng = LatLng(0.0, 0.0)
     private var targetLocation: LatLng = LatLng(0.0, 0.0)
     private var distance: Float = 0.0f
-    private var bearing: Float = 0.0f // 目标方位角
-    private var deviceAzimuth: Float = 0.0f // 设备朝向角
+    private var bearing: Float = 0.0f // Smoothed bearing
+    private var targetBearing: Float = 0.0f // Actual bearing
+    private var deviceAzimuth: Float = 0.0f // Smoothed device azimuth
+    private var targetDeviceAzimuth: Float = 0.0f // Actual device azimuth
+    private var isFirstUpdate = true
 
+    companion object {
+        private const val SMOOTHING_FACTOR = 0.2f
+        private const val ANIMATION_THRESHOLD = 0.1f
+    }
     // 传感器
     private val sensorManager: SensorManager =
         context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -169,11 +176,16 @@ class RadarCompassView @JvmOverloads constructor(
             // 计算旋转矩阵和方向
             if (SensorManager.getRotationMatrix(rotationMatrix, null, gravity, geomagnetic)) {
                 SensorManager.getOrientation(rotationMatrix, orientation)
-                deviceAzimuth = Math.toDegrees(orientation[0].toDouble()).toFloat()
-                if (deviceAzimuth < 0) {
-                    deviceAzimuth += 360f
+                var azimuth = Math.toDegrees(orientation[0].toDouble()).toFloat()
+                if (azimuth < 0) {
+                    azimuth += 360f
                 }
-                invalidate() // 触发重绘
+                targetDeviceAzimuth = azimuth
+
+                if (isFirstUpdate) {
+                    deviceAzimuth = targetDeviceAzimuth
+                    isFirstUpdate = false
+                }
             }
         }
     }
@@ -186,8 +198,7 @@ class RadarCompassView @JvmOverloads constructor(
         this.myLocation = myLoc
         this.targetLocation = targetLoc
         this.distance = calculateDistance(myLoc, targetLoc)
-        this.bearing = calculateBearing(myLoc, targetLoc)
-        invalidate() // 触发重绘
+        this.targetBearing = calculateBearing(myLoc, targetLoc)
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -196,6 +207,10 @@ class RadarCompassView @JvmOverloads constructor(
         val centerX = width / 2f
         val centerY = height / 2f
         val radius = minOf(centerX, centerY) * 0.7f
+
+        // Smoothly update the bearing and azimuth
+        deviceAzimuth = smoothAngle(deviceAzimuth, targetDeviceAzimuth)
+        bearing = smoothAngle(bearing, targetBearing)
 
         // 1. 绘制背景
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), backgroundPaint)
@@ -221,6 +236,21 @@ class RadarCompassView @JvmOverloads constructor(
 
         // 7. 显示距离和方位信息
         drawInfoPanel(canvas, centerX, centerY, radius, relativeBearing)
+
+        if (Math.abs(deviceAzimuth - targetDeviceAzimuth) > ANIMATION_THRESHOLD ||
+            Math.abs(bearing - targetBearing) > ANIMATION_THRESHOLD) {
+            invalidate()
+        }
+    }
+
+    private fun smoothAngle(current: Float, target: Float): Float {
+        val delta = target - current
+        val shortestAngle = when {
+            delta > 180 -> delta - 360
+            delta < -180 -> delta + 360
+            else -> delta
+        }
+        return current + SMOOTHING_FACTOR * shortestAngle
     }
 
     private fun drawCompassRing(canvas: Canvas, centerX: Float, centerY: Float, radius: Float) {

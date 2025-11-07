@@ -51,20 +51,60 @@ class CreateRouteActivity : AppCompatActivity() {
             adapter.updateWaypoints(waypoints)
         }
 
-        val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.Callback() {
-            override fun getMovementFlags(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
-                val dragFlags = ItemTouchHelper.UP or ItemTouchHelper.DOWN
-                val swipeFlags = ItemTouchHelper.START or ItemTouchHelper.END
-                return makeMovementFlags(dragFlags, swipeFlags)
-            }
+        val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
+            ItemTouchHelper.UP or ItemTouchHelper.DOWN,
+            ItemTouchHelper.START or ItemTouchHelper.END
+        ) {
+            private val deleteIcon = androidx.core.content.ContextCompat.getDrawable(this@CreateRouteActivity, R.drawable.ic_delete)
+            private val background = android.graphics.drawable.ColorDrawable(android.graphics.Color.RED)
 
-            override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
+            override fun onMove(
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                target: RecyclerView.ViewHolder
+            ): Boolean {
                 viewModel.moveWaypoint(viewHolder.adapterPosition, target.adapterPosition)
                 return true
             }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 viewModel.removeWaypoint(adapter.getWaypointAt(viewHolder.adapterPosition))
+            }
+
+            override fun onChildDraw(
+                c: android.graphics.Canvas,
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                dX: Float,
+                dY: Float,
+                actionState: Int,
+                isCurrentlyActive: Boolean
+            ) {
+                super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
+                val itemView = viewHolder.itemView
+                val iconMargin = (itemView.height - deleteIcon!!.intrinsicHeight) / 2
+                val iconTop = itemView.top + (itemView.height - deleteIcon.intrinsicHeight) / 2
+                val iconBottom = iconTop + deleteIcon.intrinsicHeight
+
+                if (dX > 0) { // Swiping to the right
+                    val iconLeft = itemView.left + iconMargin
+                    val iconRight = itemView.left + iconMargin + deleteIcon.intrinsicWidth
+                    deleteIcon.setBounds(iconLeft, iconTop, iconRight, iconBottom)
+                    background.setBounds(
+                        itemView.left, itemView.top,
+                        itemView.left + dX.toInt(), itemView.bottom
+                    )
+                } else if (dX < 0) { // Swiping to the left
+                    val iconLeft = itemView.right - iconMargin - deleteIcon.intrinsicWidth
+                    val iconRight = itemView.right - iconMargin
+                    deleteIcon.setBounds(iconLeft, iconTop, iconRight, iconBottom)
+                    background.setBounds(
+                        itemView.right + dX.toInt(), itemView.top,
+                        itemView.right, itemView.bottom
+                    )
+                }
+                background.draw(c)
+                deleteIcon.draw(c)
             }
         })
         itemTouchHelper.attachToRecyclerView(selectedWaypointsRecyclerView)

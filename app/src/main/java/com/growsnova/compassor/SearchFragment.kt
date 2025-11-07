@@ -141,8 +141,11 @@ class SearchFragment : Fragment(), PoiSearch.OnPoiSearchListener {
 
     private fun saveSearchHistory(query: String) {
         lifecycleScope.launch {
-            db.searchHistoryDao().insert(SearchHistory(query = query))
-            loadSearchHistory()
+            // Avoid saving duplicate searches
+            if (searchHistories.none { it.query.equals(query, ignoreCase = true) }) {
+                db.searchHistoryDao().insert(SearchHistory(query = query))
+                loadSearchHistory()
+            }
         }
     }
 
