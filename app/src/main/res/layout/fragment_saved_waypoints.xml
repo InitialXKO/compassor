@@ -80,7 +80,7 @@
                 android:layout_height="64dp"
                 android:src="@android:drawable/ic_menu_mylocation"
                 android:alpha="0.6"
-                android:tint="?attr/colorOnSurfaceVariant" />
+                app:tint="?attr/colorOnSurfaceVariant" />
 
             <TextView
                 android:layout_width="wrap_content"
