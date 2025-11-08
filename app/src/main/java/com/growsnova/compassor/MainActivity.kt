@@ -1,10 +1,14 @@
 package com.growsnova.compassor
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.os.Bundle
+import android.os.Looper
 import android.util.Log
 import android.widget.Button
 import android.widget.EditText
@@ -17,11 +21,9 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.amap.api.location.AMapLocation
 import com.amap.api.location.AMapLocationClient
-import com.amap.api.location.AMapLocationClientOption
-import com.amap.api.location.AMapLocationListener
 import com.amap.api.maps.AMap
+import com.amap.api.maps.LocationSource
 import com.amap.api.maps.CameraUpdateFactory
 import com.amap.api.maps.MapView
 import com.amap.api.maps.model.*
@@ -34,7 +36,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 
-class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.OnNavigationItemSelectedListener {
+class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
 
     // 视图组件
     private lateinit var mapView: MapView
@@ -45,10 +47,23 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     private lateinit var toolbar: androidx.appcompat.widget.Toolbar
 
     // 定位组件
-    private var locationClient: AMapLocationClient? = null
-    private var locationOption: AMapLocationClientOption? = null
+    private var locationManager: LocationManager? = null
+    private var isRequestingLocationUpdates = false
     private var myCurrentLatLng: LatLng? = null
     private var isFirstLocation = true
+    private val systemLocationListener = object : LocationListener {
+        override fun onLocationChanged(location: Location) {
+            handleLocationUpdate(location)
+        }
+
+        @Suppress("DEPRECATION")
+        override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+
+        override fun onProviderEnabled(provider: String) {}
+
+        override fun onProviderDisabled(provider: String) {}
+    }
+    private var mapLocationListener: LocationSource.OnLocationChangedListener? = null
 
     // POI搜索
     @Suppress("DEPRECATION")
@@ -162,6 +177,15 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
         // 初始化地图
         mapView.onCreate(savedInstanceState)
         aMap = mapView.map
+        aMap.setLocationSource(object : LocationSource {
+            override fun activate(listener: LocationSource.OnLocationChangedListener) {
+                mapLocationListener = listener
+            }
+
+            override fun deactivate() {
+                mapLocationListener = null
+            }
+        })
 
         // 地图UI设置
         aMap.uiSettings.isZoomControlsEnabled = true
@@ -220,111 +244,131 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     }
 
     private fun setupLocation() {
-        // 初始化定位客户端
-        locationClient = AMapLocationClient(applicationContext)
-        locationOption = AMapLocationClientOption()
-
-        // 配置定位选项
-        locationOption?.apply {
-            locationMode = AMapLocationClientOption.AMapLocationMode.Hight_Accuracy
-            interval = 3000 // 定位间隔3秒，减少频率以提高稳定性
-            isNeedAddress = true
-            isOnceLocation = false
-            // 启用GPS传感器和WiFi定位混合模式
-            locationMode = AMapLocationClientOption.AMapLocationMode.Hight_Accuracy
+        if (locationManager == null) {
+            locationManager = getSystemService(Context.LOCATION_SERVICE) as? LocationManager
         }
 
-        // 设置定位参数
-        locationClient?.setLocationOption(locationOption)
-        locationClient?.setLocationListener(this)
-
-        // 启动定位
-        locationClient?.startLocation()
-
-        // 显示我的位置图层
-        aMap.isMyLocationEnabled = true
         aMap.myLocationStyle = MyLocationStyle().apply {
             myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE_NO_CENTER)
             strokeColor(Color.BLUE)
             radiusFillColor(Color.argb(50, 0, 0, 255))
         }
+        aMap.isMyLocationEnabled = true
+
+        startLocationUpdates()
     }
 
-    override fun onLocationChanged(location: AMapLocation?) {
-        location?.let {
-            if (it.errorCode == 0) {
-                // 定位成功，添加防抖尼处理
-                val newLatLng = LatLng(it.latitude, it.longitude)
-                
-                // 检查位置变化距离，只有移动超过一定距离才更新
-                val distance = FloatArray(1)
-                myCurrentLatLng?.let { current ->
-                    Location.distanceBetween(
-                        current.latitude, current.longitude,
-                        newLatLng.latitude, newLatLng.longitude,
-                        distance
-                    )
-                }
-                
-                // 只有距离变化超过5米或首次定位才更新UI
-                if (myCurrentLatLng == null || distance[0] > 5f || isFirstLocation) {
-                    myCurrentLatLng = newLatLng
+    private fun startLocationUpdates() {
+        if (isRequestingLocationUpdates) {
+            return
+        }
 
-                    // 平滑移动相机而不是跳跃
-                    if (isFirstLocation) {
-                        aMap.moveCamera(CameraUpdateFactory.newLatLngZoom(myCurrentLatLng!!, 15f))
+        val manager = locationManager ?: return
+        val hasFinePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val hasCoarsePermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (!hasFinePermission && !hasCoarsePermission) {
+            return
+        }
+
+        try {
+            val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
+            var requested = false
+            providers.forEach { provider ->
+                if (manager.isProviderEnabled(provider)) {
+                    manager.requestLocationUpdates(provider, 3000L, 5f, systemLocationListener, Looper.getMainLooper())
+                    manager.getLastKnownLocation(provider)?.let { handleLocationUpdate(it) }
+                    requested = true
+                }
+            }
+
+            if (!requested) {
+                DialogUtils.showErrorToast(this, getString(R.string.location_unavailable))
+            } else {
+                isRequestingLocationUpdates = true
+            }
+        } catch (ex: SecurityException) {
+            Log.e(TAG, "Failed to request location updates", ex)
+        }
+    }
+
+    private fun stopLocationUpdates() {
+        if (!isRequestingLocationUpdates) {
+            return
+        }
+        try {
+            locationManager?.removeUpdates(systemLocationListener)
+        } catch (ex: SecurityException) {
+            Log.e(TAG, "Failed to remove location updates", ex)
+        } finally {
+            isRequestingLocationUpdates = false
+        }
+    }
+
+    private fun handleLocationUpdate(location: Location) {
+        mapLocationListener?.onLocationChanged(location)
+        val newLatLng = LatLng(location.latitude, location.longitude)
+
+        // 检查位置变化距离，只有移动超过一定距离才更新
+        val distance = FloatArray(1)
+        myCurrentLatLng?.let { current ->
+            Location.distanceBetween(
+                current.latitude, current.longitude,
+                newLatLng.latitude, newLatLng.longitude,
+                distance
+            )
+        }
+
+        // 只有距离变化超过5米或首次定位才更新UI
+        if (myCurrentLatLng == null || distance[0] > 5f || isFirstLocation) {
+            myCurrentLatLng = newLatLng
+
+            if (isFirstLocation) {
+                aMap.moveCamera(CameraUpdateFactory.newLatLngZoom(newLatLng, 15f))
+            } else {
+                aMap.animateCamera(CameraUpdateFactory.newLatLngZoom(newLatLng, 15f))
+            }
+            isFirstLocation = false
+        }
+
+        // 更新雷达视图
+        targetLatLng?.let { target ->
+            myCurrentLatLng?.let { current ->
+                radarView.updateTarget(current, target)
+            }
+        }
+
+        // 检查是否在路线导航中
+        currentRoute?.let { route ->
+            if (currentWaypointIndex != -1) {
+                val currentTargetWaypoint = route.waypoints[currentWaypointIndex]
+                val distanceToWaypoint = FloatArray(1)
+                Location.distanceBetween(
+                    newLatLng.latitude, newLatLng.longitude,
+                    currentTargetWaypoint.latitude, currentTargetWaypoint.longitude,
+                    distanceToWaypoint
+                )
+
+                if (distanceToWaypoint[0] < 20) { // 20米阈值
+                    currentWaypointIndex++
+                    if (currentWaypointIndex < route.waypoints.size) {
+                        val nextWaypoint = route.waypoints[currentWaypointIndex]
+                        setTargetLocation(LatLng(nextWaypoint.latitude, nextWaypoint.longitude), nextWaypoint.name)
+                        Toast.makeText(this, "已到达地点，前往下一个: ${nextWaypoint.name}", Toast.LENGTH_SHORT).show()
                     } else {
-                        aMap.animateCamera(CameraUpdateFactory.newLatLngZoom(myCurrentLatLng!!, 15f))
-                    }
-                    isFirstLocation = false
-                }
-
-                // 更新雷达视图
-                targetLatLng?.let { target ->
-                    radarView.updateTarget(myCurrentLatLng!!, target)
-                }
-
-                // 检查是否在路线导航中
-                currentRoute?.let { route ->
-                    if (currentWaypointIndex != -1) {
-                        val currentTargetWaypoint = route.waypoints[currentWaypointIndex]
-                        val distanceToWaypoint = FloatArray(1)
-                        Location.distanceBetween(
-                            myCurrentLatLng!!.latitude, myCurrentLatLng!!.longitude,
-                            currentTargetWaypoint.latitude, currentTargetWaypoint.longitude,
-                            distanceToWaypoint
-                        )
-
-                        if (distanceToWaypoint[0] < 20) { // 20米阈值
-                            currentWaypointIndex++
-                            if (currentWaypointIndex < route.waypoints.size) {
-                                val nextWaypoint = route.waypoints[currentWaypointIndex]
-                                setTargetLocation(LatLng(nextWaypoint.latitude, nextWaypoint.longitude), nextWaypoint.name)
-                                Toast.makeText(this, "已到达地点，前往下一个: ${nextWaypoint.name}", Toast.LENGTH_SHORT).show()
-                            } else {
-                                if (route.isLooping) {
-                                    currentWaypointIndex = 0
-                                    val firstWaypoint = route.waypoints[0]
-                                    setTargetLocation(LatLng(firstWaypoint.latitude, firstWaypoint.longitude), firstWaypoint.name)
-                                    Toast.makeText(this, "路线循环，返回起点: ${firstWaypoint.name}", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    // 路线结束
-                                    Toast.makeText(this, "已完成路线: ${route.name}", Toast.LENGTH_SHORT).show()
-                                    currentRoute = null
-                                    currentWaypointIndex = -1
-                                    routePolyline?.remove()
-                                    routePolyline = null
-                                }
-                            }
+                        if (route.isLooping) {
+                            currentWaypointIndex = 0
+                            val firstWaypoint = route.waypoints[0]
+                            setTargetLocation(LatLng(firstWaypoint.latitude, firstWaypoint.longitude), firstWaypoint.name)
+                            Toast.makeText(this, "路线循环，返回起点: ${firstWaypoint.name}", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(this, "已完成路线: ${route.name}", Toast.LENGTH_SHORT).show()
+                            currentRoute = null
+                            currentWaypointIndex = -1
+                            routePolyline?.remove()
+                            routePolyline = null
                         }
                     }
                 }
-            } else {
-                Toast.makeText(
-                    this,
-                    "定位失败: ${it.errorCode} - ${it.errorInfo}",
-                    Toast.LENGTH_SHORT
-                ).show()
             }
         }
     }
@@ -742,20 +786,20 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     override fun onResume() {
         super.onResume()
         mapView.onResume()
-        locationClient?.startLocation()
+        startLocationUpdates()
     }
 
     override fun onPause() {
         super.onPause()
         mapView.onPause()
-        locationClient?.stopLocation()
+        stopLocationUpdates()
     }
 
     override fun onDestroy() {
         super.onDestroy()
         mapView.onDestroy()
-        locationClient?.onDestroy()
-        locationClient = null
+        stopLocationUpdates()
+        locationManager = null
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -1056,6 +1100,7 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
 
     private fun handleCreateRouteResult(data: android.content.Intent) {
         val newRoute = data.getSerializableExtraCompat<Route>("new_route") ?: return
+        val shouldStartNavigation = data.getBooleanExtra("start_navigation", false)
         lifecycleScope.launch {
             val waypointsWithIds = mutableListOf<Waypoint>()
             // First, save any new waypoints to get their database IDs
@@ -1093,6 +1138,9 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
 
             runOnUiThread {
                 Toast.makeText(this@MainActivity, "Route '${newRoute.name}' saved", Toast.LENGTH_SHORT).show()
+                if (shouldStartNavigation) {
+                    startRouteNavigation(finalRoute)
+                }
             }
         }
     }

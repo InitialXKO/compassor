@@ -145,17 +145,16 @@ class CreateRouteActivity : AppCompatActivity() {
                             waypoints = selectedWaypoints,
                             isLooping = existingRoute?.isLooping ?: false
                         )
-                        
-                        // Set result first to ensure save happens
-                        val resultIntent = android.content.Intent()
-                        resultIntent.putExtra("new_route", newRoute)
-                        resultIntent.putExtra("waypoints_wrapper", WaypointListWrapper(ArrayList(selectedWaypoints)))
-                        setResult(RESULT_OK, resultIntent)
-                        
-                        // Then ask if user wants to start navigation for new routes
+
+                        val resultIntent = Intent().apply {
+                            putExtra("new_route", newRoute)
+                            putExtra("waypoints_wrapper", WaypointListWrapper(ArrayList(selectedWaypoints)))
+                        }
+
                         if (existingRoute == null) {
-                            askToStartNavigation(newRoute)
+                            askToStartNavigation(newRoute, resultIntent)
                         } else {
+                            setResult(RESULT_OK, resultIntent)
                             finish()
                         }
                     } else {
@@ -167,19 +166,21 @@ class CreateRouteActivity : AppCompatActivity() {
         }
     }
 
-    private fun askToStartNavigation(route: Route) {
+    private fun askToStartNavigation(route: Route, resultIntent: Intent) {
         android.app.AlertDialog.Builder(this)
             .setTitle(getString(R.string.start_navigation))
             .setMessage("是否开始导航路线: ${route.name}?")
             .setPositiveButton(getString(R.string.confirm)) { _, _ ->
-                // Start navigation in MainActivity
-                val intent = Intent(this, MainActivity::class.java)
-                intent.putExtra("start_navigation_route", route)
-                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-                startActivity(intent)
+                resultIntent.putExtra("start_navigation", true)
+                setResult(RESULT_OK, resultIntent)
                 finish()
             }
             .setNegativeButton(getString(R.string.cancel)) { _, _ ->
+                setResult(RESULT_OK, resultIntent)
+                finish()
+            }
+            .setOnCancelListener {
+                setResult(RESULT_OK, resultIntent)
                 finish()
             }
             .show()

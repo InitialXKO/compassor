@@ -33,6 +33,7 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
     private lateinit var poiSearch: PoiSearch
     private var poiItems: MutableList<PoiItem> = mutableListOf()
     private lateinit var adapter: PoiListAdapter
+    private var pendingQuery: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -74,6 +75,12 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
 
         searchButton.setOnClickListener {
             performSearch()
+        }
+
+        pendingQuery?.let {
+            searchEditText.setText(it)
+            performSearch()
+            pendingQuery = null
         }
 
         return view
@@ -134,8 +141,12 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
     }
     
     fun setSearchQuery(query: String) {
-        searchEditText.setText(query)
-        performSearch()
+        if (this::searchEditText.isInitialized) {
+            searchEditText.setText(query)
+            performSearch()
+        } else {
+            pendingQuery = query
+        }
     }
 
     companion object {

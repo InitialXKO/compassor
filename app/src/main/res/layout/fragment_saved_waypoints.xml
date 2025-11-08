@@ -102,15 +102,4 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
-    <!-- Floating Action Button -->
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fabAddWaypoint"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="@dimen/margin_lg"
-        android:contentDescription="@string/add_waypoint"
-        android:src="@android:drawable/ic_menu_add"
-        app:layout_anchor="@id/savedWaypointsRecyclerView"
-        app:layout_anchorGravity="bottom|end" />
-
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
