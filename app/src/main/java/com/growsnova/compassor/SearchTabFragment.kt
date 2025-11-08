@@ -8,7 +8,6 @@ import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
-import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
@@ -23,6 +22,7 @@ import com.amap.api.services.poisearch.PoiResult
 import com.amap.api.services.poisearch.PoiSearch
 import kotlinx.coroutines.launch
 
+@Suppress("DEPRECATION")
 class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
 
     private var currentLatLng: LatLng? = null
@@ -37,7 +37,7 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         arguments?.let {
-            currentLatLng = it.getParcelable(ARG_LATLNG)
+            currentLatLng = it.getParcelableCompat<LatLng>(ARG_LATLNG)
         }
     }
 

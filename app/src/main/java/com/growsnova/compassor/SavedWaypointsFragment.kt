@@ -20,7 +20,7 @@ class SavedWaypointsFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         arguments?.let {
-            val waypointWrapper = it.getSerializable(ARG_WAYPOINTS) as? WaypointListWrapper
+            val waypointWrapper = it.getSerializableCompat<WaypointListWrapper>(ARG_WAYPOINTS)
             waypoints = waypointWrapper?.waypoints ?: arrayListOf()
         }
     }
