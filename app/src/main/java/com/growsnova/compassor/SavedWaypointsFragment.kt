@@ -1,5 +1,6 @@
 package com.growsnova.compassor
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -18,7 +19,7 @@ class SavedWaypointsFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         arguments?.let {
-            val waypointWrapper = it.getSerializable(ARG_WAYPOINTS) as? WaypointListWrapper
+            val waypointWrapper = it.getSerializableCompat<WaypointListWrapper>(ARG_WAYPOINTS)
             waypoints = waypointWrapper?.waypoints ?: arrayListOf()
         }
     }
@@ -29,11 +30,35 @@ class SavedWaypointsFragment : Fragment() {
     ): View? {
         val view = inflater.inflate(R.layout.fragment_saved_waypoints, container, false)
         val recyclerView = view.findViewById<RecyclerView>(R.id.savedWaypointsRecyclerView)
+        val emptyStateButton = view.findViewById<View>(R.id.addFirstWaypointButton)
+        
         recyclerView.layoutManager = LinearLayoutManager(context)
         recyclerView.adapter = WaypointSelectionAdapter(waypoints) { waypoint ->
             viewModel.addWaypoint(waypoint)
         }
+
+        // Handle empty state button click
+        emptyStateButton?.setOnClickListener {
+            val intent = Intent(requireContext(), MainActivity::class.java)
+            intent.putExtra("open_add_waypoint", true)
+            startActivity(intent)
+        }
+
+        updateEmptyState(view)
         return view
+    }
+
+    private fun updateEmptyState(view: View) {
+        val emptyState = view.findViewById<View>(R.id.emptyState)
+        val recyclerView = view.findViewById<RecyclerView>(R.id.savedWaypointsRecyclerView)
+        
+        if (waypoints.isEmpty()) {
+            emptyState?.visibility = View.VISIBLE
+            recyclerView.visibility = View.GONE
+        } else {
+            emptyState?.visibility = View.GONE
+            recyclerView.visibility = View.VISIBLE
+        }
     }
 
     companion object {

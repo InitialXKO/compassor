@@ -1,5 +1,6 @@
 package com.growsnova.compassor
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.viewModels
@@ -13,21 +14,22 @@ class CreateRouteActivity : AppCompatActivity() {
 
     private lateinit var waypoints: List<Waypoint>
     private var currentLatLng: LatLng? = null
+    private var routeBeingEdited: Route? = null
     private val viewModel: CreateRouteViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_create_route)
 
-        val routeToEdit = intent.getSerializableExtra("route_to_edit") as? Route
-        if (routeToEdit != null) {
-            title = "Edit Route"
-            viewModel.selectedWaypoints.value = routeToEdit.waypoints
+        routeBeingEdited = intent.getSerializableExtraCompat<Route>("route_to_edit")
+        routeBeingEdited?.let {
+            title = getString(R.string.edit_route)
+            viewModel.selectedWaypoints.value = it.waypoints
         }
 
-        val waypointWrapper = intent.getSerializableExtra("waypoints_wrapper") as? WaypointListWrapper
+        val waypointWrapper = intent.getSerializableExtraCompat<WaypointListWrapper>("waypoints_wrapper")
         waypoints = waypointWrapper?.waypoints ?: arrayListOf()
-        currentLatLng = intent.getParcelableExtra("current_latlng")
+        currentLatLng = intent.getParcelableExtraCompat<LatLng>("current_latlng")
 
         val viewPager = findViewById<androidx.viewpager2.widget.ViewPager2>(R.id.viewPager)
         val tabLayout = findViewById<com.google.android.material.tabs.TabLayout>(R.id.tabLayout)
@@ -36,9 +38,9 @@ class CreateRouteActivity : AppCompatActivity() {
 
         com.google.android.material.tabs.TabLayoutMediator(tabLayout, viewPager) { tab, position ->
             tab.text = when (position) {
-                0 -> "Saved"
-                1 -> "Nearby"
-                else -> "Search"
+                0 -> getString(R.string.saved_waypoints)
+                1 -> getString(R.string.nearby_pois)
+                else -> getString(R.string.search_location)
             }
         }.attach()
 
@@ -59,12 +61,55 @@ class CreateRouteActivity : AppCompatActivity() {
             }
 
             override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
-                viewModel.moveWaypoint(viewHolder.adapterPosition, target.adapterPosition)
+                val fromPosition = viewHolder.bindingAdapterPosition
+                val toPosition = target.bindingAdapterPosition
+                if (fromPosition == RecyclerView.NO_POSITION || toPosition == RecyclerView.NO_POSITION) {
+                    return false
+                }
+                adapter.onItemMove(fromPosition, toPosition)
                 return true
+            }
+            
+            override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
+                super.clearView(recyclerView, viewHolder)
+                val currentWaypoints = adapter.getWaypoints()
+                viewModel.setWaypoints(currentWaypoints)
             }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-                viewModel.removeWaypoint(adapter.getWaypointAt(viewHolder.adapterPosition))
+                val position = viewHolder.bindingAdapterPosition
+                if (position == RecyclerView.NO_POSITION) {
+                    return
+                }
+                val waypoint = adapter.getWaypointAt(position)
+                viewModel.removeWaypoint(waypoint)
+            }
+            
+            override fun onChildDraw(
+                c: android.graphics.Canvas,
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                dX: Float,
+                dY: Float,
+                actionState: Int,
+                isCurrentlyActive: Boolean
+            ) {
+                if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE) {
+                    val itemView = viewHolder.itemView
+                    val paint = android.graphics.Paint()
+                    paint.color = android.graphics.Color.RED
+                    
+                    if (dX > 0) {
+                        c.drawRect(itemView.left.toFloat(), itemView.top.toFloat(), dX, itemView.bottom.toFloat(), paint)
+                    } else {
+                        c.drawRect(itemView.right.toFloat() + dX, itemView.top.toFloat(), itemView.right.toFloat(), itemView.bottom.toFloat(), paint)
+                    }
+                    
+                    val alpha = 1.0f - Math.abs(dX) / itemView.width.toFloat()
+                    itemView.alpha = alpha
+                }
+                
+                super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
             }
         })
         itemTouchHelper.attachToRecyclerView(selectedWaypointsRecyclerView)
@@ -73,44 +118,71 @@ class CreateRouteActivity : AppCompatActivity() {
         saveRouteButton.setOnClickListener {
             val selectedWaypoints = viewModel.selectedWaypoints.value
             if (selectedWaypoints.isNullOrEmpty() || selectedWaypoints.size < 2) {
-                Toast.makeText(this, "Please select at least two waypoints", Toast.LENGTH_SHORT).show()
+                DialogUtils.showErrorToast(this, "需要至少选择2个收藏地点来保存路线")
                 return@setOnClickListener
             }
 
             val editText = android.widget.EditText(this)
-            editText.hint = "Enter route name"
+            editText.hint = getString(R.string.route_name_hint)
 
             // If editing, pre-fill the existing route name
-            val routeToEdit = intent.getSerializableExtra("route_to_edit") as? Route
-            if (routeToEdit != null) {
-                editText.setText(routeToEdit.name)
+            val existingRoute = routeBeingEdited
+            if (existingRoute != null) {
+                editText.setText(existingRoute.name)
             } else if (selectedWaypoints.size >= 2) {
-                editText.setText("${selectedWaypoints.first().name} to ${selectedWaypoints.last().name}")
+                editText.setText(getString(R.string.save_route_hint, selectedWaypoints.first().name, selectedWaypoints.last().name))
             }
 
             android.app.AlertDialog.Builder(this)
-                .setTitle(if (routeToEdit == null) "Save Route" else "Update Route")
+                .setTitle(if (existingRoute == null) getString(R.string.create_route) else getString(R.string.edit_route))
                 .setView(editText)
-                .setPositiveButton("Save") { _, _ ->
+                .setPositiveButton(getString(R.string.save)) { _, _ ->
                     val routeName = editText.text.toString().trim()
                     if (routeName.isNotEmpty()) {
                         val newRoute = Route(
-                            id = routeToEdit?.id ?: System.currentTimeMillis(),
+                            id = existingRoute?.id ?: System.currentTimeMillis(),
                             name = routeName,
                             waypoints = selectedWaypoints,
-                            isLooping = routeToEdit?.isLooping ?: false
+                            isLooping = existingRoute?.isLooping ?: false
                         )
-                        val resultIntent = android.content.Intent()
-                        resultIntent.putExtra("new_route", newRoute)
-                        resultIntent.putExtra("waypoints_wrapper", WaypointListWrapper(ArrayList(selectedWaypoints)))
-                        setResult(RESULT_OK, resultIntent)
-                        finish()
+
+                        val resultIntent = Intent().apply {
+                            putExtra("new_route", newRoute)
+                            putExtra("waypoints_wrapper", WaypointListWrapper(ArrayList(selectedWaypoints)))
+                        }
+
+                        if (existingRoute == null) {
+                            askToStartNavigation(newRoute, resultIntent)
+                        } else {
+                            setResult(RESULT_OK, resultIntent)
+                            finish()
+                        }
                     } else {
-                        Toast.makeText(this, "Route name cannot be empty", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, getString(R.string.waypoint_name_empty), Toast.LENGTH_SHORT).show()
                     }
                 }
-                .setNegativeButton("Cancel", null)
+                .setNegativeButton(getString(R.string.cancel), null)
                 .show()
         }
+    }
+
+    private fun askToStartNavigation(route: Route, resultIntent: Intent) {
+        android.app.AlertDialog.Builder(this)
+            .setTitle(getString(R.string.start_navigation))
+            .setMessage("是否开始导航路线: ${route.name}?")
+            .setPositiveButton(getString(R.string.confirm)) { _, _ ->
+                resultIntent.putExtra("start_navigation", true)
+                setResult(RESULT_OK, resultIntent)
+                finish()
+            }
+            .setNegativeButton(getString(R.string.cancel)) { _, _ ->
+                setResult(RESULT_OK, resultIntent)
+                finish()
+            }
+            .setOnCancelListener {
+                setResult(RESULT_OK, resultIntent)
+                finish()
+            }
+            .show()
     }
 }
