@@ -132,6 +132,11 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
             db.searchHistoryDao().insert(SearchHistory(query = query))
         }
     }
+    
+    fun setSearchQuery(query: String) {
+        searchEditText.setText(query)
+        performSearch()
+    }
 
     companion object {
         private const val ARG_LATLNG = "latlng"

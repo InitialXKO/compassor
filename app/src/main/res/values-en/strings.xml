@@ -78,4 +78,6 @@
     <string name="navigation_started">Started route navigation: %s</string>
     <string name="need_at_least_two_waypoints">Need at least 2 waypoints to save route</string>
     <string name="save_route_hint">From %1$s to %2$s</string>
+    <string name="drag_to_reorder">Drag to reorder</string>
+    <string name="search">Search</string>
 </resources>

@@ -62,13 +62,14 @@ class CreateRouteActivity : AppCompatActivity() {
             override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
                 val fromPosition = viewHolder.adapterPosition
                 val toPosition = target.adapterPosition
-                viewModel.moveWaypoint(fromPosition, toPosition)
-                
-                // 添加滑动反馈
-                recyclerView.post {
-                    adapter.notifyItemMoved(fromPosition, toPosition)
-                }
+                adapter.onItemMove(fromPosition, toPosition)
                 return true
+            }
+            
+            override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
+                super.clearView(recyclerView, viewHolder)
+                val currentWaypoints = adapter.getWaypoints()
+                viewModel.setWaypoints(currentWaypoints)
             }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
@@ -108,12 +109,14 @@ class CreateRouteActivity : AppCompatActivity() {
                             waypoints = selectedWaypoints,
                             isLooping = routeToEdit?.isLooping ?: false
                         )
+                        
+                        // Set result first to ensure save happens
                         val resultIntent = android.content.Intent()
                         resultIntent.putExtra("new_route", newRoute)
                         resultIntent.putExtra("waypoints_wrapper", WaypointListWrapper(ArrayList(selectedWaypoints)))
                         setResult(RESULT_OK, resultIntent)
                         
-                        // Ask if user wants to start navigation for new routes
+                        // Then ask if user wants to start navigation for new routes
                         if (routeToEdit == null) {
                             askToStartNavigation(newRoute)
                         } else {

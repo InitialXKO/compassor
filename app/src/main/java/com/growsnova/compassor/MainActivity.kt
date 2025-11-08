@@ -14,6 +14,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.amap.api.location.AMapLocation
 import com.amap.api.location.AMapLocationClient
 import com.amap.api.location.AMapLocationClientOption
@@ -126,17 +128,6 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
 
         mapView = findViewById(R.id.mapView)
         radarView = findViewById(R.id.radarView)
-
-        // Set up Floating Action Button
-        val fabQuickAction = findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.fabQuickAction)
-        fabQuickAction.setOnClickListener {
-            // Quick action: center map on current location
-            myCurrentLatLng?.let { latLng ->
-                aMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
-            } ?: run {
-                DialogUtils.showErrorToast(this, getString(R.string.location_unavailable))
-            }
-        }
 
         // 初始化地图
         mapView.onCreate(savedInstanceState)
@@ -557,10 +548,30 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                 markerToRemove?.remove()
                 waypointMarkers.remove(markerToRemove)
                 
-                // 如果删除的收藏地点影响了当前导航的路线，重绘路线
-                if (affectedRoutes.any { it.id == currentRoute?.id }) {
-                    currentRoute?.let { currentRoute ->
-                        drawRouteOnMap(currentRoute.waypoints)
+                // 如果删除的收藏地点影响了当前导航的路线，更新currentRoute引用并重绘路线
+                currentRoute?.let { current ->
+                    val updatedRoute = affectedRoutes.find { it.id == current.id }
+                    if (updatedRoute != null) {
+                        currentRoute = updatedRoute
+                        if (updatedRoute.waypoints.size >= 2) {
+                            drawRouteOnMap(updatedRoute.waypoints)
+                            // 更新当前导航目标
+                            if (currentWaypointIndex >= updatedRoute.waypoints.size) {
+                                currentWaypointIndex = updatedRoute.waypoints.size - 1
+                            }
+                            if (currentWaypointIndex >= 0) {
+                                val targetWaypoint = updatedRoute.waypoints[currentWaypointIndex]
+                                setTargetLocation(LatLng(targetWaypoint.latitude, targetWaypoint.longitude), targetWaypoint.name)
+                            }
+                        } else {
+                            // 路线已被删除或不足两个点
+                            currentRoute = null
+                            currentWaypointIndex = -1
+                            routePolyline?.remove()
+                            routePolyline = null
+                            targetMarker?.remove()
+                            targetMarker = null
+                        }
                     }
                 }
                 
@@ -783,14 +794,65 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     }
 
     private fun showSearchDialog() {
-        DialogUtils.showInputDialog(
-            context = this,
-            title = getString(R.string.search_location),
-            hint = getString(R.string.search_hint),
-            onPositive = { keyword ->
-                searchPOI(keyword)
+        lifecycleScope.launch {
+            val searchHistories = db.searchHistoryDao().getRecentSearches()
+            
+            runOnUiThread {
+                val view = layoutInflater.inflate(R.layout.dialog_search_with_history, null)
+                val editText = view.findViewById<EditText>(R.id.searchEditText)
+                val historyRecyclerView = view.findViewById<RecyclerView>(R.id.historyRecyclerView)
+                val clearHistoryButton = view.findViewById<Button>(R.id.clearHistoryButton)
+                
+                historyRecyclerView.layoutManager = LinearLayoutManager(this@MainActivity)
+                
+                val historyAdapter = SearchHistoryAdapter(
+                    searchHistories.toMutableList(),
+                    onItemClick = { history ->
+                        editText.setText(history.query)
+                    },
+                    onDeleteClick = { history ->
+                        lifecycleScope.launch {
+                            db.searchHistoryDao().delete(history.id)
+                        }
+                    }
+                )
+                historyRecyclerView.adapter = historyAdapter
+                
+                if (searchHistories.isEmpty()) {
+                    historyRecyclerView.visibility = android.view.View.GONE
+                    clearHistoryButton.visibility = android.view.View.GONE
+                } else {
+                    historyRecyclerView.visibility = android.view.View.VISIBLE
+                    clearHistoryButton.visibility = android.view.View.VISIBLE
+                }
+                
+                clearHistoryButton.setOnClickListener {
+                    lifecycleScope.launch {
+                        db.searchHistoryDao().clearAll()
+                        historyRecyclerView.visibility = android.view.View.GONE
+                        clearHistoryButton.visibility = android.view.View.GONE
+                        historyAdapter.notifyDataSetChanged()
+                    }
+                }
+                
+                val dialog = AlertDialog.Builder(this@MainActivity)
+                    .setTitle(getString(R.string.search_location))
+                    .setView(view)
+                    .setPositiveButton(getString(R.string.search)) { _, _ ->
+                        val keyword = editText.text.toString().trim()
+                        if (keyword.isNotEmpty()) {
+                            searchPOI(keyword)
+                            lifecycleScope.launch {
+                                db.searchHistoryDao().insert(SearchHistory(query = keyword))
+                            }
+                        }
+                    }
+                    .setNegativeButton(R.string.cancel, null)
+                    .create()
+                    
+                dialog.show()
             }
-        )
+        }
     }
 
     private fun showWaypointManagementDialog() {

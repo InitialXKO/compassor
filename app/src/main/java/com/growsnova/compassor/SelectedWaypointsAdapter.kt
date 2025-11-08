@@ -13,13 +13,14 @@ class SelectedWaypointsAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context)
-            .inflate(android.R.layout.simple_list_item_1, parent, false)
+            .inflate(R.layout.item_selected_waypoint, parent, false)
         return ViewHolder(view)
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val waypoint = waypoints[position]
-        (holder.itemView as TextView).text = waypoint.name
+        holder.waypointNameText.text = waypoint.name
+        holder.waypointOrderText.text = "${position + 1}"
     }
 
     override fun getItemCount(): Int = waypoints.size
@@ -32,6 +33,10 @@ class SelectedWaypointsAdapter(
 
     fun getWaypointAt(position: Int): Waypoint {
         return waypoints[position]
+    }
+    
+    fun getWaypoints(): List<Waypoint> {
+        return waypoints.toList()
     }
 
     fun onItemMove(fromPosition: Int, toPosition: Int) {
@@ -47,5 +52,8 @@ class SelectedWaypointsAdapter(
         notifyItemMoved(fromPosition, toPosition)
     }
 
-    class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView)
+    class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val waypointNameText: TextView = itemView.findViewById(R.id.waypointNameText)
+        val waypointOrderText: TextView = itemView.findViewById(R.id.waypointOrderText)
+    }
 }

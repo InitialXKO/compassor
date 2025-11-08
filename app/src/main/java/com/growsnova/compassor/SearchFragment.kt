@@ -38,9 +38,10 @@ class SearchFragment : Fragment() {
 
     fun switchToSearchTab(query: String) {
         viewPager.currentItem = 0
-        // Find the search tab fragment and set the query
-        val searchFragment = adapter.createFragment(0) as? SearchTabFragment
-        searchFragment?.view?.findViewById<com.google.android.material.textfield.TextInputEditText>(R.id.editText)?.setText(query)
+        viewPager.post {
+            val fragment = childFragmentManager.findFragmentByTag("f0") as? SearchTabFragment
+            fragment?.setSearchQuery(query)
+        }
     }
 
     companion object {
