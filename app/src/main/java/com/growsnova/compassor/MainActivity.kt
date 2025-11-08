@@ -102,6 +102,21 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
 
         // 请求权限
         checkAndRequestPermissions()
+        
+        // 检查是否需要开始导航
+        handleNavigationIntent()
+    }
+    
+    private fun handleNavigationIntent() {
+        val route = intent.getSerializableExtra("start_navigation_route") as? Route
+        route?.let {
+            // 延迟启动导航，等待地图和数据加载完成
+            mapView.postDelayed({
+                if (it.waypoints.isNotEmpty()) {
+                    startRouteNavigation(it)
+                }
+            }, 1000)
+        }
     }
 
     private fun initViews(savedInstanceState: Bundle?) {
@@ -805,20 +820,31 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                 
                 historyRecyclerView.layoutManager = LinearLayoutManager(this@MainActivity)
                 
-                val historyAdapter = SearchHistoryAdapter(
-                    searchHistories.toMutableList(),
+                val historyList = searchHistories.toMutableList()
+                lateinit var historyAdapter: SearchHistoryAdapter
+                
+                historyAdapter = SearchHistoryAdapter(
+                    historyList,
                     onItemClick = { history ->
                         editText.setText(history.query)
                     },
                     onDeleteClick = { history ->
                         lifecycleScope.launch {
                             db.searchHistoryDao().delete(history.id)
+                            historyList.remove(history)
+                            runOnUiThread {
+                                historyAdapter.notifyDataSetChanged()
+                                if (historyList.isEmpty()) {
+                                    historyRecyclerView.visibility = android.view.View.GONE
+                                    clearHistoryButton.visibility = android.view.View.GONE
+                                }
+                            }
                         }
                     }
                 )
                 historyRecyclerView.adapter = historyAdapter
                 
-                if (searchHistories.isEmpty()) {
+                if (historyList.isEmpty()) {
                     historyRecyclerView.visibility = android.view.View.GONE
                     clearHistoryButton.visibility = android.view.View.GONE
                 } else {
@@ -829,9 +855,12 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
                 clearHistoryButton.setOnClickListener {
                     lifecycleScope.launch {
                         db.searchHistoryDao().clearAll()
-                        historyRecyclerView.visibility = android.view.View.GONE
-                        clearHistoryButton.visibility = android.view.View.GONE
-                        historyAdapter.notifyDataSetChanged()
+                        historyList.clear()
+                        runOnUiThread {
+                            historyAdapter.notifyDataSetChanged()
+                            historyRecyclerView.visibility = android.view.View.GONE
+                            clearHistoryButton.visibility = android.view.View.GONE
+                        }
                     }
                 }
                 
@@ -911,11 +940,12 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
     }
 
     private fun showSkinSelectionDialog() {
-        val skinNames = arrayOf("Default", "Forest", "Ocean")
+        val skinNames = arrayOf("Default", "Forest", "Ocean", getString(R.string.import_skin))
         val skinDescriptions = arrayOf(
             "默认蓝色主题",
             "森林绿色主题", 
-            "海洋蓝色主题"
+            "海洋蓝色主题",
+            getString(R.string.import_skin_description)
         )
         
         // 创建包含描述的选项列表
@@ -928,13 +958,17 @@ class MainActivity : AppCompatActivity(), AMapLocationListener, NavigationView.O
             title = getString(R.string.select_skin),
             options = optionsWithDescriptions
         ) { which ->
-            val skinIndex = which % 3 // 确保索引在范围内
-            val selectedSkin = DefaultSkins.skins[skinIndex]
-            radarView.setSkin(selectedSkin)
-            saveSkinPreference(skinNames[skinIndex])
-            
-            // 显示导入选项的单独对话框
-            showImportSkinDialog()
+            when (which) {
+                0, 1, 2 -> {
+                    val selectedSkin = DefaultSkins.skins[which]
+                    radarView.setSkin(selectedSkin)
+                    saveSkinPreference(skinNames[which])
+                }
+                3 -> {
+                    // 导入自定义皮肤
+                    openFilePicker()
+                }
+            }
         }
     }
     

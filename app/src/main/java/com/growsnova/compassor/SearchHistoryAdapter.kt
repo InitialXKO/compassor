@@ -15,7 +15,7 @@ class SearchHistoryAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SearchHistoryViewHolder {
         val view = LayoutInflater.from(parent.context)
-            .inflate(android.R.layout.simple_list_item_2, parent, false)
+            .inflate(R.layout.item_search_history, parent, false)
         return SearchHistoryViewHolder(view)
     }
 
@@ -26,17 +26,19 @@ class SearchHistoryAdapter(
     override fun getItemCount() = searchHistories.size
 
     class SearchHistoryViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val text1: TextView = itemView.findViewById(android.R.id.text1)
-        private val text2: TextView = itemView.findViewById(android.R.id.text2)
+        private val queryText: TextView = itemView.findViewById(R.id.queryText)
+        private val timestampText: TextView = itemView.findViewById(R.id.timestampText)
+        private val deleteButton: ImageButton = itemView.findViewById(R.id.deleteButton)
         
         fun bind(
             searchHistory: SearchHistory,
             onItemClick: (SearchHistory) -> Unit,
             onDeleteClick: (SearchHistory) -> Unit
         ) {
-            text1.text = searchHistory.query
-            text2.text = android.text.format.DateFormat.format("yyyy-MM-dd HH:mm", searchHistory.timestamp)
+            queryText.text = searchHistory.query
+            timestampText.text = android.text.format.DateFormat.format("yyyy-MM-dd HH:mm", searchHistory.timestamp)
             itemView.setOnClickListener { onItemClick(searchHistory) }
+            deleteButton.setOnClickListener { onDeleteClick(searchHistory) }
         }
     }
 }

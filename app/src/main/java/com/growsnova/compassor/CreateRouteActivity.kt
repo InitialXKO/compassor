@@ -73,7 +73,36 @@ class CreateRouteActivity : AppCompatActivity() {
             }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-                viewModel.removeWaypoint(adapter.getWaypointAt(viewHolder.adapterPosition))
+                val position = viewHolder.adapterPosition
+                val waypoint = adapter.getWaypointAt(position)
+                viewModel.removeWaypoint(waypoint)
+            }
+            
+            override fun onChildDraw(
+                c: android.graphics.Canvas,
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                dX: Float,
+                dY: Float,
+                actionState: Int,
+                isCurrentlyActive: Boolean
+            ) {
+                if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE) {
+                    val itemView = viewHolder.itemView
+                    val paint = android.graphics.Paint()
+                    paint.color = android.graphics.Color.RED
+                    
+                    if (dX > 0) {
+                        c.drawRect(itemView.left.toFloat(), itemView.top.toFloat(), dX, itemView.bottom.toFloat(), paint)
+                    } else {
+                        c.drawRect(itemView.right.toFloat() + dX, itemView.top.toFloat(), itemView.right.toFloat(), itemView.bottom.toFloat(), paint)
+                    }
+                    
+                    val alpha = 1.0f - Math.abs(dX) / itemView.width.toFloat()
+                    itemView.alpha = alpha
+                }
+                
+                super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
             }
         })
         itemTouchHelper.attachToRecyclerView(selectedWaypointsRecyclerView)
