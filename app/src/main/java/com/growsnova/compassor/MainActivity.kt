@@ -305,8 +305,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun handleLocationUpdate(location: Location) {
-        mapLocationListener?.onLocationChanged(location)
-        val newLatLng = LatLng(location.latitude, location.longitude)
+        val (gcjLat, gcjLng) = CoordTransform.wgs84ToGcj02(location.latitude, location.longitude)
+        val convertedLocation = Location(location).apply {
+            latitude = gcjLat
+            longitude = gcjLng
+        }
+        mapLocationListener?.onLocationChanged(convertedLocation)
+        val newLatLng = LatLng(gcjLat, gcjLng)
 
         // 检查位置变化距离，只有移动超过一定距离才更新
         val distance = FloatArray(1)
