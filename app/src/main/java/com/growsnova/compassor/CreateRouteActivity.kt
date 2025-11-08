@@ -62,17 +62,47 @@ class CreateRouteActivity : AppCompatActivity() {
             override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
                 val fromPosition = viewHolder.adapterPosition
                 val toPosition = target.adapterPosition
-                viewModel.moveWaypoint(fromPosition, toPosition)
-                
-                // 添加滑动反馈
-                recyclerView.post {
-                    adapter.notifyItemMoved(fromPosition, toPosition)
-                }
+                adapter.onItemMove(fromPosition, toPosition)
                 return true
+            }
+            
+            override fun clearView(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder) {
+                super.clearView(recyclerView, viewHolder)
+                val currentWaypoints = adapter.getWaypoints()
+                viewModel.setWaypoints(currentWaypoints)
             }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-                viewModel.removeWaypoint(adapter.getWaypointAt(viewHolder.adapterPosition))
+                val position = viewHolder.adapterPosition
+                val waypoint = adapter.getWaypointAt(position)
+                viewModel.removeWaypoint(waypoint)
+            }
+            
+            override fun onChildDraw(
+                c: android.graphics.Canvas,
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                dX: Float,
+                dY: Float,
+                actionState: Int,
+                isCurrentlyActive: Boolean
+            ) {
+                if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE) {
+                    val itemView = viewHolder.itemView
+                    val paint = android.graphics.Paint()
+                    paint.color = android.graphics.Color.RED
+                    
+                    if (dX > 0) {
+                        c.drawRect(itemView.left.toFloat(), itemView.top.toFloat(), dX, itemView.bottom.toFloat(), paint)
+                    } else {
+                        c.drawRect(itemView.right.toFloat() + dX, itemView.top.toFloat(), itemView.right.toFloat(), itemView.bottom.toFloat(), paint)
+                    }
+                    
+                    val alpha = 1.0f - Math.abs(dX) / itemView.width.toFloat()
+                    itemView.alpha = alpha
+                }
+                
+                super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
             }
         })
         itemTouchHelper.attachToRecyclerView(selectedWaypointsRecyclerView)
@@ -108,12 +138,14 @@ class CreateRouteActivity : AppCompatActivity() {
                             waypoints = selectedWaypoints,
                             isLooping = routeToEdit?.isLooping ?: false
                         )
+                        
+                        // Set result first to ensure save happens
                         val resultIntent = android.content.Intent()
                         resultIntent.putExtra("new_route", newRoute)
                         resultIntent.putExtra("waypoints_wrapper", WaypointListWrapper(ArrayList(selectedWaypoints)))
                         setResult(RESULT_OK, resultIntent)
                         
-                        // Ask if user wants to start navigation for new routes
+                        // Then ask if user wants to start navigation for new routes
                         if (routeToEdit == null) {
                             askToStartNavigation(newRoute)
                         } else {

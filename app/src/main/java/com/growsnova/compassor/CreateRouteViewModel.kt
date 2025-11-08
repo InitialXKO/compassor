@@ -24,4 +24,8 @@ class CreateRouteViewModel : ViewModel() {
         currentList.add(toPosition, movedItem)
         selectedWaypoints.value = currentList
     }
+    
+    fun setWaypoints(waypoints: List<Waypoint>) {
+        selectedWaypoints.value = waypoints.toMutableList()
+    }
 }
