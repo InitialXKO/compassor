@@ -16,9 +16,9 @@ import com.amap.api.services.core.LatLonPoint
 import com.amap.api.services.core.PoiItem
 import com.amap.api.services.poisearch.PoiResult
 import com.amap.api.services.poisearch.PoiSearch
-import com.google.android.material.chip.Chip
 import com.google.android.material.chip.ChipGroup
 
+@Suppress("DEPRECATION")
 class NearbyPoisFragment : Fragment(), PoiSearch.OnPoiSearchListener {
 
     private var currentLatLng: LatLng? = null
@@ -34,7 +34,7 @@ class NearbyPoisFragment : Fragment(), PoiSearch.OnPoiSearchListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         arguments?.let {
-            currentLatLng = it.getParcelable(ARG_LATLNG)
+            currentLatLng = it.getParcelableCompat<LatLng>(ARG_LATLNG)
         }
     }
 
@@ -70,12 +70,14 @@ class NearbyPoisFragment : Fragment(), PoiSearch.OnPoiSearchListener {
     }
 
     private fun setupCategoryFilter() {
-        categoryChipGroup.setOnCheckedChangeListener { group, checkedId ->
-            when (checkedId) {
-                R.id.chipAll -> currentCategory = "all"
-                R.id.chipRestaurant -> currentCategory = "餐饮服务"
-                R.id.chipGasStation -> currentCategory = "汽车服务"
-                R.id.chipHotel -> currentCategory = "住宿服务"
+        categoryChipGroup.setOnCheckedStateChangeListener { _, checkedIds ->
+            val checkedId = checkedIds.firstOrNull() ?: View.NO_ID
+            currentCategory = when (checkedId) {
+                R.id.chipAll -> "all"
+                R.id.chipRestaurant -> "餐饮服务"
+                R.id.chipGasStation -> "汽车服务"
+                R.id.chipHotel -> "住宿服务"
+                else -> currentCategory
             }
             filterPois()
         }

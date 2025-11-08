@@ -10,7 +10,6 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class SavedWaypointsFragment : Fragment() {
 
@@ -20,7 +19,7 @@ class SavedWaypointsFragment : Fragment() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         arguments?.let {
-            val waypointWrapper = it.getSerializable(ARG_WAYPOINTS) as? WaypointListWrapper
+            val waypointWrapper = it.getSerializableCompat<WaypointListWrapper>(ARG_WAYPOINTS)
             waypoints = waypointWrapper?.waypoints ?: arrayListOf()
         }
     }
@@ -31,19 +30,11 @@ class SavedWaypointsFragment : Fragment() {
     ): View? {
         val view = inflater.inflate(R.layout.fragment_saved_waypoints, container, false)
         val recyclerView = view.findViewById<RecyclerView>(R.id.savedWaypointsRecyclerView)
-        val fabAddWaypoint = view.findViewById<FloatingActionButton>(R.id.fabAddWaypoint)
         val emptyStateButton = view.findViewById<View>(R.id.addFirstWaypointButton)
         
         recyclerView.layoutManager = LinearLayoutManager(context)
         recyclerView.adapter = WaypointSelectionAdapter(waypoints) { waypoint ->
             viewModel.addWaypoint(waypoint)
-        }
-
-        // Handle FAB click to open MainActivity for adding new waypoint
-        fabAddWaypoint.setOnClickListener {
-            val intent = Intent(requireContext(), MainActivity::class.java)
-            intent.putExtra("open_add_waypoint", true)
-            startActivity(intent)
         }
 
         // Handle empty state button click
@@ -60,16 +51,13 @@ class SavedWaypointsFragment : Fragment() {
     private fun updateEmptyState(view: View) {
         val emptyState = view.findViewById<View>(R.id.emptyState)
         val recyclerView = view.findViewById<RecyclerView>(R.id.savedWaypointsRecyclerView)
-        val fab = view.findViewById<FloatingActionButton>(R.id.fabAddWaypoint)
         
         if (waypoints.isEmpty()) {
             emptyState?.visibility = View.VISIBLE
             recyclerView.visibility = View.GONE
-            fab?.visibility = View.GONE
         } else {
             emptyState?.visibility = View.GONE
             recyclerView.visibility = View.VISIBLE
-            fab?.visibility = View.VISIBLE
         }
     }
 

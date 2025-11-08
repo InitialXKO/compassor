@@ -14,21 +14,22 @@ class CreateRouteActivity : AppCompatActivity() {
 
     private lateinit var waypoints: List<Waypoint>
     private var currentLatLng: LatLng? = null
+    private var routeBeingEdited: Route? = null
     private val viewModel: CreateRouteViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_create_route)
 
-        val routeToEdit = intent.getSerializableExtra("route_to_edit") as? Route
-        if (routeToEdit != null) {
+        routeBeingEdited = intent.getSerializableExtraCompat<Route>("route_to_edit")
+        routeBeingEdited?.let {
             title = getString(R.string.edit_route)
-            viewModel.selectedWaypoints.value = routeToEdit.waypoints
+            viewModel.selectedWaypoints.value = it.waypoints
         }
 
-        val waypointWrapper = intent.getSerializableExtra("waypoints_wrapper") as? WaypointListWrapper
+        val waypointWrapper = intent.getSerializableExtraCompat<WaypointListWrapper>("waypoints_wrapper")
         waypoints = waypointWrapper?.waypoints ?: arrayListOf()
-        currentLatLng = intent.getParcelableExtra("current_latlng")
+        currentLatLng = intent.getParcelableExtraCompat<LatLng>("current_latlng")
 
         val viewPager = findViewById<androidx.viewpager2.widget.ViewPager2>(R.id.viewPager)
         val tabLayout = findViewById<com.google.android.material.tabs.TabLayout>(R.id.tabLayout)
@@ -60,8 +61,11 @@ class CreateRouteActivity : AppCompatActivity() {
             }
 
             override fun onMove(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder, target: RecyclerView.ViewHolder): Boolean {
-                val fromPosition = viewHolder.adapterPosition
-                val toPosition = target.adapterPosition
+                val fromPosition = viewHolder.bindingAdapterPosition
+                val toPosition = target.bindingAdapterPosition
+                if (fromPosition == RecyclerView.NO_POSITION || toPosition == RecyclerView.NO_POSITION) {
+                    return false
+                }
                 adapter.onItemMove(fromPosition, toPosition)
                 return true
             }
@@ -73,7 +77,10 @@ class CreateRouteActivity : AppCompatActivity() {
             }
 
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-                val position = viewHolder.adapterPosition
+                val position = viewHolder.bindingAdapterPosition
+                if (position == RecyclerView.NO_POSITION) {
+                    return
+                }
                 val waypoint = adapter.getWaypointAt(position)
                 viewModel.removeWaypoint(waypoint)
             }
@@ -119,36 +126,35 @@ class CreateRouteActivity : AppCompatActivity() {
             editText.hint = getString(R.string.route_name_hint)
 
             // If editing, pre-fill the existing route name
-            val routeToEdit = intent.getSerializableExtra("route_to_edit") as? Route
-            if (routeToEdit != null) {
-                editText.setText(routeToEdit.name)
+            val existingRoute = routeBeingEdited
+            if (existingRoute != null) {
+                editText.setText(existingRoute.name)
             } else if (selectedWaypoints.size >= 2) {
                 editText.setText(getString(R.string.save_route_hint, selectedWaypoints.first().name, selectedWaypoints.last().name))
             }
 
             android.app.AlertDialog.Builder(this)
-                .setTitle(if (routeToEdit == null) getString(R.string.create_route) else getString(R.string.edit_route))
+                .setTitle(if (existingRoute == null) getString(R.string.create_route) else getString(R.string.edit_route))
                 .setView(editText)
                 .setPositiveButton(getString(R.string.save)) { _, _ ->
                     val routeName = editText.text.toString().trim()
                     if (routeName.isNotEmpty()) {
                         val newRoute = Route(
-                            id = routeToEdit?.id ?: System.currentTimeMillis(),
+                            id = existingRoute?.id ?: System.currentTimeMillis(),
                             name = routeName,
                             waypoints = selectedWaypoints,
-                            isLooping = routeToEdit?.isLooping ?: false
+                            isLooping = existingRoute?.isLooping ?: false
                         )
-                        
-                        // Set result first to ensure save happens
-                        val resultIntent = android.content.Intent()
-                        resultIntent.putExtra("new_route", newRoute)
-                        resultIntent.putExtra("waypoints_wrapper", WaypointListWrapper(ArrayList(selectedWaypoints)))
-                        setResult(RESULT_OK, resultIntent)
-                        
-                        // Then ask if user wants to start navigation for new routes
-                        if (routeToEdit == null) {
-                            askToStartNavigation(newRoute)
+
+                        val resultIntent = Intent().apply {
+                            putExtra("new_route", newRoute)
+                            putExtra("waypoints_wrapper", WaypointListWrapper(ArrayList(selectedWaypoints)))
+                        }
+
+                        if (existingRoute == null) {
+                            askToStartNavigation(newRoute, resultIntent)
                         } else {
+                            setResult(RESULT_OK, resultIntent)
                             finish()
                         }
                     } else {
@@ -160,19 +166,21 @@ class CreateRouteActivity : AppCompatActivity() {
         }
     }
 
-    private fun askToStartNavigation(route: Route) {
+    private fun askToStartNavigation(route: Route, resultIntent: Intent) {
         android.app.AlertDialog.Builder(this)
             .setTitle(getString(R.string.start_navigation))
             .setMessage("是否开始导航路线: ${route.name}?")
             .setPositiveButton(getString(R.string.confirm)) { _, _ ->
-                // Start navigation in MainActivity
-                val intent = Intent(this, MainActivity::class.java)
-                intent.putExtra("start_navigation_route", route)
-                intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK
-                startActivity(intent)
+                resultIntent.putExtra("start_navigation", true)
+                setResult(RESULT_OK, resultIntent)
                 finish()
             }
             .setNegativeButton(getString(R.string.cancel)) { _, _ ->
+                setResult(RESULT_OK, resultIntent)
+                finish()
+            }
+            .setOnCancelListener {
+                setResult(RESULT_OK, resultIntent)
                 finish()
             }
             .show()

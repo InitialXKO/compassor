@@ -22,7 +22,7 @@ class SearchFragment : Fragment() {
         viewPager = view.findViewById(R.id.viewPager)
         tabLayout = view.findViewById(R.id.tabLayout)
         
-        adapter = SearchPagerAdapter(requireActivity())
+        adapter = SearchPagerAdapter(this)
         viewPager.adapter = adapter
 
         TabLayoutMediator(tabLayout, viewPager) { tab, position ->
@@ -39,8 +39,7 @@ class SearchFragment : Fragment() {
     fun switchToSearchTab(query: String) {
         viewPager.currentItem = 0
         viewPager.post {
-            val fragment = childFragmentManager.findFragmentByTag("f0") as? SearchTabFragment
-            fragment?.setSearchQuery(query)
+            (adapter.getFragment(0) as? SearchTabFragment)?.setSearchQuery(query)
         }
     }
 
