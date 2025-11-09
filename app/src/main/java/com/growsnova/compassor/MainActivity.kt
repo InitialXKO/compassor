@@ -14,7 +14,6 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.ActivityCompat
@@ -463,7 +462,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val poiNames = pois.map { "${it.title} (${it.distance}m)" }.toTypedArray()
         var selectedPoi: PoiItem? = null
 
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle("选择一个地点")
             .setSingleChoiceItems(poiNames, -1) { _, which ->
                 selectedPoi = pois[which]
@@ -494,7 +493,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
             if (existingWaypoint != null) {
                 runOnUiThread {
-                    AlertDialog.Builder(this@MainActivity)
+                    MaterialAlertDialogBuilder(this@MainActivity)
                         .setTitle("更新收藏地点")
                         .setMessage("附近已存在一个相似的收藏地点 '${existingWaypoint.name}'。您想用新的位置和名称 '$name' 更新它吗？")
                         .setPositiveButton("更新") { _, _ ->
@@ -704,7 +703,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private fun showRouteManagementDialog() {
         val routeNames = routes.map { it.name }.toTypedArray()
 
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.manage_routes))
             .setItems(routeNames) { _, which ->
                 showRouteOptionsDialog(routes[which])
@@ -964,7 +963,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     }
                 }
                 
-                val dialog = AlertDialog.Builder(this@MainActivity)
+                val dialog = MaterialAlertDialogBuilder(this@MainActivity)
                     .setTitle(getString(R.string.search_location))
                     .setView(view)
                     .setPositiveButton(getString(R.string.search)) { _, _ ->

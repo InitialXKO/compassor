@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.ItemTouchHelper
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.amap.api.maps.model.LatLng
@@ -140,7 +141,7 @@ class CreateRouteActivity : AppCompatActivity() {
                 editText.setText(getString(R.string.save_route_hint, selectedWaypoints.first().name, selectedWaypoints.last().name))
             }
 
-            android.app.AlertDialog.Builder(this)
+            MaterialAlertDialogBuilder(this)
                 .setTitle(if (existingRoute == null) getString(R.string.create_route) else getString(R.string.edit_route))
                 .setView(editText)
                 .setPositiveButton(getString(R.string.save)) { _, _ ->
@@ -174,7 +175,7 @@ class CreateRouteActivity : AppCompatActivity() {
     }
 
     private fun askToStartNavigation(route: Route, resultIntent: Intent) {
-        android.app.AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(getString(R.string.start_navigation))
             .setMessage("是否开始导航路线: ${route.name}?")
             .setPositiveButton(getString(R.string.confirm)) { _, _ ->
