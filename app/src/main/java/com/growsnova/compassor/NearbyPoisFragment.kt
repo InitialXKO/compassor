@@ -9,8 +9,10 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.launch
 import com.amap.api.maps.model.LatLng
 import com.amap.api.services.core.LatLonPoint
 import com.amap.api.services.core.PoiItem
@@ -49,14 +51,27 @@ class NearbyPoisFragment : Fragment(), PoiSearch.OnPoiSearchListener {
         
         recyclerView.layoutManager = LinearLayoutManager(context)
         adapter = PoiListAdapter(filteredPois) { poiItem ->
+            // Create waypoint from POI and save to database
             val waypoint = Waypoint(
-                id = System.currentTimeMillis(),
                 name = poiItem.title,
                 latitude = poiItem.latLonPoint.latitude,
                 longitude = poiItem.latLonPoint.longitude
             )
-            viewModel.addWaypoint(waypoint)
-            Toast.makeText(context, "${poiItem.title} added to route", Toast.LENGTH_SHORT).show()
+            
+            // Save POI as a waypoint to the database
+            val fragContext = context
+            if (fragContext != null) {
+                lifecycleScope.launch {
+                    val db = AppDatabase.getDatabase(fragContext)
+                    val newId = db.waypointDao().insert(waypoint)
+                    val savedWaypoint = waypoint.copy(id = newId)
+                    viewModel.addWaypoint(savedWaypoint)
+                    Toast.makeText(fragContext, "${poiItem.title} added to route", Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                viewModel.addWaypoint(waypoint)
+                Toast.makeText(context, "${poiItem.title} added to route", Toast.LENGTH_SHORT).show()
+            }
         }
         recyclerView.adapter = adapter
 

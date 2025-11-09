@@ -80,4 +80,12 @@
     <string name="save_route_hint">从 %1$s 到 %2$s</string>
     <string name="drag_to_reorder">拖动以重新排序</string>
     <string name="search">搜索</string>
+    <string name="add_favorite_location">添加收藏地点</string>
+    <string name="create_route_action">创建路线</string>
+    <string name="select_destination_waypoint">选择目的地航点</string>
+    <string name="set_destination_waypoint">设为目的地</string>
+    <string name="set_as_looping_route">设置为循环路线</string>
+    <string name="navigation_completed">已完成路线: %s</string>
+    <string name="reached_destination_next_waypoint">已到达地点，前往下一个: %s</string>
+    <string name="looping_route_restart">路线循环，返回起点: %s</string>
 </resources>

@@ -114,7 +114,14 @@ class CreateRouteActivity : AppCompatActivity() {
         })
         itemTouchHelper.attachToRecyclerView(selectedWaypointsRecyclerView)
 
+        val loopingCheckBox = findViewById<com.google.android.material.checkbox.MaterialCheckBox>(R.id.loopingCheckBox)
         val saveRouteButton = findViewById<android.widget.Button>(R.id.saveRouteButton)
+        
+        // If editing, set the checkbox to the existing route's looping state
+        routeBeingEdited?.let {
+            loopingCheckBox.isChecked = it.isLooping
+        }
+
         saveRouteButton.setOnClickListener {
             val selectedWaypoints = viewModel.selectedWaypoints.value
             if (selectedWaypoints.isNullOrEmpty() || selectedWaypoints.size < 2) {
@@ -143,7 +150,7 @@ class CreateRouteActivity : AppCompatActivity() {
                             id = existingRoute?.id ?: System.currentTimeMillis(),
                             name = routeName,
                             waypoints = selectedWaypoints,
-                            isLooping = existingRoute?.isLooping ?: false
+                            isLooping = loopingCheckBox.isChecked
                         )
 
                         val resultIntent = Intent().apply {

@@ -80,4 +80,12 @@
     <string name="save_route_hint">From %1$s to %2$s</string>
     <string name="drag_to_reorder">Drag to reorder</string>
     <string name="search">Search</string>
+    <string name="add_favorite_location">Add Favorite Location</string>
+    <string name="create_route_action">Create Route</string>
+    <string name="select_destination_waypoint">Select Destination Waypoint</string>
+    <string name="set_destination_waypoint">Set as Destination</string>
+    <string name="set_as_looping_route">Set as Looping Route</string>
+    <string name="navigation_completed">Route navigation completed: %s</string>
+    <string name="reached_destination_next_waypoint">Reached location, heading to next: %s</string>
+    <string name="looping_route_restart">Route looping, returning to start: %s</string>
 </resources>

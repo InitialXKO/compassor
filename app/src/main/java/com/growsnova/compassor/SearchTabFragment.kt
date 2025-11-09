@@ -53,14 +53,21 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
         
         recyclerView.layoutManager = LinearLayoutManager(context)
         adapter = PoiListAdapter(poiItems) { poiItem ->
+            // Create waypoint from POI and save to database
             val waypoint = Waypoint(
-                id = System.currentTimeMillis(),
                 name = poiItem.title,
                 latitude = poiItem.latLonPoint.latitude,
                 longitude = poiItem.latLonPoint.longitude
             )
-            viewModel.addWaypoint(waypoint)
-            Toast.makeText(context, "${poiItem.title} added to route", Toast.LENGTH_SHORT).show()
+            
+            // Save POI as a waypoint to the database
+            lifecycleScope.launch {
+                val db = AppDatabase.getDatabase(requireContext())
+                val newId = db.waypointDao().insert(waypoint)
+                val savedWaypoint = waypoint.copy(id = newId)
+                viewModel.addWaypoint(savedWaypoint)
+                Toast.makeText(context, "${poiItem.title} added to route", Toast.LENGTH_SHORT).show()
+            }
         }
         recyclerView.adapter = adapter
 

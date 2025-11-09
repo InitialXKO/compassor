@@ -208,6 +208,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         aMap.setOnMapLongClickListener { latLng ->
             showMapLongClickOptionsDialog(latLng)
         }
+
+        // 初始化FAB按钮
+        val fab = findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.fabAddAction)
+        fab.setOnClickListener {
+            showFabMenuDialog()
+        }
     }
 
     private fun checkAndRequestPermissions() {
@@ -358,15 +364,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     if (currentWaypointIndex < route.waypoints.size) {
                         val nextWaypoint = route.waypoints[currentWaypointIndex]
                         setTargetLocation(LatLng(nextWaypoint.latitude, nextWaypoint.longitude), nextWaypoint.name)
-                        Toast.makeText(this, "已到达地点，前往下一个: ${nextWaypoint.name}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, getString(R.string.reached_destination_next_waypoint, nextWaypoint.name), Toast.LENGTH_SHORT).show()
                     } else {
                         if (route.isLooping) {
                             currentWaypointIndex = 0
                             val firstWaypoint = route.waypoints[0]
                             setTargetLocation(LatLng(firstWaypoint.latitude, firstWaypoint.longitude), firstWaypoint.name)
-                            Toast.makeText(this, "路线循环，返回起点: ${firstWaypoint.name}", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, getString(R.string.looping_route_restart, firstWaypoint.name), Toast.LENGTH_SHORT).show()
                         } else {
-                            Toast.makeText(this, "已完成路线: ${route.name}", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, getString(R.string.navigation_completed, route.name), Toast.LENGTH_SHORT).show()
                             currentRoute = null
                             currentWaypointIndex = -1
                             routePolyline?.remove()
@@ -559,6 +565,29 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
+    private fun showFabMenuDialog() {
+        val options = arrayOf(getString(R.string.add_favorite_location), getString(R.string.create_route_action))
+        
+        DialogUtils.showOptionsDialog(
+            context = this,
+            title = getString(R.string.quick_action),
+            options = options
+        ) { which ->
+            when (which) {
+                0 -> {
+                    myCurrentLatLng?.let { latLng ->
+                        reverseGeocode(latLng) { name ->
+                            showSaveWaypointDialog(latLng, defaultName = name)
+                        }
+                    } ?: run {
+                        DialogUtils.showErrorToast(this, getString(R.string.location_unavailable))
+                    }
+                }
+                1 -> launchCreateRoute()
+            }
+        }
+    }
+
     private fun updateWaypoint(waypoint: Waypoint, newName: String, newLatLng: LatLng? = null) {
         lifecycleScope.launch {
             val otherWaypoints = waypoints.filter { it.id != waypoint.id }
@@ -732,12 +761,26 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 2 -> deleteRoute(route)
                 3 -> {
                     if (route.waypoints.isNotEmpty()) {
-                        val waypoint = route.waypoints[0]
-                        setTargetLocation(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
+                        showSelectDestinationWaypointDialog(route)
                     }
                 }
             }
         }
+    }
+
+    private fun showSelectDestinationWaypointDialog(route: Route) {
+        val waypointNames = route.waypoints.mapIndexed { index, waypoint ->
+            "${index + 1}. ${waypoint.name}"
+        }.toTypedArray()
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(getString(R.string.select_destination_waypoint))
+            .setItems(waypointNames) { _, which ->
+                val waypoint = route.waypoints[which]
+                setTargetLocation(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun deleteRoute(route: Route) {
@@ -1084,7 +1127,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             else -> 0
         }
         
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(R.string.theme_settings)
             .setSingleChoiceItems(themeOptions, currentSelection) { dialog, which ->
                 val newMode = when (which) {
