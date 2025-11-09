@@ -81,15 +81,63 @@
     </style>
 
     <!-- Text Styles -->
-    <style name="TextAppearance.Compassor.Headline" parent="TextAppearance.Material3.HeadlineSmall">
+    <style name="TextAppearance.Compassor.DisplayLarge" parent="TextAppearance.Material3.DisplayLarge">
         <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
 
-    <style name="TextAppearance.Compassor.Body" parent="TextAppearance.Material3.BodyMedium">
+    <style name="TextAppearance.Compassor.DisplayMedium" parent="TextAppearance.Material3.DisplayMedium">
         <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
 
-    <style name="TextAppearance.Compassor.Caption" parent="TextAppearance.Material3.BodySmall">
+    <style name="TextAppearance.Compassor.DisplaySmall" parent="TextAppearance.Material3.DisplaySmall">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="TextAppearance.Compassor.HeadlineLarge" parent="TextAppearance.Material3.HeadlineLarge">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="TextAppearance.Compassor.HeadlineMedium" parent="TextAppearance.Material3.HeadlineMedium">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="TextAppearance.Compassor.HeadlineSmall" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="TextAppearance.Compassor.TitleLarge" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="TextAppearance.Compassor.TitleMedium" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="TextAppearance.Compassor.TitleSmall" parent="TextAppearance.Material3.TitleSmall">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="TextAppearance.Compassor.BodyLarge" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="TextAppearance.Compassor.BodyMedium" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="TextAppearance.Compassor.BodySmall" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+    </style>
+
+    <style name="TextAppearance.Compassor.LabelLarge" parent="TextAppearance.Material3.LabelLarge">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="TextAppearance.Compassor.LabelMedium" parent="TextAppearance.Material3.LabelMedium">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="TextAppearance.Compassor.LabelSmall" parent="TextAppearance.Material3.LabelSmall">
         <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
     </style>
 

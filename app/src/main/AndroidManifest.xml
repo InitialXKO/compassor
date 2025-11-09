@@ -46,6 +46,10 @@
             android:name=".CreateRouteActivity"
             android:screenOrientation="portrait" />
 
+        <activity
+            android:name=".WaypointSelectionActivity"
+            android:screenOrientation="portrait" />
+
         <!-- 高德地图服务 -->
         <service android:name="com.amap.api.location.APSService" />
     </application>

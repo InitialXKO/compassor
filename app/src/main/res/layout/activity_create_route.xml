@@ -7,113 +7,49 @@
     android:layout_height="match_parent"
     tools:context=".CreateRouteActivity">
 
-    <com.google.android.material.appbar.AppBarLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:elevation="@dimen/elevation_sm">
-
-        <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            app:title="@string/create_route" />
-
-        <com.google.android.material.tabs.TabLayout
-            android:id="@+id/tabLayout"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:tabMode="fixed"
-            app:tabGravity="fill" />
-
-    </com.google.android.material.appbar.AppBarLayout>
-
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_marginTop="112dp">
+        android:orientation="vertical">
 
-        <androidx.viewpager2.widget.ViewPager2
-            android:id="@+id/viewPager"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toTopOf="@id/selectedWaypointsCard"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
-
-        <!-- Selected Waypoints Card -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/selectedWaypointsCard"
+        <com.google.android.material.appbar.AppBarLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/margin_md"
-            android:layout_marginEnd="@dimen/margin_md"
-            android:layout_marginBottom="@dimen/margin_md"
-            app:cardCornerRadius="@dimen/corner_radius_lg"
-            app:cardElevation="@dimen/card_elevation"
-            app:layout_constraintBottom_toTopOf="@id/saveRouteButton"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent">
+            android:elevation="@dimen/elevation_sm">
 
-            <androidx.constraintlayout.widget.ConstraintLayout
+            <com.google.android.material.appbar.MaterialToolbar
+                android:id="@+id/toolbar"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="?attr/actionBarSize"
+                app:title="@string/create_route" />
 
-                <TextView
-                    android:id="@+id/selectedWaypointsLabel"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/margin_md"
-                    android:layout_marginTop="@dimen/margin_md"
-                    android:text="@string/selected_waypoints"
-                    android:textAppearance="?attr/textAppearanceTitleMedium"
-                    android:textColor="?attr/colorOnSurface"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+        </com.google.android.material.appbar.AppBarLayout>
 
-                <TextView
-                    android:id="@+id/waypointCount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="@dimen/margin_md"
-                    android:layout_marginTop="@dimen/margin_md"
-                    android:textAppearance="?attr/textAppearanceBodyMedium"
-                    android:textColor="?attr/colorOnSurfaceVariant"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/selectedWaypointsRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:clipToPadding="false"
+            android:padding="@dimen/padding_md" />
 
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/selectedWaypointsRecyclerView"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="@dimen/margin_sm"
-                    android:layout_marginBottom="@dimen/margin_md"
-                    android:clipToPadding="false"
-                    android:paddingStart="@dimen/padding_sm"
-                    android:paddingEnd="@dimen/padding_sm"
-                    app:layout_constraintTop_toBottomOf="@id/selectedWaypointsLabel"
-                    app:layout_constraintBottom_toBottomOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintEnd_toEndOf="parent" />
-
-            </androidx.constraintlayout.widget.ConstraintLayout>
-
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Save Route Button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/saveRouteButton"
-            android:layout_width="0dp"
-            android:layout_height="@dimen/button_height"
-            android:layout_marginStart="@dimen/margin_md"
-            android:layout_marginEnd="@dimen/margin_md"
-            android:layout_marginBottom="@dimen/margin_lg"
-            android:text="@string/save_route"
             style="@style/Widget.Compassor.Button"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintEnd_toEndOf="parent" />
+            android:layout_width="match_parent"
+            android:layout_height="@dimen/button_height"
+            android:layout_margin="@dimen/margin_md"
+            android:text="@string/save_route" />
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+    </LinearLayout>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/addWaypointFab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="@dimen/margin_lg"
+        android:src="@drawable/ic_add"
+        app:tint="?attr/colorOnPrimary" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

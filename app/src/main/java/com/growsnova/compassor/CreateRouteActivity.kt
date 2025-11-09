@@ -31,19 +31,6 @@ class CreateRouteActivity : AppCompatActivity() {
         waypoints = waypointWrapper?.waypoints ?: arrayListOf()
         currentLatLng = intent.getParcelableExtraCompat<LatLng>("current_latlng")
 
-        val viewPager = findViewById<androidx.viewpager2.widget.ViewPager2>(R.id.viewPager)
-        val tabLayout = findViewById<com.google.android.material.tabs.TabLayout>(R.id.tabLayout)
-
-        viewPager.adapter = CreateRoutePagerAdapter(this, waypoints, currentLatLng)
-
-        com.google.android.material.tabs.TabLayoutMediator(tabLayout, viewPager) { tab, position ->
-            tab.text = when (position) {
-                0 -> getString(R.string.saved_waypoints)
-                1 -> getString(R.string.nearby_pois)
-                else -> getString(R.string.search_location)
-            }
-        }.attach()
-
         val selectedWaypointsRecyclerView = findViewById<RecyclerView>(R.id.selectedWaypointsRecyclerView)
         val adapter = SelectedWaypointsAdapter(mutableListOf())
         selectedWaypointsRecyclerView.adapter = adapter
@@ -163,6 +150,12 @@ class CreateRouteActivity : AppCompatActivity() {
                 }
                 .setNegativeButton(getString(R.string.cancel), null)
                 .show()
+        }
+
+        val addWaypointFab = findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.addWaypointFab)
+        addWaypointFab.setOnClickListener {
+            val intent = Intent(this, WaypointSelectionActivity::class.java)
+            startActivityForResult(intent, 1)
         }
     }
 

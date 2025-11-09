@@ -121,6 +121,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         setContentView(R.layout.activity_main)
 
+        val bottomSheet = findViewById<android.widget.FrameLayout>(R.id.bottomSheet)
+        com.google.android.material.bottomsheet.BottomSheetBehavior.from(bottomSheet).apply {
+            peekHeight = 250
+            isHideable = false
+        }
+
         // 初始化视图
         initViews(savedInstanceState)
 
