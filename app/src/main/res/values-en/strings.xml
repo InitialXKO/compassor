@@ -80,4 +80,6 @@
     <string name="save_route_hint">From %1$s to %2$s</string>
     <string name="drag_to_reorder">Drag to reorder</string>
     <string name="search">Search</string>
+    <string name="search_location_to_start">Start searching locations to create a list</string>
+    <string name="enter_search_term">Enter keywords to search for locations</string>
 </resources>

@@ -1,38 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:padding="12dp"
     android:background="?attr/selectableItemBackground"
-    android:gravity="center_vertical">
+    android:paddingStart="@dimen/padding_md"
+    android:paddingEnd="@dimen/padding_md"
+    android:paddingTop="@dimen/padding_sm"
+    android:paddingBottom="@dimen/padding_sm"
+    android:minHeight="@dimen/list_item_height">
 
     <ImageView
         android:id="@+id/dragHandle"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
+        android:layout_width="@dimen/icon_size_md"
+        android:layout_height="@dimen/icon_size_md"
         android:src="@android:drawable/ic_menu_sort_by_size"
         android:contentDescription="@string/drag_to_reorder"
+        android:layout_marginEnd="@dimen/margin_md"
         app:tint="?attr/colorOnSurfaceVariant"
-        android:layout_marginEnd="12dp" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
 
     <TextView
         android:id="@+id/waypointNameText"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
         android:textAppearance="?attr/textAppearanceBodyLarge"
         android:textColor="?attr/colorOnSurface"
         android:ellipsize="end"
-        android:maxLines="1" />
+        android:maxLines="2"
+        app:layout_constraintStart_toEndOf="@id/dragHandle"
+        app:layout_constraintEnd_toStartOf="@id/waypointOrderText"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
 
-    <TextView
+    <com.google.android.material.chip.Chip
         android:id="@+id/waypointOrderText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textAppearance="?attr/textAppearanceBodyMedium"
-        android:textColor="?attr/colorOnSurfaceVariant"
-        android:layout_marginStart="8dp" />
+        android:layout_marginStart="@dimen/margin_md"
+        android:textAppearance="?attr/textAppearanceLabelMedium"
+        android:textColor="?attr/colorOnPrimary"
+        app:chipBackgroundColor="?attr/colorPrimary"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent" />
 
-</LinearLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

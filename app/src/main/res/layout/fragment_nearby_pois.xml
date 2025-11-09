@@ -17,7 +17,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="@dimen/margin_md"
             app:cardCornerRadius="@dimen/corner_radius_md"
-            app:cardElevation="@dimen/elevation_sm"
+            app:cardElevation="@dimen/elevation_md"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
@@ -149,11 +149,12 @@
             app:layout_constraintEnd_toEndOf="parent">
 
             <ImageView
-                android:layout_width="64dp"
-                android:layout_height="64dp"
+                android:layout_width="@dimen/icon_size_lg"
+                android:layout_height="@dimen/icon_size_lg"
                 android:src="@android:drawable/ic_menu_search"
-                android:alpha="0.6"
-                app:tint="?attr/colorOnSurfaceVariant" />
+                android:alpha="0.5"
+                app:tint="?attr/colorOnSurfaceVariant"
+                android:contentDescription="@string/no_nearby_pois" />
 
             <TextView
                 android:layout_width="wrap_content"

@@ -101,4 +101,41 @@
         <item name="itemShapeAppearance">@style/ShapeAppearance.Compassor.SmallComponent</item>
         <item name="itemShapeFillColor">?attr/colorSurfaceVariant</item>
     </style>
+
+    <!-- Checkbox Style -->
+    <style name="Widget.Compassor.CheckBox" parent="Widget.Material3.CheckBox">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+    </style>
+
+    <!-- Dialog Style -->
+    <style name="Theme.Compassor.Dialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="materialAlertDialogBodyTextColor">?attr/colorOnSurface</item>
+        <item name="materialAlertDialogTitleIconTintColor">?attr/colorPrimary</item>
+    </style>
+
+    <!-- SnackBar Style -->
+    <style name="Widget.Compassor.SnackBar" parent="Widget.Material3.Snackbar">
+    </style>
+
+    <!-- FAB Style -->
+    <style name="Widget.Compassor.FloatingActionButton" parent="Widget.Material3.FloatingActionButton.Primary">
+        <item name="cornerRadius">@dimen/corner_radius_lg</item>
+    </style>
+
+    <!-- Progress Indicator -->
+    <style name="Widget.Compassor.ProgressIndicator" parent="Widget.Material3.LinearProgressIndicator">
+    </style>
+
+    <!-- Toolbar Extended Style -->
+    <style name="Widget.Compassor.Toolbar" parent="Widget.MaterialComponents.AppBarLayout.Primary">
+        <item name="android:elevation">@dimen/elevation_sm</item>
+    </style>
+
+    <!-- List Item Style -->
+    <style name="Widget.Compassor.ListItem" parent="Widget.Material3.ListItem">
+        <item name="android:minHeight">@dimen/list_item_height</item>
+        <item name="android:paddingStart">@dimen/padding_md</item>
+        <item name="android:paddingEnd">@dimen/padding_md</item>
+    </style>
 </resources>

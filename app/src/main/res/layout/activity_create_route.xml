@@ -50,7 +50,7 @@
             android:layout_marginEnd="@dimen/margin_md"
             android:layout_marginBottom="@dimen/margin_md"
             app:cardCornerRadius="@dimen/corner_radius_lg"
-            app:cardElevation="@dimen/card_elevation"
+            app:cardElevation="@dimen/elevation_md"
             app:layout_constraintBottom_toTopOf="@id/saveRouteButton"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">

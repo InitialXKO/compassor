@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -12,12 +12,16 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="@dimen/margin_md"
         app:cardCornerRadius="@dimen/corner_radius_md"
-        app:cardElevation="@dimen/elevation_sm">
+        app:cardElevation="@dimen/elevation_md"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="@dimen/padding_md">
+            android:padding="@dimen/padding_md"
+            android:minHeight="@dimen/input_height">
 
             <!-- 搜索图标和输入 -->
             <ImageView
@@ -39,7 +43,8 @@
                 style="@style/Widget.Compassor.TextInputLayout"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintStart_toEndOf="@id/searchIcon"
-                app:layout_constraintEnd_toStartOf="@id/searchButton">
+                app:layout_constraintEnd_toStartOf="@id/searchButton"
+                app:layout_constraintBottom_toBottomOf="parent">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/editText"
@@ -54,7 +59,7 @@
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/searchButton"
                 android:layout_width="wrap_content"
-                android:layout_height="@dimen/button_height"
+                android:layout_height="wrap_content"
                 android:text="@string/search_button"
                 style="@style/Widget.Compassor.Button"
                 app:layout_constraintTop_toTopOf="parent"
@@ -74,31 +79,42 @@
         android:text="@string/search_results"
         android:textAppearance="?attr/textAppearanceTitleMedium"
         android:textColor="?attr/colorOnSurface"
-        android:visibility="gone" />
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/searchCard"
+        app:layout_constraintStart_toStartOf="parent" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/searchResultsRecyclerView"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_marginTop="@dimen/margin_lg"
+        android:layout_height="0dp"
+        android:layout_marginTop="@dimen/margin_md"
         android:layout_marginBottom="@dimen/margin_md"
-        android:visibility="gone" />
+        android:clipToPadding="false"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/resultsLabel"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <!-- 空状态 -->
     <LinearLayout
         android:id="@+id/emptyState"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
         android:orientation="vertical"
         android:gravity="center"
         android:padding="@dimen/padding_lg"
-        android:visibility="gone">
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/searchCard"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
 
         <ImageView
             android:layout_width="@dimen/icon_size_lg"
             android:layout_height="@dimen/icon_size_lg"
             android:src="@android:drawable/ic_menu_search"
-            android:alpha="0.6"
+            android:alpha="0.5"
             app:tint="?attr/colorOnSurfaceVariant"
             android:contentDescription="@string/search_location" />
 
@@ -111,6 +127,15 @@
             android:textColor="?attr/colorOnSurfaceVariant"
             android:gravity="center" />
 
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/margin_sm"
+            android:text="@string/enter_search_term"
+            android:textAppearance="?attr/textAppearanceBodySmall"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:gravity="center" />
+
     </LinearLayout>
 
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

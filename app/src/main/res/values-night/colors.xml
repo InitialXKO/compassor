@@ -60,4 +60,21 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="transparent">#00000000</color>
+
+    <!-- Gradient Colors for Enhanced UI - Dark Mode -->
+    <color name="gradient_start">#003062</color>
+    <color name="gradient_mid">#60A5FA</color>
+    <color name="gradient_end">#AEC6FF</color>
+
+    <!-- Semantic Colors for States - Dark Mode -->
+    <color name="state_enabled">#E6E1E5</color>
+    <color name="state_disabled">#9A9BA0</color>
+    <color name="state_hover">#313033</color>
+    <color name="state_focus">#AEC6FF</color>
+    <color name="state_pressed">#49454F</color>
+
+    <!-- Overlay Colors - Dark Mode -->
+    <color name="overlay_light">#1C1B1F</color>
+    <color name="overlay_dark">#FFFBFE</color>
+    <color name="overlay_scrim">#FFFFFF19</color>
 </resources>

@@ -5,16 +5,17 @@
     android:layout_height="wrap_content"
     android:layout_margin="@dimen/margin_xs"
     app:cardCornerRadius="@dimen/corner_radius_md"
-    app:cardElevation="@dimen/elevation_sm"
+    app:cardElevation="@dimen/elevation_md"
     app:rippleColor="?attr/colorPrimary"
     android:clickable="true"
     android:focusable="true"
-    android:foreground="?attr/selectableItemBackground">
+    android:stateListAnimator="@null">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:padding="@dimen/padding_md">
+        android:padding="@dimen/padding_md"
+        android:minHeight="@dimen/list_item_height">
 
         <TextView
             android:id="@+id/waypointName"

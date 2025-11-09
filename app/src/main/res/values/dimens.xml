@@ -59,4 +59,36 @@
     <dimen name="stroke_width_thin">1dp</dimen>
     <dimen name="stroke_width_normal">2dp</dimen>
     <dimen name="stroke_width_thick">4dp</dimen>
+
+    <!-- Animation durations -->
+    <integer name="duration_short">150</integer>
+    <integer name="duration_medium">300</integer>
+    <integer name="duration_long">500</integer>
+
+    <!-- Text sizes -->
+    <dimen name="text_size_display_large">57sp</dimen>
+    <dimen name="text_size_display_medium">45sp</dimen>
+    <dimen name="text_size_headline_large">32sp</dimen>
+    <dimen name="text_size_headline_medium">28sp</dimen>
+    <dimen name="text_size_headline_small">24sp</dimen>
+    <dimen name="text_size_title_large">22sp</dimen>
+    <dimen name="text_size_title_medium">16sp</dimen>
+    <dimen name="text_size_title_small">14sp</dimen>
+    <dimen name="text_size_body_large">16sp</dimen>
+    <dimen name="text_size_body_medium">14sp</dimen>
+    <dimen name="text_size_body_small">12sp</dimen>
+    <dimen name="text_size_label_large">14sp</dimen>
+    <dimen name="text_size_label_medium">12sp</dimen>
+    <dimen name="text_size_label_small">11sp</dimen>
+
+    <!-- Line heights for better readability -->
+    <dimen name="line_height_body">20dp</dimen>
+    <dimen name="line_height_headline">28dp</dimen>
+
+    <!-- Maximum widths for better reading on large screens -->
+    <dimen name="max_content_width">600dp</dimen>
+
+    <!-- Dialog dimensions -->
+    <dimen name="dialog_min_width">280dp</dimen>
+    <dimen name="dialog_max_width">560dp</dimen>
 </resources>
