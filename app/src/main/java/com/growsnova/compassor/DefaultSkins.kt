@@ -3,7 +3,19 @@ package com.growsnova.compassor
 import android.graphics.Color
 
 object DefaultSkins {
-    val default = RadarSkin()
+    val default = RadarSkin(
+        backgroundColor = Color.parseColor("#1C1B1F"),
+        compassRingColor = Color.parseColor("#58A6FF"),
+        innerRingColor = Color.parseColor("#49454F"),
+        crosshairColor = Color.parseColor("#F4EFF4"),
+        targetColor = Color.parseColor("#FFD700"), // Gold
+        targetRingColor = Color.parseColor("#FFD700"),
+        targetLineColor = Color.parseColor("#FFD700"),
+        distanceTextColor = Color.parseColor("#F4EFF4"),
+        infoTextColor = Color.parseColor("#CAC4D0"),
+        directionTextColor = Color.parseColor("#CAC4D0"),
+        tickColor = Color.parseColor("#49454F")
+    )
 
     val forest = RadarSkin(
         backgroundColor = Color.parseColor("#1B2631"),

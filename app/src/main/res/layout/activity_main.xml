@@ -40,46 +40,27 @@
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/radarCard"
-                android:layout_width="match_parent"
+    style="@style/Widget.Compassor.Card"
+    android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/margin_md"
                 android:layout_marginEnd="@dimen/margin_md"
                 android:layout_marginBottom="@dimen/margin_md"
-                app:cardCornerRadius="@dimen/corner_radius_lg"
-                app:cardElevation="@dimen/card_elevation"
+    app:cardBackgroundColor="?attr/colorSurface"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent">
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintWidth_percent="0.95">
 
-                <androidx.constraintlayout.widget.ConstraintLayout
+    <com.growsnova.compassor.RadarCompassView
+        android:id="@+id/radarView"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
-
-                    <com.growsnova.compassor.RadarCompassView
-                        android:id="@+id/radarView"
-                        android:layout_width="match_parent"
-                        android:layout_height="@dimen/radar_height_default"
-                        android:background="@color/radar_background"
-                        android:minHeight="@dimen/radar_height_min"
-                        android:maxHeight="@dimen/radar_height_max"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent" />
-
-                    <TextView
-                        android:id="@+id/radarTitle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="@dimen/margin_md"
-                        android:layout_marginTop="@dimen/margin_md"
-                        android:text="@string/radar_compass"
-                        android:textAppearance="?attr/textAppearanceTitleMedium"
-                        android:textColor="?attr/colorOnSurface"
-                        android:visibility="gone"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent" />
-
-                </androidx.constraintlayout.widget.ConstraintLayout>
+        android:layout_height="@dimen/radar_height_default"
+        android:minHeight="@dimen/radar_height_min"
+        android:maxHeight="@dimen/radar_height_max"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
             </com.google.android.material.card.MaterialCardView>
 
