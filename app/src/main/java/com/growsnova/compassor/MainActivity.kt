@@ -330,7 +330,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             if (isFirstLocation) {
                 aMap.moveCamera(CameraUpdateFactory.newLatLngZoom(newLatLng, 15f))
             } else {
-                aMap.animateCamera(CameraUpdateFactory.newLatLngZoom(newLatLng, 15f))
+                aMap.animateCamera(CameraUpdateFactory.newLatLng(newLatLng))
             }
             isFirstLocation = false
         }
