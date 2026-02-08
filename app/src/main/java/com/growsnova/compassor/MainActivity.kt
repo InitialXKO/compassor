@@ -441,7 +441,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         targetMarker?.showInfoWindow()
 
         // 移动相机到目标位置
-        aMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
+        aMap.animateCamera(CameraUpdateFactory.newLatLng(latLng))
 
         // 更新雷达视图
         myCurrentLatLng?.let { myLoc ->
