@@ -45,6 +45,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private lateinit var mapView: MapView
     private lateinit var aMap: AMap
     private lateinit var radarView: RadarCompassView
+    private lateinit var simpleCompassView: SimpleCompassView
+    private lateinit var radarContent: android.view.View
+    private var isRadarFlipped = false
     private lateinit var drawerLayout: androidx.drawerlayout.widget.DrawerLayout
     private lateinit var navigationView: com.google.android.material.navigation.NavigationView
     private lateinit var toolbar: androidx.appcompat.widget.Toolbar
@@ -252,6 +255,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         mapView = findViewById(R.id.mapView)
         radarView = findViewById(R.id.radarView)
+        simpleCompassView = findViewById(R.id.simpleCompassView)
+        radarContent = findViewById(R.id.radarContent)
+        
+        radarContent.setOnClickListener {
+            flipRadarCard()
+        }
 
         // Init Navigation UI
         navigationStatusCard = findViewById(R.id.navigationStatusCard)
@@ -356,7 +365,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         aMap.isMyLocationEnabled = true
         
         // Initialize radar skin from theme
-        radarView.setSkin(RadarSkin.createFromTheme(this))
+        val skin = RadarSkin.createFromTheme(this)
+        radarView.setSkin(skin)
+        simpleCompassView.setSkin(skin)
 
         startLocationUpdates()
     }
@@ -524,7 +535,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 Location.distanceBetween(current.latitude, current.longitude, target.latitude, target.longitude, distArray)
                 val dist = distArray[0]
                 
-                radarView.updateTarget(current, target)
+                updateRadarViews(current, target)
                 updateGuidanceLine(current, target)
                 
                 // Update navigation status card if not in route (route has its own update below)
@@ -641,7 +652,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         // 更新雷达视图
         myCurrentLatLng?.let { myLoc ->
-            radarView.updateTarget(myLoc, latLng)
+            updateRadarViews(myLoc, latLng)
         }
 
         // 清除路线 (if this is a direct target set) or redraw (if in route)
@@ -1490,6 +1501,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 // Here you would typically save the skin to a list of custom skins
                 // For simplicity, we'll just apply it directly for now
                 radarView.setSkin(skin)
+                simpleCompassView.setSkin(skin)
                 DialogUtils.showSuccessToast(this, getString(R.string.skin_imported))
             }
         } catch (e: Exception) {
@@ -1511,5 +1523,42 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    private fun flipRadarCard() {
+        val root = radarContent
+        val front = radarView
+        val back = simpleCompassView
+        
+        val scale = resources.displayMetrics.density
+        root.cameraDistance = 8000 * scale
+
+        val outAnim = android.animation.ObjectAnimator.ofFloat(root, "rotationY", if (isRadarFlipped) 180f else 0f, if (isRadarFlipped) 90f else 90f)
+        val inAnim = android.animation.ObjectAnimator.ofFloat(root, "rotationY", if (isRadarFlipped) -90f else 270f, if (isRadarFlipped) 0f else 180f)
+        
+        outAnim.duration = 150
+        inAnim.duration = 150
+        
+        outAnim.addListener(object : android.animation.AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: android.animation.Animator) {
+                if (isRadarFlipped) {
+                    back.visibility = android.view.View.GONE
+                    front.visibility = android.view.View.VISIBLE
+                    root.rotationY = 0f
+                } else {
+                    front.visibility = android.view.View.GONE
+                    back.visibility = android.view.View.VISIBLE
+                    root.rotationY = 180f
+                }
+                isRadarFlipped = !isRadarFlipped
+                inAnim.start()
+            }
+        })
+        outAnim.start()
+    }
+
+    private fun updateRadarViews(current: LatLng, target: LatLng) {
+        radarView.updateTarget(current, target)
+        simpleCompassView.updateTarget(current, target)
     }
 }

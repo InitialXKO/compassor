@@ -38,6 +38,8 @@ class RadarCompassView @JvmOverloads constructor(
     private val geomagnetic = FloatArray(3)
     private val rotationMatrix = FloatArray(9)
     private val orientation = FloatArray(3)
+    private var smoothedAzimuth: Float = 0f
+    private val alphaFilter = 0.15f // 滤波系数，越小越平滑但延迟越高
 
     private var skin: RadarSkin = RadarSkin()
 
@@ -183,13 +185,23 @@ class RadarCompassView @JvmOverloads constructor(
             // 计算旋转矩阵和方向
             if (SensorManager.getRotationMatrix(rotationMatrix, null, gravity, geomagnetic)) {
                 SensorManager.getOrientation(rotationMatrix, orientation)
-                deviceAzimuth = Math.toDegrees(orientation[0].toDouble()).toFloat()
-                if (deviceAzimuth < 0) {
-                    deviceAzimuth += 360f
-                }
+                var azimuth = Math.toDegrees(orientation[0].toDouble()).toFloat()
+                if (azimuth < 0) azimuth += 360f
+                
+                // 低通滤波处理抖动
+                smoothedAzimuth = smoothRotation(smoothedAzimuth, azimuth, alphaFilter)
+                deviceAzimuth = smoothedAzimuth
+                
                 invalidate() // 触发重绘
             }
         }
+    }
+
+    private fun smoothRotation(current: Float, target: Float, alpha: Float): Float {
+        var diff = target - current
+        if (diff > 180) diff -= 360
+        else if (diff < -180) diff += 360
+        return current + alpha * diff
     }
 
     override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {

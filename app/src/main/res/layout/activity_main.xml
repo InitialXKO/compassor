@@ -120,8 +120,12 @@
                 app:layout_constraintEnd_toEndOf="parent">
 
                 <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/radarContent"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
+                    android:layout_height="wrap_content"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackground">
 
                     <com.growsnova.compassor.RadarCompassView
                         android:id="@+id/radarView"
@@ -130,6 +134,16 @@
                         android:background="@color/radar_background"
                         android:minHeight="@dimen/radar_height_min"
                         android:maxHeight="@dimen/radar_height_max"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent" />
+
+                    <com.growsnova.compassor.SimpleCompassView
+                        android:id="@+id/simpleCompassView"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/radar_height_default"
+                        android:background="@color/radar_background"
+                        android:visibility="gone"
                         app:layout_constraintTop_toTopOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintEnd_toEndOf="parent" />
