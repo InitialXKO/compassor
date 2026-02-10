@@ -35,7 +35,6 @@ import com.amap.api.services.core.PoiItem
 import com.amap.api.services.poisearch.PoiResult
 import com.amap.api.services.poisearch.PoiSearch
 import com.google.android.material.navigation.NavigationView
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 
@@ -1442,7 +1441,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             else -> 0
         }
         
-        AlertDialog.Builder(this)
+        MaterialAlertDialogBuilder(this)
             .setTitle(R.string.theme_settings)
             .setSingleChoiceItems(themeOptions, currentSelection) { dialog, which ->
                 val newMode = when (which) {

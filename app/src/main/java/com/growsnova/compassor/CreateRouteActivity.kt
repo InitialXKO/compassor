@@ -123,8 +123,8 @@ class CreateRouteActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            val initialName = if (existingRoute != null) {
-                existingRoute.name
+            val initialName = if (routeBeingEdited != null) {
+                routeBeingEdited?.name.orEmpty()
             } else if (selectedWaypoints.size >= 2) {
                 getString(R.string.save_route_hint, selectedWaypoints.first().name, selectedWaypoints.last().name)
             } else {
@@ -133,15 +133,15 @@ class CreateRouteActivity : AppCompatActivity() {
 
             DialogUtils.showInputDialog(
                 context = this,
-                title = if (existingRoute == null) getString(R.string.create_route) else getString(R.string.edit_route),
+                title = if (routeBeingEdited == null) getString(R.string.create_route) else getString(R.string.edit_route),
                 hint = getString(R.string.route_name_hint),
                 initialValue = initialName,
                 onPositive = { routeName ->
                     val newRoute = Route(
-                        id = existingRoute?.id ?: System.currentTimeMillis(),
+                        id = routeBeingEdited?.id ?: System.currentTimeMillis(),
                         name = routeName,
                         waypoints = selectedWaypoints,
-                        isLooping = existingRoute?.isLooping ?: false
+                        isLooping = routeBeingEdited?.isLooping ?: false
                     )
 
                     val resultIntent = Intent().apply {
@@ -149,7 +149,7 @@ class CreateRouteActivity : AppCompatActivity() {
                         putExtra("waypoints_wrapper", WaypointListWrapper(ArrayList(selectedWaypoints)))
                     }
 
-                    if (existingRoute == null) {
+                    if (routeBeingEdited == null) {
                         askToStartNavigation(newRoute, resultIntent)
                     } else {
                         setResult(RESULT_OK, resultIntent)
