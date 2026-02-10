@@ -119,6 +119,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         private const val PREF_SKIN_NAME = "SkinName"
         private const val PREF_THEME_MODE = "ThemeMode"
         private const val PREF_NAV_ROUTE = "NavRoute"
+        private const val PREF_NAV_ROUTE_ID = "NavRouteId"
         private const val PREF_NAV_INDEX = "NavIndex"
         private const val PREF_NAV_TARGET_LAT = "NavTargetLat"
         private const val PREF_NAV_TARGET_LNG = "NavTargetLng"
@@ -163,16 +164,17 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private fun saveNavigationState() {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val editor = prefs.edit()
-        
+
         if (currentRoute != null) {
-            val gson = com.google.gson.Gson()
-            editor.putString(PREF_NAV_ROUTE, gson.toJson(currentRoute))
+            editor.putLong(PREF_NAV_ROUTE_ID, currentRoute!!.id)
             editor.putInt(PREF_NAV_INDEX, currentWaypointIndex)
+            editor.remove(PREF_NAV_ROUTE)
         } else {
+            editor.remove(PREF_NAV_ROUTE_ID)
             editor.remove(PREF_NAV_ROUTE)
             editor.remove(PREF_NAV_INDEX)
         }
-        
+
         if (targetLatLng != null && currentRoute == null) {
             editor.putLong(PREF_NAV_TARGET_LAT, java.lang.Double.doubleToRawLongBits(targetLatLng!!.latitude))
             editor.putLong(PREF_NAV_TARGET_LNG, java.lang.Double.doubleToRawLongBits(targetLatLng!!.longitude))
@@ -182,7 +184,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             editor.remove(PREF_NAV_TARGET_LNG)
             editor.remove(PREF_NAV_TARGET_NAME)
         }
-        
+
         editor.apply()
     }
     
@@ -190,6 +192,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val editor = prefs.edit()
         editor.remove(PREF_NAV_ROUTE)
+        editor.remove(PREF_NAV_ROUTE_ID)
         editor.remove(PREF_NAV_INDEX)
         editor.remove(PREF_NAV_TARGET_LAT)
         editor.remove(PREF_NAV_TARGET_LNG)
@@ -199,35 +202,80 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private fun resumeNavigationState() {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val routeJson = prefs.getString(PREF_NAV_ROUTE, null)
-        
-        if (routeJson != null) {
-            try {
-                val gson = com.google.gson.Gson()
-                // Use TypeToken to properly deserialize the generic list
-                val routeType = object : com.google.gson.reflect.TypeToken<Route>() {}.type
-                val route = gson.fromJson<Route>(routeJson, routeType)
-                val index = prefs.getInt(PREF_NAV_INDEX, 0)
-                
-                // Validate the route data thoroughly
-                if (route != null && 
-                    route.waypoints != null && 
-                    route.waypoints.isNotEmpty() && 
-                    index >= 0 && 
-                    index < route.waypoints.size &&
-                    route.waypoints.all { it != null && it.latitude.isFinite() && it.longitude.isFinite() }
-                ) {
-                    // Wait for map to be ready using viewTreeObserver
-                    mapView.viewTreeObserver.addOnGlobalLayoutListener(object : 
+        val routeId = prefs.getLong(PREF_NAV_ROUTE_ID, -1L)
+
+        if (routeId > 0L) {
+            lifecycleScope.launch {
+                val routeWithWaypoints = db.routeDao().getRouteWithWaypoints(routeId)
+                val waypoints = routeWithWaypoints?.waypoints
+
+                if (routeWithWaypoints == null || waypoints.isNullOrEmpty()) {
+                    Log.w(TAG, "Navigation route missing, clearing navigation state")
+                    clearInvalidNavigationState()
+                    return@launch
+                }
+
+                if (waypoints.any { !it.latitude.isFinite() || !it.longitude.isFinite() }) {
+                    Log.w(TAG, "Invalid waypoint coordinates found, clearing navigation state")
+                    clearInvalidNavigationState()
+                    return@launch
+                }
+
+                val route = routeWithWaypoints.route
+                route.waypoints.clear()
+                route.waypoints.addAll(waypoints)
+
+                val index = prefs.getInt(PREF_NAV_INDEX, 0).coerceIn(0, waypoints.size - 1)
+
+                runOnUiThread {
+                    mapView.viewTreeObserver.addOnGlobalLayoutListener(object :
                         android.view.ViewTreeObserver.OnGlobalLayoutListener {
                         override fun onGlobalLayout() {
                             mapView.viewTreeObserver.removeOnGlobalLayoutListener(this)
-                            // Additional check to ensure map is initialized
                             if (::aMap.isInitialized) {
                                 try {
                                     currentRoute = route
                                     currentWaypointIndex = index
-                                    val waypoint = route.waypoints[index]
+                                    val waypoint = waypoints[index]
+                                    setTargetLocation(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
+                                    drawRouteOnMap(waypoints)
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "Failed to resume navigation", e)
+                                    clearInvalidNavigationState()
+                                    stopNavigation()
+                                }
+                            }
+                        }
+                    })
+                }
+            }
+            return
+        }
+
+        val routeJson = prefs.getString(PREF_NAV_ROUTE, null)
+
+        if (routeJson != null) {
+            try {
+                val gson = com.google.gson.Gson()
+                val routeType = object : com.google.gson.reflect.TypeToken<Route>() {}.type
+                val route = gson.fromJson<Route>(routeJson, routeType)
+                val index = prefs.getInt(PREF_NAV_INDEX, 0)
+
+                if (route != null &&
+                    route.waypoints.isNotEmpty() &&
+                    index >= 0 &&
+                    route.waypoints.all { it.latitude.isFinite() && it.longitude.isFinite() }
+                ) {
+                    val safeIndex = index.coerceIn(0, route.waypoints.size - 1)
+                    mapView.viewTreeObserver.addOnGlobalLayoutListener(object :
+                        android.view.ViewTreeObserver.OnGlobalLayoutListener {
+                        override fun onGlobalLayout() {
+                            mapView.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                            if (::aMap.isInitialized) {
+                                try {
+                                    currentRoute = route
+                                    currentWaypointIndex = safeIndex
+                                    val waypoint = route.waypoints[safeIndex]
                                     setTargetLocation(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
                                     drawRouteOnMap(route.waypoints)
                                 } catch (e: Exception) {
@@ -239,53 +287,51 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         }
                     })
                 } else {
-                    // Invalid route data, clear it
                     Log.w(TAG, "Invalid route data found, clearing navigation state")
                     clearInvalidNavigationState()
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to parse navigation route", e)
-                // Clear invalid data
                 clearInvalidNavigationState()
                 DialogUtils.showErrorToast(this, getString(R.string.navigation_data_error))
             }
-        } else {
-            val latBits = prefs.getLong(PREF_NAV_TARGET_LAT, java.lang.Double.doubleToRawLongBits(0.0))
-            val lngBits = prefs.getLong(PREF_NAV_TARGET_LNG, java.lang.Double.doubleToRawLongBits(0.0))
-            // Check for non-zero values (handling both 0 and the raw bits of 0.0)
-            if (latBits != 0L && lngBits != 0L && 
-                latBits != java.lang.Double.doubleToRawLongBits(0.0) && 
-                lngBits != java.lang.Double.doubleToRawLongBits(0.0)) {
-                try {
-                    val lat = java.lang.Double.longBitsToDouble(latBits)
-                    val lng = java.lang.Double.longBitsToDouble(lngBits)
-                    val name = prefs.getString(PREF_NAV_TARGET_NAME, "目的地") ?: "目的地"
-                    
-                    // Validate coordinates
-                    if (lat.isFinite() && lng.isFinite() && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                        mapView.viewTreeObserver.addOnGlobalLayoutListener(object : 
-                            android.view.ViewTreeObserver.OnGlobalLayoutListener {
-                            override fun onGlobalLayout() {
-                                mapView.viewTreeObserver.removeOnGlobalLayoutListener(this)
-                                if (::aMap.isInitialized) {
-                                    try {
-                                        setTargetLocation(LatLng(lat, lng), name)
-                                    } catch (e: Exception) {
-                                        Log.e(TAG, "Failed to resume target location", e)
-                                        clearInvalidNavigationState()
-                                    }
+            return
+        }
+
+        val latBits = prefs.getLong(PREF_NAV_TARGET_LAT, java.lang.Double.doubleToRawLongBits(0.0))
+        val lngBits = prefs.getLong(PREF_NAV_TARGET_LNG, java.lang.Double.doubleToRawLongBits(0.0))
+        if (latBits != 0L && lngBits != 0L &&
+            latBits != java.lang.Double.doubleToRawLongBits(0.0) &&
+            lngBits != java.lang.Double.doubleToRawLongBits(0.0)
+        ) {
+            try {
+                val lat = java.lang.Double.longBitsToDouble(latBits)
+                val lng = java.lang.Double.longBitsToDouble(lngBits)
+                val name = prefs.getString(PREF_NAV_TARGET_NAME, "目的地") ?: "目的地"
+
+                if (lat.isFinite() && lng.isFinite() && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                    mapView.viewTreeObserver.addOnGlobalLayoutListener(object :
+                        android.view.ViewTreeObserver.OnGlobalLayoutListener {
+                        override fun onGlobalLayout() {
+                            mapView.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                            if (::aMap.isInitialized) {
+                                try {
+                                    setTargetLocation(LatLng(lat, lng), name)
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "Failed to resume target location", e)
+                                    clearInvalidNavigationState()
                                 }
                             }
-                        })
-                    } else {
-                        clearInvalidNavigationState()
-                        DialogUtils.showErrorToast(this, getString(R.string.navigation_data_error))
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to parse navigation target", e)
+                        }
+                    })
+                } else {
                     clearInvalidNavigationState()
                     DialogUtils.showErrorToast(this, getString(R.string.navigation_data_error))
                 }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to parse navigation target", e)
+                clearInvalidNavigationState()
+                DialogUtils.showErrorToast(this, getString(R.string.navigation_data_error))
             }
         }
     }
@@ -1533,13 +1579,17 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private fun loadThemePreference() {
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         val themeMode = prefs.getInt(PREF_THEME_MODE, AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
-        AppCompatDelegate.setDefaultNightMode(themeMode)
+        if (AppCompatDelegate.getDefaultNightMode() != themeMode) {
+            AppCompatDelegate.setDefaultNightMode(themeMode)
+        }
     }
 
     private fun saveThemePreference(mode: Int) {
         val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
         prefs.edit().putInt(PREF_THEME_MODE, mode).apply()
-        AppCompatDelegate.setDefaultNightMode(mode)
+        if (AppCompatDelegate.getDefaultNightMode() != mode) {
+            AppCompatDelegate.setDefaultNightMode(mode)
+        }
     }
 
     private fun showSettingsDialog() {
