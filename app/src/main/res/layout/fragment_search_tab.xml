@@ -84,6 +84,13 @@
         android:layout_marginBottom="@dimen/margin_md"
         android:visibility="gone" />
 
+    <ProgressBar
+        android:id="@+id/progressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:visibility="gone" />
+
     <!-- 空状态 -->
     <LinearLayout
         android:id="@+id/emptyState"

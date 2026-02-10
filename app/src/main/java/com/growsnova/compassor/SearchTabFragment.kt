@@ -10,8 +10,11 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import android.text.Editable
+import android.text.TextWatcher
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
@@ -32,10 +35,12 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
     private lateinit var recyclerView: RecyclerView
     private lateinit var searchEditText: EditText
     private lateinit var searchButton: Button
+    private lateinit var progressBar: ProgressBar
     private lateinit var poiSearch: PoiSearch
     private var poiItems: MutableList<PoiItem> = mutableListOf()
     private lateinit var adapter: PoiListAdapter
     private var pendingQuery: String? = null
+    private var searchJob: kotlinx.coroutines.Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,6 +57,7 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
         recyclerView = view.findViewById(R.id.searchResultsRecyclerView)
         searchEditText = view.findViewById(R.id.editText)
         searchButton = view.findViewById(R.id.searchButton)
+        progressBar = view.findViewById(R.id.progressBar)
         
         recyclerView.layoutManager = LinearLayoutManager(context)
         adapter = PoiListAdapter(poiItems) { poiItem ->
@@ -66,10 +72,25 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
         }
         recyclerView.adapter = adapter
 
+        searchEditText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                searchJob?.cancel()
+                val query = s?.toString()?.trim() ?: ""
+                if (query.length >= 2) {
+                    searchJob = lifecycleScope.launch {
+                        kotlinx.coroutines.delay(500) // Debounce 500ms
+                        performSearch(hideKeyboard = false)
+                    }
+                }
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+
         searchEditText.setOnEditorActionListener { _, actionId, event ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH ||
                 (event != null && event.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)) {
-                performSearch()
+                performSearch(hideKeyboard = true)
                 true
             } else {
                 false
@@ -77,24 +98,30 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
         }
 
         searchButton.setOnClickListener {
-            performSearch()
+            performSearch(hideKeyboard = true)
         }
 
         pendingQuery?.let {
             searchEditText.setText(it)
-            performSearch()
+            performSearch(hideKeyboard = true)
             pendingQuery = null
         }
 
         return view
     }
 
-    private fun performSearch() {
+    private fun performSearch(hideKeyboard: Boolean = true) {
         val keyword = searchEditText.text.toString().trim()
         if (keyword.isNotEmpty()) {
+            if (!NetworkUtils.isNetworkAvailable(requireContext())) {
+                DialogUtils.showErrorToast(requireContext(), getString(R.string.network_unavailable))
+                return
+            }
             searchPois(keyword)
             saveSearchHistory(keyword)
-            hideKeyboard()
+            if (hideKeyboard) {
+                hideKeyboard()
+            }
         }
     }
 
@@ -104,6 +131,7 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
     }
 
     private fun searchPois(keyword: String) {
+        progressBar.visibility = View.VISIBLE
         val query = PoiSearch.Query(keyword, "", "")
         query.pageSize = 20
         poiSearch = PoiSearch(context, query)
@@ -119,6 +147,7 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
     }
 
     override fun onPoiSearched(result: PoiResult?, rCode: Int) {
+        progressBar.visibility = View.GONE
         if (rCode == 1000) {
             result?.pois?.let {
                 poiItems.clear()

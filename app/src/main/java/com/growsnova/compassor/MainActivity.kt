@@ -12,6 +12,7 @@ import android.os.Looper
 import android.util.Log
 import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
@@ -382,6 +383,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     @Suppress("DEPRECATION")
     private fun searchPOI(keyword: String) {
+        if (!NetworkUtils.isNetworkAvailable(this)) {
+            DialogUtils.showErrorToast(this, getString(R.string.network_unavailable))
+            return
+        }
         Toast.makeText(this, R.string.searching, Toast.LENGTH_SHORT).show()
 
         // 获取当前城市
@@ -922,40 +927,48 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         }
                     }
                 }
-                
+
                 val dialog = AlertDialog.Builder(this@MainActivity)
                     .setTitle(getString(R.string.search_location))
                     .setView(view)
-                    .setPositiveButton(getString(R.string.search)) { _, _ ->
-                        val keyword = editText.text.toString().trim()
-                        if (keyword.isNotEmpty()) {
-                            searchPOI(keyword)
-                            lifecycleScope.launch {
-                                db.searchHistoryDao().insert(SearchHistory(query = keyword))
-                            }
-                        }
-                    }
+                    .setPositiveButton(getString(R.string.search), null) // Set to null first to override behavior
                     .setNegativeButton(R.string.cancel, null)
                     .create()
+
+                // Request focus and show keyboard
+                editText.requestFocus()
+                dialog.setOnShowListener {
+                    val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+                    imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
+                }
+
+                val performSearchAction = {
+                    val keyword = editText.text.toString().trim()
+                    if (keyword.isNotEmpty()) {
+                        searchPOI(keyword)
+                        lifecycleScope.launch {
+                            db.searchHistoryDao().insert(SearchHistory(query = keyword))
+                        }
+                        dialog.dismiss()
+                    }
+                }
+
+                dialog.show()
+
+                // Override positive button to prevent auto-dismiss if empty
+                dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                    performSearchAction()
+                }
 
                 editText.setOnEditorActionListener { _, actionId, event ->
                     if (actionId == EditorInfo.IME_ACTION_SEARCH ||
                         (event != null && event.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)) {
-                        val keyword = editText.text.toString().trim()
-                        if (keyword.isNotEmpty()) {
-                            searchPOI(keyword)
-                            lifecycleScope.launch {
-                                db.searchHistoryDao().insert(SearchHistory(query = keyword))
-                            }
-                            dialog.dismiss()
-                        }
+                        performSearchAction()
                         true
                     } else {
                         false
                     }
                 }
-                    
-                dialog.show()
             }
         }
     }
