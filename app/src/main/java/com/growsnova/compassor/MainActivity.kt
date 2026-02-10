@@ -185,35 +185,70 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         
         editor.apply()
     }
+    
+    private fun clearInvalidNavigationState() {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val editor = prefs.edit()
+        editor.remove(PREF_NAV_ROUTE)
+        editor.remove(PREF_NAV_INDEX)
+        editor.remove(PREF_NAV_TARGET_LAT)
+        editor.remove(PREF_NAV_TARGET_LNG)
+        editor.remove(PREF_NAV_TARGET_NAME)
+        editor.apply()
+    }
 
     private fun resumeNavigationState() {
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val routeJson = prefs.getString(PREF_NAV_ROUTE, null)
         
         if (routeJson != null) {
-            val gson = com.google.gson.Gson()
-            val route = gson.fromJson(routeJson, Route::class.java)
-            val index = prefs.getInt(PREF_NAV_INDEX, 0)
-            
-            // Wait for map to be ready
-            mapView.post {
-                currentRoute = route
-                currentWaypointIndex = index
-                if (index < route.waypoints.size) {
-                    val waypoint = route.waypoints[index]
-                    setTargetLocation(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
-                    drawRouteOnMap(route.waypoints)
+            try {
+                val gson = com.google.gson.Gson()
+                val route = gson.fromJson(routeJson, Route::class.java)
+                val index = prefs.getInt(PREF_NAV_INDEX, 0)
+                
+                // Validate the route data
+                if (route != null && route.waypoints != null && route.waypoints.isNotEmpty() && index >= 0 && index < route.waypoints.size) {
+                    // Wait for map to be ready
+                    mapView.post {
+                        currentRoute = route
+                        currentWaypointIndex = index
+                        val waypoint = route.waypoints[index]
+                        setTargetLocation(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
+                        drawRouteOnMap(route.waypoints)
+                    }
+                } else {
+                    // Invalid route data, clear it
+                    clearInvalidNavigationState()
                 }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to parse navigation route", e)
+                // Clear invalid data
+                clearInvalidNavigationState()
+                DialogUtils.showErrorToast(this, getString(R.string.navigation_data_error))
             }
         } else {
             val latBits = prefs.getLong(PREF_NAV_TARGET_LAT, 0)
             val lngBits = prefs.getLong(PREF_NAV_TARGET_LNG, 0)
             if (latBits != 0L && lngBits != 0L) {
-                val lat = java.lang.Double.longBitsToDouble(latBits)
-                val lng = java.lang.Double.longBitsToDouble(lngBits)
-                val name = prefs.getString(PREF_NAV_TARGET_NAME, "目的地") ?: "目的地"
-                mapView.post {
-                    setTargetLocation(LatLng(lat, lng), name)
+                try {
+                    val lat = java.lang.Double.longBitsToDouble(latBits)
+                    val lng = java.lang.Double.longBitsToDouble(lngBits)
+                    val name = prefs.getString(PREF_NAV_TARGET_NAME, "目的地") ?: "目的地"
+                    
+                    // Validate coordinates
+                    if (lat.isFinite() && lng.isFinite() && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+                        mapView.post {
+                            setTargetLocation(LatLng(lat, lng), name)
+                        }
+                    } else {
+                        clearInvalidNavigationState()
+                        DialogUtils.showErrorToast(this, getString(R.string.navigation_data_error))
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to parse navigation target", e)
+                    clearInvalidNavigationState()
+                    DialogUtils.showErrorToast(this, getString(R.string.navigation_data_error))
                 }
             }
         }
@@ -1581,10 +1616,16 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     back.visibility = android.view.View.GONE
                     front.visibility = android.view.View.VISIBLE
                     root.rotationY = 0f
+                    // Reset scale for front view
+                    front.scaleX = 1f
+                    front.scaleY = 1f
                 } else {
                     front.visibility = android.view.View.GONE
                     back.visibility = android.view.View.VISIBLE
                     root.rotationY = 180f
+                    // Flip the back view to correct orientation
+                    back.scaleX = -1f
+                    back.scaleY = 1f
                 }
                 isRadarFlipped = !isRadarFlipped
                 inAnim.start()

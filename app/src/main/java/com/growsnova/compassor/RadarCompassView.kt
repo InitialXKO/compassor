@@ -342,15 +342,15 @@ class RadarCompassView @JvmOverloads constructor(
         val targetX = centerX + targetRadius * sin(radian).toFloat()
         val targetY = centerY - targetRadius * cos(radian).toFloat()
 
+        // 绘制指向目标的虚线 - 从中心到目标点
+        canvas.drawLine(centerX, centerY, targetX, targetY, targetLinePaint)
+
         // 绘制目标发光效果
         val pulse = (sin(System.currentTimeMillis() / 200.0) * 0.5 + 0.5).toFloat()
         val glowSize = 40f + 20f * pulse
         val colors = intArrayOf(skin.targetColor and 0x00FFFFFF or 0x60000000, Color.TRANSPARENT)
         glowPaint.shader = RadialGradient(targetX, targetY, glowSize, colors, null, Shader.TileMode.CLAMP)
         canvas.drawCircle(targetX, targetY, glowSize, glowPaint)
-
-        // 绘制指向目标的虚线
-        canvas.drawLine(centerX, centerY, targetX, targetY, targetLinePaint)
 
         // 绘制目标点外圈（脉冲效果）
         canvas.drawCircle(targetX, targetY, 25f + 5f * pulse, targetRingPaint)
