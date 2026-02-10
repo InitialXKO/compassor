@@ -204,21 +204,43 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (routeJson != null) {
             try {
                 val gson = com.google.gson.Gson()
-                val route = gson.fromJson(routeJson, Route::class.java)
+                // Use TypeToken to properly deserialize the generic list
+                val routeType = object : com.google.gson.reflect.TypeToken<Route>() {}.type
+                val route = gson.fromJson<Route>(routeJson, routeType)
                 val index = prefs.getInt(PREF_NAV_INDEX, 0)
                 
-                // Validate the route data
-                if (route != null && route.waypoints != null && route.waypoints.isNotEmpty() && index >= 0 && index < route.waypoints.size) {
-                    // Wait for map to be ready
-                    mapView.post {
-                        currentRoute = route
-                        currentWaypointIndex = index
-                        val waypoint = route.waypoints[index]
-                        setTargetLocation(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
-                        drawRouteOnMap(route.waypoints)
-                    }
+                // Validate the route data thoroughly
+                if (route != null && 
+                    route.waypoints != null && 
+                    route.waypoints.isNotEmpty() && 
+                    index >= 0 && 
+                    index < route.waypoints.size &&
+                    route.waypoints.all { it != null && it.latitude.isFinite() && it.longitude.isFinite() }
+                ) {
+                    // Wait for map to be ready using viewTreeObserver
+                    mapView.viewTreeObserver.addOnGlobalLayoutListener(object : 
+                        android.view.ViewTreeObserver.OnGlobalLayoutListener {
+                        override fun onGlobalLayout() {
+                            mapView.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                            // Additional check to ensure map is initialized
+                            if (::aMap.isInitialized) {
+                                try {
+                                    currentRoute = route
+                                    currentWaypointIndex = index
+                                    val waypoint = route.waypoints[index]
+                                    setTargetLocation(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
+                                    drawRouteOnMap(route.waypoints)
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "Failed to resume navigation", e)
+                                    clearInvalidNavigationState()
+                                    stopNavigation()
+                                }
+                            }
+                        }
+                    })
                 } else {
                     // Invalid route data, clear it
+                    Log.w(TAG, "Invalid route data found, clearing navigation state")
                     clearInvalidNavigationState()
                 }
             } catch (e: Exception) {
@@ -228,9 +250,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 DialogUtils.showErrorToast(this, getString(R.string.navigation_data_error))
             }
         } else {
-            val latBits = prefs.getLong(PREF_NAV_TARGET_LAT, 0)
-            val lngBits = prefs.getLong(PREF_NAV_TARGET_LNG, 0)
-            if (latBits != 0L && lngBits != 0L) {
+            val latBits = prefs.getLong(PREF_NAV_TARGET_LAT, java.lang.Double.doubleToRawLongBits(0.0))
+            val lngBits = prefs.getLong(PREF_NAV_TARGET_LNG, java.lang.Double.doubleToRawLongBits(0.0))
+            // Check for non-zero values (handling both 0 and the raw bits of 0.0)
+            if (latBits != 0L && lngBits != 0L && 
+                latBits != java.lang.Double.doubleToRawLongBits(0.0) && 
+                lngBits != java.lang.Double.doubleToRawLongBits(0.0)) {
                 try {
                     val lat = java.lang.Double.longBitsToDouble(latBits)
                     val lng = java.lang.Double.longBitsToDouble(lngBits)
@@ -238,9 +263,20 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     
                     // Validate coordinates
                     if (lat.isFinite() && lng.isFinite() && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-                        mapView.post {
-                            setTargetLocation(LatLng(lat, lng), name)
-                        }
+                        mapView.viewTreeObserver.addOnGlobalLayoutListener(object : 
+                            android.view.ViewTreeObserver.OnGlobalLayoutListener {
+                            override fun onGlobalLayout() {
+                                mapView.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                                if (::aMap.isInitialized) {
+                                    try {
+                                        setTargetLocation(LatLng(lat, lng), name)
+                                    } catch (e: Exception) {
+                                        Log.e(TAG, "Failed to resume target location", e)
+                                        clearInvalidNavigationState()
+                                    }
+                                }
+                            }
+                        })
                     } else {
                         clearInvalidNavigationState()
                         DialogUtils.showErrorToast(this, getString(R.string.navigation_data_error))
@@ -697,18 +733,32 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun setTargetLocation(latLng: LatLng, title: String) {
+        // Validate input
+        if (!latLng.latitude.isFinite() || !latLng.longitude.isFinite() ||
+            latLng.latitude < -90 || latLng.latitude > 90 ||
+            latLng.longitude < -180 || latLng.longitude > 180) {
+            Log.e(TAG, "Invalid coordinates: $latLng")
+            return
+        }
+        
         targetLatLng = latLng
 
         // 移除旧标记
         targetMarker?.remove()
 
-        // 添加新标记
-        val markerOptions = MarkerOptions()
-            .position(latLng)
-            .title(title)
-            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
+        // 添加新标记 - only if map is initialized
+        if (::aMap.isInitialized) {
+            try {
+                val markerOptions = MarkerOptions()
+                    .position(latLng)
+                    .title(title)
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
 
-        targetMarker = aMap.addMarker(markerOptions)
+                targetMarker = aMap.addMarker(markerOptions)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to add marker", e)
+            }
+        }
         
         // Hide info window during active navigation to prevent occlusion
         // We only show it if the user just set a target, but hide it once they start moving or if in route
@@ -718,8 +768,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             targetMarker?.hideInfoWindow()
         }
 
-        // 移动相机到目标位置
-        aMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
+        // 移动相机到目标位置 - only if map is initialized
+        if (::aMap.isInitialized) {
+            try {
+                aMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to animate camera", e)
+            }
+        }
 
         // 更新雷达视图
         myCurrentLatLng?.let { myLoc ->
@@ -728,10 +784,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         // 清除路线 (if this is a direct target set) or redraw (if in route)
         if (currentRoute == null) {
-            routePolyline?.remove()
-            routePolyline = null
-            traveledPolyline?.remove()
-            traveledPolyline = null
+            try {
+                routePolyline?.remove()
+                routePolyline = null
+                traveledPolyline?.remove()
+                traveledPolyline = null
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to remove polylines", e)
+            }
         } else {
             drawRouteOnMap(currentRoute!!.waypoints)
         }
@@ -945,8 +1005,24 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun drawRouteOnMap(waypoints: List<Waypoint>) {
-        routePolyline?.remove()
-        traveledPolyline?.remove()
+        // Validate waypoints
+        if (waypoints.isEmpty() || waypoints.any { !it.latitude.isFinite() || !it.longitude.isFinite() }) {
+            Log.w(TAG, "Invalid waypoints for drawing route")
+            return
+        }
+        
+        // Ensure map is initialized
+        if (!::aMap.isInitialized) {
+            Log.w(TAG, "Map not initialized, cannot draw route")
+            return
+        }
+        
+        try {
+            routePolyline?.remove()
+            traveledPolyline?.remove()
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to remove old polylines", e)
+        }
 
         if (waypoints.size > 1) {
             val typedValue = android.util.TypedValue()
@@ -956,30 +1032,34 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             theme.resolveAttribute(com.google.android.material.R.attr.colorOutline, typedValue, true)
             val traveledColor = typedValue.data
 
-            // Draw traveled portion if in navigation
-            if (currentRoute != null && currentWaypointIndex > 0) {
-                val traveledPoints = waypoints.subList(0, currentWaypointIndex + 1).map { LatLng(it.latitude, it.longitude) }
-                val traveledOptions = PolylineOptions()
-                    .addAll(traveledPoints)
-                    .color(traveledColor and 0x80FFFFFF.toInt()) // Semi-transparent grey/outline
-                    .width(10f)
-                    .setDottedLine(true)
-                traveledPolyline = aMap.addPolyline(traveledOptions)
-            }
+            try {
+                // Draw traveled portion if in navigation
+                if (currentRoute != null && currentWaypointIndex > 0) {
+                    val traveledPoints = waypoints.subList(0, currentWaypointIndex + 1).map { LatLng(it.latitude, it.longitude) }
+                    val traveledOptions = PolylineOptions()
+                        .addAll(traveledPoints)
+                        .color(traveledColor and 0x80FFFFFF.toInt()) // Semi-transparent grey/outline
+                        .width(10f)
+                        .setDottedLine(true)
+                    traveledPolyline = aMap.addPolyline(traveledOptions)
+                }
 
-            // Draw remaining portion
-            val startIndex = if (currentRoute != null) currentWaypointIndex else 0
-            val remainingWaypoints = waypoints.subList(startIndex, waypoints.size)
-            
-            if (remainingWaypoints.size > 1) {
-                val polylineOptions = PolylineOptions()
-                    .addAll(remainingWaypoints.map { LatLng(it.latitude, it.longitude) })
-                    .color(primaryColor and 0xCCFFFFFF.toInt()) // Semi-transparent
-                    .width(12f)
-                    .setDottedLine(false)
-                    .useGradient(true)
+                // Draw remaining portion
+                val startIndex = if (currentRoute != null) currentWaypointIndex else 0
+                val remainingWaypoints = waypoints.subList(startIndex, waypoints.size)
+                
+                if (remainingWaypoints.size > 1) {
+                    val polylineOptions = PolylineOptions()
+                        .addAll(remainingWaypoints.map { LatLng(it.latitude, it.longitude) })
+                        .color(primaryColor and 0xCCFFFFFF.toInt()) // Semi-transparent
+                        .width(12f)
+                        .setDottedLine(false)
+                        .useGradient(true)
 
-                routePolyline = aMap.addPolyline(polylineOptions)
+                    routePolyline = aMap.addPolyline(polylineOptions)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to draw route polylines", e)
             }
         }
         
@@ -1138,6 +1218,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     override fun onPause() {
         super.onPause()
         mapView.onPause()
+        // Save navigation state to ensure it's persisted even if app is killed
+        saveNavigationState()
         // If not navigating, stop location updates to save battery
         if (targetLatLng == null) {
             stopLocationUpdates()
