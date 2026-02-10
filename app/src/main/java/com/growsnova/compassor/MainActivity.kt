@@ -10,6 +10,8 @@ import android.location.LocationManager
 import android.os.Bundle
 import android.os.Looper
 import android.util.Log
+import android.view.KeyEvent
+import android.view.inputmethod.EditorInfo
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
@@ -935,6 +937,23 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     }
                     .setNegativeButton(R.string.cancel, null)
                     .create()
+
+                editText.setOnEditorActionListener { _, actionId, event ->
+                    if (actionId == EditorInfo.IME_ACTION_SEARCH ||
+                        (event != null && event.keyCode == KeyEvent.KEYCODE_ENTER && event.action == KeyEvent.ACTION_DOWN)) {
+                        val keyword = editText.text.toString().trim()
+                        if (keyword.isNotEmpty()) {
+                            searchPOI(keyword)
+                            lifecycleScope.launch {
+                                db.searchHistoryDao().insert(SearchHistory(query = keyword))
+                            }
+                            dialog.dismiss()
+                        }
+                        true
+                    } else {
+                        false
+                    }
+                }
                     
                 dialog.show()
             }
