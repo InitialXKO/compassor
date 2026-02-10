@@ -33,7 +33,7 @@
                 android:layout_height="24dp"
                 android:layout_gravity="center"
                 android:src="@android:drawable/ic_dialog_map"
-                app:tint="?attr/onColorPrimaryContainer" />
+                app:tint="?attr/colorOnPrimaryContainer" />
 
         </com.google.android.material.card.MaterialCardView>
 
