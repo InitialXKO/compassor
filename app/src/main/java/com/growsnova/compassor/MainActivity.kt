@@ -80,6 +80,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private val waypointMarkers = mutableListOf<Marker>()
     private val routes = mutableListOf<Route>()
     private var routePolyline: Polyline? = null
+    private var guidancePolyline: Polyline? = null
     private var currentRoute: Route? = null
     private var currentWaypointIndex: Int = -1
     private val db by lazy { AppDatabase.getDatabase(this) }
@@ -405,12 +406,31 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         targetMarker = null
         routePolyline?.remove()
         routePolyline = null
+        guidancePolyline?.remove()
+        guidancePolyline = null
         navigationStatusCard.visibility = android.view.View.GONE
         
         // Clear keep screen on
         window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         
         saveNavigationState()
+    }
+
+    private fun updateGuidanceLine(myLoc: LatLng, targetLoc: LatLng) {
+        guidancePolyline?.remove()
+
+        val typedValue = android.util.TypedValue()
+        theme.resolveAttribute(com.google.android.material.R.attr.colorPrimary, typedValue, true)
+        val primaryColor = typedValue.data
+
+        val options = PolylineOptions()
+            .add(myLoc, targetLoc)
+            .color(primaryColor and 0x80FFFFFF.toInt()) // More transparent than main route
+            .width(6f)
+            .setDottedLine(true) // 虚线
+            .setDottedLineType(PolylineOptions.DOTTEDLINE_TYPE_SQUARE)
+
+        guidancePolyline = aMap.addPolyline(options)
     }
 
     private fun updateNavigationStatus(targetName: String, distanceMeters: Float) {
@@ -464,6 +484,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 val dist = distArray[0]
                 
                 radarView.updateTarget(current, target)
+                updateGuidanceLine(current, target)
                 
                 // Update navigation status card if not in route (route has its own update below)
                 if (currentRoute == null) {
@@ -565,7 +586,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
 
         targetMarker = aMap.addMarker(markerOptions)
-        targetMarker?.showInfoWindow()
+        
+        // Hide info window during active navigation to prevent occlusion
+        // We only show it if the user just set a target, but hide it once they start moving or if in route
+        if (currentRoute == null) {
+            targetMarker?.showInfoWindow()
+        } else {
+            targetMarker?.hideInfoWindow()
+        }
 
         // 移动相机到目标位置
         aMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
