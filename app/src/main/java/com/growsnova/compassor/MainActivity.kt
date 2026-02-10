@@ -490,17 +490,17 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         currentWaypointIndex++
                         val nextWaypoint = route.waypoints[currentWaypointIndex]
                         setTargetLocation(LatLng(nextWaypoint.latitude, nextWaypoint.longitude), nextWaypoint.name)
-                        Toast.makeText(this, getString(R.string.next_waypoint_notification, nextWaypoint.name), Toast.LENGTH_SHORT).show()
+                        DialogUtils.showToast(this, getString(R.string.next_waypoint_notification, nextWaypoint.name))
                         saveNavigationState()
                     } else {
                         if (route.isLooping) {
                             currentWaypointIndex = 0
                             val firstWaypoint = route.waypoints[0]
                             setTargetLocation(LatLng(firstWaypoint.latitude, firstWaypoint.longitude), firstWaypoint.name)
-                            Toast.makeText(this, getString(R.string.arrival_notification, currentTargetWaypoint.name), Toast.LENGTH_SHORT).show()
+                            DialogUtils.showToast(this, getString(R.string.arrival_notification, currentTargetWaypoint.name))
                             saveNavigationState()
                         } else {
-                            Toast.makeText(this, getString(R.string.route_completed), Toast.LENGTH_SHORT).show()
+                            DialogUtils.showToast(this, getString(R.string.route_completed))
                             stopNavigation()
                         }
                     }
@@ -515,7 +515,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             DialogUtils.showErrorToast(this, getString(R.string.network_unavailable))
             return
         }
-        Toast.makeText(this, R.string.searching, Toast.LENGTH_SHORT).show()
+        DialogUtils.showToast(this, getString(R.string.searching))
 
         // 获取当前城市
         val city = myCurrentLatLng?.let {
@@ -538,19 +538,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         if (pois.isNotEmpty()) {
                             showPOIListDialog(pois)
                         } else {
-                            Toast.makeText(
-                                this@MainActivity,
-                                R.string.no_result,
-                                Toast.LENGTH_SHORT
-                            ).show()
+                            DialogUtils.showToast(this@MainActivity, getString(R.string.no_result))
                         }
                     }
                 } else {
-                    Toast.makeText(
-                        this@MainActivity,
-                        "搜索失败: $errorCode",
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    DialogUtils.showErrorToast(this@MainActivity, "搜索失败: $errorCode")
                 }
             }
 
@@ -599,25 +591,21 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val poiNames = pois.map { "${it.title} (${it.distance}m)" }.toTypedArray()
         var selectedPoi: PoiItem? = null
 
-        AlertDialog.Builder(this)
-            .setTitle("选择一个地点")
-            .setSingleChoiceItems(poiNames, -1) { _, which ->
+        DialogUtils.showSingleChoiceDialog(
+            context = this,
+            title = "选择一个地点",
+            items = poiNames,
+            onItemSelected = { which ->
                 selectedPoi = pois[which]
-            }
-            .setPositiveButton("设为目的地") { _, _ ->
+            },
+            onPositive = {
                 selectedPoi?.let {
                     val latLng = LatLng(it.latLonPoint.latitude, it.latLonPoint.longitude)
                     setTargetLocation(latLng, it.title)
                 }
-            }
-            .setNeutralButton("添加到收藏") { _, _ ->
-                selectedPoi?.let {
-                    val latLng = LatLng(it.latLonPoint.latitude, it.latLonPoint.longitude)
-                    addWaypoint(latLng, it.title)
-                }
-            }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+            },
+            onNegative = {}
+        )
     }
 
     private fun addWaypoint(latLng: LatLng, name: String) {
@@ -630,14 +618,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
             if (existingWaypoint != null) {
                 runOnUiThread {
-                    AlertDialog.Builder(this@MainActivity)
-                        .setTitle("更新收藏地点")
-                        .setMessage("附近已存在一个相似的收藏地点 '${existingWaypoint.name}'。您想用新的位置和名称 '$name' 更新它吗？")
-                        .setPositiveButton("更新") { _, _ ->
+                    DialogUtils.showConfirmationDialog(
+                        context = this@MainActivity,
+                        title = "更新收藏地点",
+                        message = "附近已存在一个相似的收藏地点 '${existingWaypoint.name}'。您想用新的位置和名称 '$name' 更新它吗？",
+                        onPositive = {
                             updateWaypoint(existingWaypoint, name, newLatLng = latLng)
                         }
-                        .setNegativeButton("取消", null)
-                        .show()
+                    )
                 }
             } else {
                 val waypoint = Waypoint(
@@ -823,16 +811,18 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private fun showRouteManagementDialog() {
         val routeNames = routes.map { it.name }.toTypedArray()
 
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.manage_routes))
-            .setItems(routeNames) { _, which ->
+        DialogUtils.showListDialog(
+            context = this,
+            title = getString(R.string.manage_routes),
+            items = routeNames,
+            onItemSelected = { which ->
                 showRouteOptionsDialog(routes[which])
-            }
-            .setPositiveButton(R.string.create_route) { _, _ ->
+            },
+            positiveButtonText = R.string.create_route,
+            onPositive = {
                 launchCreateRoute()
             }
-            .setNegativeButton(R.string.cancel, null)
-            .show()
+        )
     }
 
     private fun launchCreateRoute() {

@@ -123,67 +123,57 @@ class CreateRouteActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            val editText = android.widget.EditText(this)
-            editText.hint = getString(R.string.route_name_hint)
-
-            // If editing, pre-fill the existing route name
-            val existingRoute = routeBeingEdited
-            if (existingRoute != null) {
-                editText.setText(existingRoute.name)
+            val initialName = if (existingRoute != null) {
+                existingRoute.name
             } else if (selectedWaypoints.size >= 2) {
-                editText.setText(getString(R.string.save_route_hint, selectedWaypoints.first().name, selectedWaypoints.last().name))
+                getString(R.string.save_route_hint, selectedWaypoints.first().name, selectedWaypoints.last().name)
+            } else {
+                ""
             }
 
-            android.app.AlertDialog.Builder(this)
-                .setTitle(if (existingRoute == null) getString(R.string.create_route) else getString(R.string.edit_route))
-                .setView(editText)
-                .setPositiveButton(getString(R.string.save)) { _, _ ->
-                    val routeName = editText.text.toString().trim()
-                    if (routeName.isNotEmpty()) {
-                        val newRoute = Route(
-                            id = existingRoute?.id ?: System.currentTimeMillis(),
-                            name = routeName,
-                            waypoints = selectedWaypoints,
-                            isLooping = existingRoute?.isLooping ?: false
-                        )
+            DialogUtils.showInputDialog(
+                context = this,
+                title = if (existingRoute == null) getString(R.string.create_route) else getString(R.string.edit_route),
+                hint = getString(R.string.route_name_hint),
+                initialValue = initialName,
+                onPositive = { routeName ->
+                    val newRoute = Route(
+                        id = existingRoute?.id ?: System.currentTimeMillis(),
+                        name = routeName,
+                        waypoints = selectedWaypoints,
+                        isLooping = existingRoute?.isLooping ?: false
+                    )
 
-                        val resultIntent = Intent().apply {
-                            putExtra("new_route", newRoute)
-                            putExtra("waypoints_wrapper", WaypointListWrapper(ArrayList(selectedWaypoints)))
-                        }
+                    val resultIntent = Intent().apply {
+                        putExtra("new_route", newRoute)
+                        putExtra("waypoints_wrapper", WaypointListWrapper(ArrayList(selectedWaypoints)))
+                    }
 
-                        if (existingRoute == null) {
-                            askToStartNavigation(newRoute, resultIntent)
-                        } else {
-                            setResult(RESULT_OK, resultIntent)
-                            finish()
-                        }
+                    if (existingRoute == null) {
+                        askToStartNavigation(newRoute, resultIntent)
                     } else {
-                        Toast.makeText(this, getString(R.string.waypoint_name_empty), Toast.LENGTH_SHORT).show()
+                        setResult(RESULT_OK, resultIntent)
+                        finish()
                     }
                 }
-                .setNegativeButton(getString(R.string.cancel), null)
-                .show()
+            )
         }
     }
 
     private fun askToStartNavigation(route: Route, resultIntent: Intent) {
-        android.app.AlertDialog.Builder(this)
-            .setTitle(getString(R.string.start_navigation))
-            .setMessage("是否开始导航路线: ${route.name}?")
-            .setPositiveButton(getString(R.string.confirm)) { _, _ ->
+        DialogUtils.showConfirmationDialog(
+            context = this,
+            title = getString(R.string.start_navigation),
+            message = "是否开始导航路线: ${route.name}?",
+            onPositive = {
                 resultIntent.putExtra("start_navigation", true)
                 setResult(RESULT_OK, resultIntent)
                 finish()
-            }
-            .setNegativeButton(getString(R.string.cancel)) { _, _ ->
+            },
+            onNegative = {
                 setResult(RESULT_OK, resultIntent)
                 finish()
             }
-            .setOnCancelListener {
-                setResult(RESULT_OK, resultIntent)
-                finish()
-            }
-            .show()
+        )
     }
 }

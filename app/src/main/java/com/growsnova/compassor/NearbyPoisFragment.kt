@@ -56,7 +56,7 @@ class NearbyPoisFragment : Fragment(), PoiSearch.OnPoiSearchListener {
                 longitude = poiItem.latLonPoint.longitude
             )
             viewModel.addWaypoint(waypoint)
-            Toast.makeText(context, "${poiItem.title} added to route", Toast.LENGTH_SHORT).show()
+            DialogUtils.showSuccessToast(requireContext(), "${poiItem.title} added to route")
         }
         recyclerView.adapter = adapter
 
