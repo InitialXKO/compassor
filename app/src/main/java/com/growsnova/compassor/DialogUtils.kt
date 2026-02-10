@@ -46,7 +46,6 @@ object DialogUtils {
 
         editText.setOnEditorActionListener { _, actionId, event ->
             if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE ||
-                actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SAVE ||
                 (event != null && event.keyCode == android.view.KeyEvent.KEYCODE_ENTER && event.action == android.view.KeyEvent.ACTION_DOWN)) {
                 val input = editText.text.toString().trim()
                 if (input.isNotEmpty()) {

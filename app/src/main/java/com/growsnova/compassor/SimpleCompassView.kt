@@ -38,7 +38,7 @@ class SimpleCompassView @JvmOverloads constructor(
 
     private var skin: RadarSkin = RadarSkin()
 
-    private val arrowPaint = Paint(Paint.ANTI_ALIAS_ALIAS_FLAG).apply {
+    private val arrowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
     }
     
