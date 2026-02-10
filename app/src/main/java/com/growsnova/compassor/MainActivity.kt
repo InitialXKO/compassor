@@ -882,6 +882,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 val historyRecyclerView = view.findViewById<RecyclerView>(R.id.historyRecyclerView)
                 val clearHistoryButton = view.findViewById<Button>(R.id.clearHistoryButton)
                 
+                clearHistoryButton.applyTouchScale()
+                
                 historyRecyclerView.layoutManager = LinearLayoutManager(this@MainActivity)
                 
                 val historyList = searchHistories.toMutableList()

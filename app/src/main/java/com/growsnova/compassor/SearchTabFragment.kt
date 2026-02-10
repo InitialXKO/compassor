@@ -58,6 +58,8 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
         searchEditText = view.findViewById(R.id.editText)
         searchButton = view.findViewById(R.id.searchButton)
         progressBar = view.findViewById(R.id.progressBar)
+
+        searchButton.applyTouchScale()
         
         recyclerView.layoutManager = LinearLayoutManager(context)
         adapter = PoiListAdapter(poiItems) { poiItem ->
