@@ -95,6 +95,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private lateinit var navDistanceText: android.widget.TextView
     private lateinit var stopNavButton: com.google.android.material.button.MaterialButton
     private lateinit var skipNavButton: com.google.android.material.button.MaterialButton
+    private lateinit var prevNavButton: com.google.android.material.button.MaterialButton
 
     private val createRouteLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
@@ -268,6 +269,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         navDistanceText = findViewById(R.id.navDistanceText)
         stopNavButton = findViewById(R.id.stopNavButton)
         skipNavButton = findViewById(R.id.skipNavButton)
+        prevNavButton = findViewById(R.id.prevNavButton)
         
         stopNavButton.applyTouchScale()
         stopNavButton.setOnClickListener {
@@ -277,6 +279,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         skipNavButton.applyTouchScale()
         skipNavButton.setOnClickListener {
             skipNextWaypoint()
+        }
+
+        prevNavButton.applyTouchScale()
+        prevNavButton.setOnClickListener {
+            goToPreviousWaypoint()
         }
 
         // 初始化地图
@@ -430,11 +437,28 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             currentWaypointIndex = 0
             val firstWaypoint = route.waypoints[0]
             setTargetLocation(LatLng(firstWaypoint.latitude, firstWaypoint.longitude), firstWaypoint.name)
-            DialogUtils.showToast(this, "已跳到起点")
+            DialogUtils.showToast(this, "已重置到起点")
             saveNavigationState()
         } else {
             DialogUtils.showToast(this, getString(R.string.route_completed))
             stopNavigation()
+        }
+    }
+
+    private fun goToPreviousWaypoint() {
+        val route = currentRoute ?: return
+        if (currentWaypointIndex > 0) {
+            currentWaypointIndex--
+            val prevWaypoint = route.waypoints[currentWaypointIndex]
+            setTargetLocation(LatLng(prevWaypoint.latitude, prevWaypoint.longitude), prevWaypoint.name)
+            DialogUtils.showToast(this, "已返回到上一个点: ${prevWaypoint.name}")
+            saveNavigationState()
+        } else if (route.isLooping) {
+            currentWaypointIndex = route.waypoints.size - 1
+            val lastWaypoint = route.waypoints[currentWaypointIndex]
+            setTargetLocation(LatLng(lastWaypoint.latitude, lastWaypoint.longitude), lastWaypoint.name)
+            DialogUtils.showToast(this, "已返回到最后一个点: ${lastWaypoint.name}")
+            saveNavigationState()
         }
     }
 
@@ -486,8 +510,21 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
         navTargetText.text = getString(R.string.nav_target_format, targetName)
         
-        // Only show skip button if we are in a multi-waypoint route
-        skipNavButton.visibility = if (currentRoute != null) android.view.View.VISIBLE else android.view.View.GONE
+        // Only show skip/prev buttons if we are in a multi-waypoint route
+        if (currentRoute != null) {
+            skipNavButton.visibility = android.view.View.VISIBLE
+            prevNavButton.visibility = android.view.View.VISIBLE
+            // Disable buttons if at the very beginning/end and not looping
+            val canSkip = currentRoute!!.isLooping || currentWaypointIndex < currentRoute!!.waypoints.size - 1
+            val canPrev = currentRoute!!.isLooping || currentWaypointIndex > 0
+            skipNavButton.isEnabled = canSkip
+            prevNavButton.isEnabled = canPrev
+            skipNavButton.alpha = if (canSkip) 1.0f else 0.5f
+            prevNavButton.alpha = if (canPrev) 1.0f else 0.5f
+        } else {
+            skipNavButton.visibility = android.view.View.GONE
+            prevNavButton.visibility = android.view.View.GONE
+        }
         
         val distanceStr = if (distanceMeters < 1000) {
             "${distanceMeters.toInt()}m"
