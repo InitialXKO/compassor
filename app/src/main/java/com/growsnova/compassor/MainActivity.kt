@@ -84,6 +84,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private var currentWaypointIndex: Int = -1
     private val db by lazy { AppDatabase.getDatabase(this) }
 
+    // Navigation UI
+    private lateinit var navigationStatusCard: com.google.android.material.card.MaterialCardView
+    private lateinit var navTargetText: android.widget.TextView
+    private lateinit var navDistanceText: android.widget.TextView
+    private lateinit var stopNavButton: com.google.android.material.button.MaterialButton
+
     private val createRouteLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             result.data?.let { handleCreateRouteResult(it) }
@@ -106,6 +112,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         private const val PREFS_NAME = "CompassorPrefs"
         private const val PREF_SKIN_NAME = "SkinName"
         private const val PREF_THEME_MODE = "ThemeMode"
+        private const val PREF_NAV_ROUTE = "NavRoute"
+        private const val PREF_NAV_INDEX = "NavIndex"
+        private const val PREF_NAV_TARGET_LAT = "NavTargetLat"
+        private const val PREF_NAV_TARGET_LNG = "NavTargetLng"
+        private const val PREF_NAV_TARGET_NAME = "NavTargetName"
         private val REQUIRED_PERMISSIONS = arrayOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION
@@ -136,10 +147,72 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         // 请求权限
         checkAndRequestPermissions()
         
+        // 恢复导航状态
+        resumeNavigationState()
+
         // 检查是否需要开始导航
         handleNavigationIntent()
     }
     
+    private fun saveNavigationState() {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val editor = prefs.edit()
+        
+        if (currentRoute != null) {
+            val gson = com.google.gson.Gson()
+            editor.putString(PREF_NAV_ROUTE, gson.toJson(currentRoute))
+            editor.putInt(PREF_NAV_INDEX, currentWaypointIndex)
+        } else {
+            editor.remove(PREF_NAV_ROUTE)
+            editor.remove(PREF_NAV_INDEX)
+        }
+        
+        if (targetLatLng != null && currentRoute == null) {
+            editor.putLong(PREF_NAV_TARGET_LAT, java.lang.Double.doubleToRawLongBits(targetLatLng!!.latitude))
+            editor.putLong(PREF_NAV_TARGET_LNG, java.lang.Double.doubleToRawLongBits(targetLatLng!!.longitude))
+            editor.putString(PREF_NAV_TARGET_NAME, targetMarker?.title)
+        } else {
+            editor.remove(PREF_NAV_TARGET_LAT)
+            editor.remove(PREF_NAV_TARGET_LNG)
+            editor.remove(PREF_NAV_TARGET_NAME)
+        }
+        
+        editor.apply()
+    }
+
+    private fun resumeNavigationState() {
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val routeJson = prefs.getString(PREF_NAV_ROUTE, null)
+        
+        if (routeJson != null) {
+            val gson = com.google.gson.Gson()
+            val route = gson.fromJson(routeJson, Route::class.java)
+            val index = prefs.getInt(PREF_NAV_INDEX, 0)
+            
+            // Wait for map to be ready
+            mapView.post {
+                currentRoute = route
+                currentWaypointIndex = index
+                if (index < route.waypoints.size) {
+                    val waypoint = route.waypoints[index]
+                    setTargetLocation(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
+                    drawRouteOnMap(route.waypoints)
+                }
+            }
+        } else {
+            val latBits = prefs.getLong(PREF_NAV_TARGET_LAT, 0)
+            val lngBits = prefs.getLong(PREF_NAV_TARGET_LNG, 0)
+            if (latBits != 0L && lngBits != 0L) {
+                val lat = java.lang.Double.longBitsToDouble(latBits)
+                val lng = java.lang.Double.longBitsToDouble(lngBits)
+                val name = prefs.getString(PREF_NAV_TARGET_NAME, "目的地") ?: "目的地"
+                mapView.post {
+                    setTargetLocation(LatLng(lat, lng), name)
+                }
+            }
+        }
+    }
+
     private fun handleNavigationIntent() {
         val route = intent.getSerializableExtraCompat<Route>("start_navigation_route")
         route?.let {
@@ -176,6 +249,16 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         mapView = findViewById(R.id.mapView)
         radarView = findViewById(R.id.radarView)
+
+        // Init Navigation UI
+        navigationStatusCard = findViewById(R.id.navigationStatusCard)
+        navTargetText = findViewById(R.id.navTargetText)
+        navDistanceText = findViewById(R.id.navDistanceText)
+        stopNavButton = findViewById(R.id.stopNavButton)
+        stopNavButton.applyTouchScale()
+        stopNavButton.setOnClickListener {
+            stopNavigation()
+        }
 
         // 初始化地图
         mapView.onCreate(savedInstanceState)
@@ -314,6 +397,34 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
+    private fun stopNavigation() {
+        currentRoute = null
+        currentWaypointIndex = -1
+        targetLatLng = null
+        targetMarker?.remove()
+        targetMarker = null
+        routePolyline?.remove()
+        routePolyline = null
+        navigationStatusCard.visibility = android.view.View.GONE
+        
+        // Clear keep screen on
+        window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        
+        saveNavigationState()
+    }
+
+    private fun updateNavigationStatus(targetName: String, distanceMeters: Float) {
+        navigationStatusCard.visibility = android.view.View.VISIBLE
+        navTargetText.text = getString(R.string.nav_target_format, targetName)
+        
+        val distanceStr = if (distanceMeters < 1000) {
+            "${distanceMeters.toInt()}m"
+        } else {
+            "%.1fkm".format(distanceMeters / 1000f)
+        }
+        navDistanceText.text = getString(R.string.nav_distance_format, distanceStr)
+    }
+
     private fun handleLocationUpdate(location: Location) {
         val (gcjLat, gcjLng) = CoordTransform.wgs84ToGcj02(location.latitude, location.longitude)
         val convertedLocation = Location(location).apply {
@@ -348,7 +459,16 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         // 更新雷达视图
         targetLatLng?.let { target ->
             myCurrentLatLng?.let { current ->
+                val distArray = FloatArray(1)
+                Location.distanceBetween(current.latitude, current.longitude, target.latitude, target.longitude, distArray)
+                val dist = distArray[0]
+                
                 radarView.updateTarget(current, target)
+                
+                // Update navigation status card if not in route (route has its own update below)
+                if (currentRoute == null) {
+                    updateNavigationStatus(targetMarker?.title ?: "目的地", dist)
+                }
             }
         }
 
@@ -362,25 +482,26 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     currentTargetWaypoint.latitude, currentTargetWaypoint.longitude,
                     distanceToWaypoint
                 )
+                
+                updateNavigationStatus(currentTargetWaypoint.name, distanceToWaypoint[0])
 
                 if (distanceToWaypoint[0] < 20) { // 20米阈值
-                    currentWaypointIndex++
-                    if (currentWaypointIndex < route.waypoints.size) {
+                    if (currentWaypointIndex < route.waypoints.size - 1) {
+                        currentWaypointIndex++
                         val nextWaypoint = route.waypoints[currentWaypointIndex]
                         setTargetLocation(LatLng(nextWaypoint.latitude, nextWaypoint.longitude), nextWaypoint.name)
-                        Toast.makeText(this, "已到达地点，前往下一个: ${nextWaypoint.name}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, getString(R.string.next_waypoint_notification, nextWaypoint.name), Toast.LENGTH_SHORT).show()
+                        saveNavigationState()
                     } else {
                         if (route.isLooping) {
                             currentWaypointIndex = 0
                             val firstWaypoint = route.waypoints[0]
                             setTargetLocation(LatLng(firstWaypoint.latitude, firstWaypoint.longitude), firstWaypoint.name)
-                            Toast.makeText(this, "路线循环，返回起点: ${firstWaypoint.name}", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, getString(R.string.arrival_notification, currentTargetWaypoint.name), Toast.LENGTH_SHORT).show()
+                            saveNavigationState()
                         } else {
-                            Toast.makeText(this, "已完成路线: ${route.name}", Toast.LENGTH_SHORT).show()
-                            currentRoute = null
-                            currentWaypointIndex = -1
-                            routePolyline?.remove()
-                            routePolyline = null
+                            Toast.makeText(this, getString(R.string.route_completed), Toast.LENGTH_SHORT).show()
+                            stopNavigation()
                         }
                     }
                 }
@@ -462,9 +583,16 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             radarView.updateTarget(myLoc, latLng)
         }
 
-        // 清除路线
-        routePolyline?.remove()
-        routePolyline = null
+        // 清除路线 (if this is a direct target set)
+        if (currentRoute == null) {
+            routePolyline?.remove()
+            routePolyline = null
+        }
+        
+        // Keep screen on during navigation
+        window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        
+        saveNavigationState()
     }
 
     private fun showPOIListDialog(pois: List<PoiItem>) {
@@ -677,10 +805,16 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         routePolyline?.remove()
 
         if (waypoints.size > 1) {
+            val typedValue = android.util.TypedValue()
+            theme.resolveAttribute(com.google.android.material.R.attr.colorPrimary, typedValue, true)
+            val primaryColor = typedValue.data
+
             val polylineOptions = PolylineOptions()
                 .addAll(waypoints.map { LatLng(it.latitude, it.longitude) })
-                .color(Color.BLUE)
-                .width(10f)
+                .color(primaryColor and 0xCCFFFFFF.toInt()) // Semi-transparent
+                .width(12f)
+                .setDottedLine(false)
+                .useGradient(true)
 
             routePolyline = aMap.addPolyline(polylineOptions)
         }
@@ -725,6 +859,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         setTargetLocation(LatLng(firstWaypoint.latitude, firstWaypoint.longitude), firstWaypoint.name)
         drawRouteOnMap(route.waypoints)
         DialogUtils.showSuccessToast(this, getString(R.string.navigation_started, route.name))
+        saveNavigationState()
     }
 
     private fun showRouteOptionsDialog(route: Route) {
@@ -811,7 +946,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     override fun onPause() {
         super.onPause()
         mapView.onPause()
-        stopLocationUpdates()
+        // If not navigating, stop location updates to save battery
+        if (targetLatLng == null) {
+            stopLocationUpdates()
+        }
     }
 
     override fun onDestroy() {
