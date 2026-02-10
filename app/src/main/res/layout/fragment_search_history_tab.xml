@@ -50,7 +50,7 @@
         android:orientation="vertical"
         android:gravity="center"
         android:padding="@dimen/padding_lg"
-        android:background="@color/md_theme_light_background"
+        android:background="?attr/colorSurface"
         android:visibility="gone">
 
         <com.google.android.material.card.MaterialCardView
@@ -58,7 +58,7 @@
             android:layout_height="120dp"
             app:cardCornerRadius="60dp"
             app:cardElevation="0dp"
-            app:cardBackgroundColor="@color/md_theme_light_surfaceVariant"
+            app:cardBackgroundColor="?attr/colorSurfaceVariant"
             app:strokeWidth="0dp">
 
             <ImageView
@@ -67,7 +67,7 @@
                 android:layout_gravity="center"
                 android:src="@android:drawable/ic_menu_recent_history"
                 android:alpha="0.8"
-                app:tint="@color/md_theme_light_primary"
+                app:tint="?attr/colorPrimary"
                 android:contentDescription="@string/no_search_history" />
 
         </com.google.android.material.card.MaterialCardView>
@@ -78,7 +78,7 @@
             android:layout_marginTop="24dp"
             android:text="@string/no_search_history"
             android:textAppearance="?attr/textAppearanceTitleMedium"
-            android:textColor="@color/md_theme_light_onSurfaceVariant"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:alpha="0.8"
             android:gravity="center" />
 
@@ -88,7 +88,7 @@
             android:layout_marginTop="8dp"
             android:text="您的搜索足迹将出现在这里"
             android:textAppearance="?attr/textAppearanceBodyMedium"
-            android:textColor="@color/md_theme_light_onSurfaceVariant"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:alpha="0.6"
             android:gravity="center" />
 

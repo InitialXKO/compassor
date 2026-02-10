@@ -30,6 +30,11 @@ class SearchHistoryAdapter(
         private val timestampText: TextView = itemView.findViewById(R.id.timestampText)
         private val deleteButton: ImageButton = itemView.findViewById(R.id.deleteButton)
         
+        init {
+            itemView.applyTouchScale()
+            deleteButton.applyTouchScale()
+        }
+        
         fun bind(
             searchHistory: SearchHistory,
             onItemClick: (SearchHistory) -> Unit,

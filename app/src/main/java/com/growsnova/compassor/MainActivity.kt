@@ -251,12 +251,19 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             locationManager = getSystemService(Context.LOCATION_SERVICE) as? LocationManager
         }
 
+        val typedValue = android.util.TypedValue()
+        theme.resolveAttribute(com.google.android.material.R.attr.colorPrimary, typedValue, true)
+        val primaryColor = typedValue.data
+        
         aMap.myLocationStyle = MyLocationStyle().apply {
             myLocationType(MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE_NO_CENTER)
-            strokeColor(Color.BLUE)
-            radiusFillColor(Color.argb(50, 0, 0, 255))
+            strokeColor(primaryColor)
+            radiusFillColor(primaryColor and 0x30FFFFFF)
         }
         aMap.isMyLocationEnabled = true
+        
+        // Initialize radar skin from theme
+        radarView.setSkin(RadarSkin.createFromTheme(this))
 
         startLocationUpdates()
     }

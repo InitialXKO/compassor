@@ -55,5 +55,9 @@ class SelectedWaypointsAdapter(
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val waypointNameText: TextView = itemView.findViewById(R.id.waypointNameText)
         val waypointOrderText: TextView = itemView.findViewById(R.id.waypointOrderText)
+        
+        init {
+            itemView.applyTouchScale()
+        }
     }
 }

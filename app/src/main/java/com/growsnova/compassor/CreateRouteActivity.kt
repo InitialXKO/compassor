@@ -115,6 +115,7 @@ class CreateRouteActivity : AppCompatActivity() {
         itemTouchHelper.attachToRecyclerView(selectedWaypointsRecyclerView)
 
         val saveRouteButton = findViewById<android.widget.Button>(R.id.saveRouteButton)
+        saveRouteButton.applyTouchScale()
         saveRouteButton.setOnClickListener {
             val selectedWaypoints = viewModel.selectedWaypoints.value
             if (selectedWaypoints.isNullOrEmpty() || selectedWaypoints.size < 2) {
