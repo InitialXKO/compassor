@@ -17,6 +17,10 @@ interface RouteDao {
     @Query("SELECT * FROM routes")
     suspend fun getRoutesWithWaypoints(): List<RouteWithWaypoints>
 
+    @Transaction
+    @Query("SELECT * FROM routes WHERE id = :routeId")
+    suspend fun getRouteWithWaypoints(routeId: Long): RouteWithWaypoints?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRouteWaypointCrossRef(crossRef: RouteWaypointCrossRef)
 
