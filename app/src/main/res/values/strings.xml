@@ -89,4 +89,5 @@
     <string name="next_waypoint_notification">前往下一个: %s</string>
     <string name="off_route_warning">偏离路线！请检查方向</string>
     <string name="route_completed">路线已完成</string>
+    <string name="navigation_data_error">导航数据错误，已清除无效数据</string>
 </resources>

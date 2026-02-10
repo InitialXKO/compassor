@@ -80,4 +80,5 @@
     <string name="save_route_hint">从 %1$s 到 %2$s</string>
     <string name="drag_to_reorder">拖动以重新排序</string>
     <string name="search">搜索</string>
+    <string name="navigation_data_error">导航数据错误，已清除无效数据</string>
 </resources>
