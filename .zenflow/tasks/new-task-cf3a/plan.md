@@ -36,4 +36,4 @@ Implement the bug fix.
 
 ### [x] Step: Release
 1. [x] Push changes to main branch
-2. [x] Create and push tag v1.6.2 to trigger release workflow
+2. [x] Create and push tag v1.6.8 to trigger release workflow
