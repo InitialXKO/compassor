@@ -82,6 +82,17 @@
                         app:layout_constraintTop_toBottomOf="@id/navTargetText" />
 
                     <com.google.android.material.button.MaterialButton
+                        android:id="@+id/skipNavButton"
+                        style="@style/Widget.Compassor.Button.Text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="跳过"
+                        android:visibility="gone"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/stopNavButton" />
+
+                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/stopNavButton"
                         style="@style/Widget.Compassor.Button.Outlined"
                         android:layout_width="wrap_content"
