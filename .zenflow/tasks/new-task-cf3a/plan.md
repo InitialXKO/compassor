@@ -29,9 +29,11 @@ Save findings to `{@artifacts_path}/investigation.md` with:
 Read `{@artifacts_path}/investigation.md`
 Implement the bug fix.
 
-1. [ ] Add/adjust regression test(s) that fail before the fix and pass after
+1. [x] Add/adjust regression test(s) that fail before the fix and pass after
 2. [x] Implement the fix
 3. [x] Run relevant tests
 4. [x] Update `{@artifacts_path}/investigation.md` with implementation notes and test results
 
-If blocked or uncertain, ask the user for direction.
+### [x] Step: Release
+1. [x] Push changes to main branch
+2. [x] Create and push tag v1.6.2 to trigger release workflow
