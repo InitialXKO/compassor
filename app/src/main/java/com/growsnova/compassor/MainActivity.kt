@@ -436,6 +436,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         aMap.setOnMapLongClickListener { latLng ->
             showMapLongClickOptionsDialog(latLng)
         }
+
+        // 初始化FAB按钮
+        val fab = findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.fabAddAction)
+        fab.setOnClickListener {
+            showFabMenuDialog()
+        }
     }
 
     private fun checkAndRequestPermissions() {
@@ -852,11 +858,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val poiNames = pois.map { "${it.title} (${it.distance}m)" }.toTypedArray()
         var selectedPoi: PoiItem? = null
 
-        DialogUtils.showSingleChoiceDialog(
-            context = this,
-            title = "选择一个地点",
-            items = poiNames,
-            onItemSelected = { which ->
+        MaterialAlertDialogBuilder(this)
+            .setTitle("选择一个地点")
+            .setSingleChoiceItems(poiNames, -1) { _, which ->
                 selectedPoi = pois[which]
             },
             onPositive = {
@@ -879,11 +883,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
             if (existingWaypoint != null) {
                 runOnUiThread {
-                    DialogUtils.showConfirmationDialog(
-                        context = this@MainActivity,
-                        title = "更新收藏地点",
-                        message = "附近已存在一个相似的收藏地点 '${existingWaypoint.name}'。您想用新的位置和名称 '$name' 更新它吗？",
-                        onPositive = {
+                    MaterialAlertDialogBuilder(this@MainActivity)
+                        .setTitle("更新收藏地点")
+                        .setMessage("附近已存在一个相似的收藏地点 '${existingWaypoint.name}'。您想用新的位置和名称 '$name' 更新它吗？")
+                        .setPositiveButton("更新") { _, _ ->
                             updateWaypoint(existingWaypoint, name, newLatLng = latLng)
                         }
                     )
@@ -946,6 +949,29 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 1 -> reverseGeocode(latLng) { name ->
                     setTargetLocation(latLng, name)
                 }
+            }
+        }
+    }
+
+    private fun showFabMenuDialog() {
+        val options = arrayOf(getString(R.string.add_favorite_location), getString(R.string.create_route_action))
+        
+        DialogUtils.showOptionsDialog(
+            context = this,
+            title = getString(R.string.quick_action),
+            options = options
+        ) { which ->
+            when (which) {
+                0 -> {
+                    myCurrentLatLng?.let { latLng ->
+                        reverseGeocode(latLng) { name ->
+                            showSaveWaypointDialog(latLng, defaultName = name)
+                        }
+                    } ?: run {
+                        DialogUtils.showErrorToast(this, getString(R.string.location_unavailable))
+                    }
+                }
+                1 -> launchCreateRoute()
             }
         }
     }
@@ -1139,11 +1165,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private fun showRouteManagementDialog() {
         val routeNames = routes.map { it.name }.toTypedArray()
 
-        DialogUtils.showListDialog(
-            context = this,
-            title = getString(R.string.manage_routes),
-            items = routeNames,
-            onItemSelected = { which ->
+        MaterialAlertDialogBuilder(this)
+            .setTitle(getString(R.string.manage_routes))
+            .setItems(routeNames) { _, which ->
                 showRouteOptionsDialog(routes[which])
             },
             positiveButtonText = R.string.create_route,
@@ -1199,12 +1223,26 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 2 -> deleteRoute(route)
                 3 -> {
                     if (route.waypoints.isNotEmpty()) {
-                        val waypoint = route.waypoints[0]
-                        setTargetLocation(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
+                        showSelectDestinationWaypointDialog(route)
                     }
                 }
             }
         }
+    }
+
+    private fun showSelectDestinationWaypointDialog(route: Route) {
+        val waypointNames = route.waypoints.mapIndexed { index, waypoint ->
+            "${index + 1}. ${waypoint.name}"
+        }.toTypedArray()
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(getString(R.string.select_destination_waypoint))
+            .setItems(waypointNames) { _, which ->
+                val waypoint = route.waypoints[which]
+                setTargetLocation(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun deleteRoute(route: Route) {
@@ -1433,14 +1471,22 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         }
                     }
                 }
-
-                // Request focus and show keyboard
-                editText.requestFocus()
-                dialog.setOnShowListener {
-                    val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                    imm.showSoftInput(editText, InputMethodManager.SHOW_IMPLICIT)
-                }
-
+                
+                val dialog = MaterialAlertDialogBuilder(this@MainActivity)
+                    .setTitle(getString(R.string.search_location))
+                    .setView(view)
+                    .setPositiveButton(getString(R.string.search)) { _, _ ->
+                        val keyword = editText.text.toString().trim()
+                        if (keyword.isNotEmpty()) {
+                            searchPOI(keyword)
+                            lifecycleScope.launch {
+                                db.searchHistoryDao().insert(SearchHistory(query = keyword))
+                            }
+                        }
+                    }
+                    .setNegativeButton(R.string.cancel, null)
+                    .create()
+                    
                 dialog.show()
 
                 // Override positive button to prevent auto-dismiss if empty

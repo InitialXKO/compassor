@@ -6,6 +6,7 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.ItemTouchHelper
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.amap.api.maps.model.LatLng
@@ -114,7 +115,14 @@ class CreateRouteActivity : AppCompatActivity() {
         })
         itemTouchHelper.attachToRecyclerView(selectedWaypointsRecyclerView)
 
+        val loopingCheckBox = findViewById<com.google.android.material.checkbox.MaterialCheckBox>(R.id.loopingCheckBox)
         val saveRouteButton = findViewById<android.widget.Button>(R.id.saveRouteButton)
+        
+        // If editing, set the checkbox to the existing route's looping state
+        routeBeingEdited?.let {
+            loopingCheckBox.isChecked = it.isLooping
+        }
+
         saveRouteButton.applyTouchScale()
         saveRouteButton.setOnClickListener {
             val selectedWaypoints = viewModel.selectedWaypoints.value
@@ -131,26 +139,30 @@ class CreateRouteActivity : AppCompatActivity() {
                 ""
             }
 
-            DialogUtils.showInputDialog(
-                context = this,
-                title = if (routeBeingEdited == null) getString(R.string.create_route) else getString(R.string.edit_route),
-                hint = getString(R.string.route_name_hint),
-                initialValue = initialName,
-                onPositive = { routeName ->
-                    val newRoute = Route(
-                        id = routeBeingEdited?.id ?: System.currentTimeMillis(),
-                        name = routeName,
-                        waypoints = selectedWaypoints,
-                        isLooping = routeBeingEdited?.isLooping ?: false
-                    )
+            MaterialAlertDialogBuilder(this)
+                .setTitle(if (existingRoute == null) getString(R.string.create_route) else getString(R.string.edit_route))
+                .setView(editText)
+                .setPositiveButton(getString(R.string.save)) { _, _ ->
+                    val routeName = editText.text.toString().trim()
+                    if (routeName.isNotEmpty()) {
+                        val newRoute = Route(
+                            id = existingRoute?.id ?: System.currentTimeMillis(),
+                            name = routeName,
+                            waypoints = selectedWaypoints,
+                            isLooping = loopingCheckBox.isChecked
+                        )
 
-                    val resultIntent = Intent().apply {
-                        putExtra("new_route", newRoute)
-                        putExtra("waypoints_wrapper", WaypointListWrapper(ArrayList(selectedWaypoints)))
-                    }
+                        val resultIntent = Intent().apply {
+                            putExtra("new_route", newRoute)
+                            putExtra("waypoints_wrapper", WaypointListWrapper(ArrayList(selectedWaypoints)))
+                        }
 
-                    if (routeBeingEdited == null) {
-                        askToStartNavigation(newRoute, resultIntent)
+                        if (existingRoute == null) {
+                            askToStartNavigation(newRoute, resultIntent)
+                        } else {
+                            setResult(RESULT_OK, resultIntent)
+                            finish()
+                        }
                     } else {
                         setResult(RESULT_OK, resultIntent)
                         finish()
@@ -161,11 +173,10 @@ class CreateRouteActivity : AppCompatActivity() {
     }
 
     private fun askToStartNavigation(route: Route, resultIntent: Intent) {
-        DialogUtils.showConfirmationDialog(
-            context = this,
-            title = getString(R.string.start_navigation),
-            message = "是否开始导航路线: ${route.name}?",
-            onPositive = {
+        MaterialAlertDialogBuilder(this)
+            .setTitle(getString(R.string.start_navigation))
+            .setMessage("是否开始导航路线: ${route.name}?")
+            .setPositiveButton(getString(R.string.confirm)) { _, _ ->
                 resultIntent.putExtra("start_navigation", true)
                 setResult(RESULT_OK, resultIntent)
                 finish()

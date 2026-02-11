@@ -51,7 +51,7 @@
             android:layout_marginBottom="@dimen/margin_md"
             app:cardCornerRadius="@dimen/corner_radius_lg"
             app:cardElevation="@dimen/card_elevation"
-            app:layout_constraintBottom_toTopOf="@id/saveRouteButton"
+            app:layout_constraintBottom_toTopOf="@id/loopingCheckBox"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
 
@@ -99,6 +99,19 @@
             </androidx.constraintlayout.widget.ConstraintLayout>
 
         </com.google.android.material.card.MaterialCardView>
+
+        <!-- Looping Route Checkbox -->
+        <com.google.android.material.checkbox.MaterialCheckBox
+            android:id="@+id/loopingCheckBox"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/margin_md"
+            android:layout_marginEnd="@dimen/margin_md"
+            android:layout_marginBottom="@dimen/margin_md"
+            android:text="@string/set_as_looping_route"
+            android:textColor="?attr/colorOnSurface"
+            app:layout_constraintBottom_toTopOf="@id/saveRouteButton"
+            app:layout_constraintStart_toStartOf="parent" />
 
         <!-- Save Route Button -->
         <com.google.android.material.button.MaterialButton
