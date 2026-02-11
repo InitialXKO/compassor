@@ -123,6 +123,7 @@ class CreateRouteActivity : AppCompatActivity() {
             loopingCheckBox.isChecked = it.isLooping
         }
 
+        saveRouteButton.applyTouchScale()
         saveRouteButton.setOnClickListener {
             val selectedWaypoints = viewModel.selectedWaypoints.value
             if (selectedWaypoints.isNullOrEmpty() || selectedWaypoints.size < 2) {
@@ -130,15 +131,12 @@ class CreateRouteActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            val editText = android.widget.EditText(this)
-            editText.hint = getString(R.string.route_name_hint)
-
-            // If editing, pre-fill the existing route name
-            val existingRoute = routeBeingEdited
-            if (existingRoute != null) {
-                editText.setText(existingRoute.name)
+            val initialName = if (routeBeingEdited != null) {
+                routeBeingEdited?.name.orEmpty()
             } else if (selectedWaypoints.size >= 2) {
-                editText.setText(getString(R.string.save_route_hint, selectedWaypoints.first().name, selectedWaypoints.last().name))
+                getString(R.string.save_route_hint, selectedWaypoints.first().name, selectedWaypoints.last().name)
+            } else {
+                ""
             }
 
             MaterialAlertDialogBuilder(this)
@@ -166,11 +164,11 @@ class CreateRouteActivity : AppCompatActivity() {
                             finish()
                         }
                     } else {
-                        Toast.makeText(this, getString(R.string.waypoint_name_empty), Toast.LENGTH_SHORT).show()
+                        setResult(RESULT_OK, resultIntent)
+                        finish()
                     }
                 }
-                .setNegativeButton(getString(R.string.cancel), null)
-                .show()
+            )
         }
     }
 
@@ -182,15 +180,11 @@ class CreateRouteActivity : AppCompatActivity() {
                 resultIntent.putExtra("start_navigation", true)
                 setResult(RESULT_OK, resultIntent)
                 finish()
-            }
-            .setNegativeButton(getString(R.string.cancel)) { _, _ ->
+            },
+            onNegative = {
                 setResult(RESULT_OK, resultIntent)
                 finish()
             }
-            .setOnCancelListener {
-                setResult(RESULT_OK, resultIntent)
-                finish()
-            }
-            .show()
+        )
     }
 }

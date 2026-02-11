@@ -88,4 +88,14 @@
     <string name="navigation_completed">已完成路线: %s</string>
     <string name="reached_destination_next_waypoint">已到达地点，前往下一个: %s</string>
     <string name="looping_route_restart">路线循环，返回起点: %s</string>
+    <string name="network_unavailable">网络不可用，请检查网络连接</string>
+    <string name="loading">加载中...</string>
+    <string name="nav_target_format">目标: %s</string>
+    <string name="nav_distance_format">距离: %s</string>
+    <string name="stop_navigation">停止导航</string>
+    <string name="arrival_notification">已到达地点: %s</string>
+    <string name="next_waypoint_notification">前往下一个: %s</string>
+    <string name="off_route_warning">偏离路线！请检查方向</string>
+    <string name="route_completed">路线已完成</string>
+    <string name="navigation_data_error">导航数据错误，已清除无效数据</string>
 </resources>

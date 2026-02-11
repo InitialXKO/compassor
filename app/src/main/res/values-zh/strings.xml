@@ -88,4 +88,5 @@
     <string name="navigation_completed">已完成路线: %s</string>
     <string name="reached_destination_next_waypoint">已到达地点，前往下一个: %s</string>
     <string name="looping_route_restart">路线循环，返回起点: %s</string>
+    <string name="navigation_data_error">导航数据错误，已清除无效数据</string>
 </resources>

@@ -98,7 +98,5 @@
         <item name="itemTextAppearance">?attr/textAppearanceBodyLarge</item>
         <item name="itemIconTint">?attr/colorOnSurfaceVariant</item>
         <item name="itemTextColor">?attr/colorOnSurface</item>
-        <item name="itemShapeAppearance">@style/ShapeAppearance.Compassor.SmallComponent</item>
-        <item name="itemShapeFillColor">?attr/colorSurfaceVariant</item>
     </style>
 </resources>

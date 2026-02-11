@@ -32,6 +32,8 @@ class SavedWaypointsFragment : Fragment() {
         val recyclerView = view.findViewById<RecyclerView>(R.id.savedWaypointsRecyclerView)
         val emptyStateButton = view.findViewById<View>(R.id.addFirstWaypointButton)
         
+        emptyStateButton?.applyTouchScale()
+        
         recyclerView.layoutManager = LinearLayoutManager(context)
         recyclerView.adapter = WaypointSelectionAdapter(waypoints) { waypoint ->
             viewModel.addWaypoint(waypoint)
@@ -81,7 +83,7 @@ class WaypointSelectionAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): WaypointViewHolder {
         val view = LayoutInflater.from(parent.context)
-            .inflate(android.R.layout.simple_list_item_1, parent, false)
+            .inflate(R.layout.item_waypoint, parent, false)
         return WaypointViewHolder(view)
     }
 
@@ -92,8 +94,14 @@ class WaypointSelectionAdapter(
     override fun getItemCount() = waypoints.size
 
     class WaypointViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val nameView: TextView = itemView.findViewById(R.id.waypointName)
+
+        init {
+            itemView.applyTouchScale()
+        }
+
         fun bind(waypoint: Waypoint, onWaypointClicked: (Waypoint) -> Unit) {
-            (itemView as TextView).text = waypoint.name
+            nameView.text = waypoint.name
             itemView.setOnClickListener { onWaypointClicked(waypoint) }
         }
     }

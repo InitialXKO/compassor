@@ -39,22 +39,105 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintVertical_weight="1" />
 
+            <!-- Navigation Status Overlay -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/navigationStatusCard"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_margin="16dp"
+                android:visibility="gone"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="@dimen/elevation_md"
+                app:strokeWidth="1dp"
+                app:strokeColor="?attr/colorPrimary"
+                app:layout_constraintTop_toBottomOf="@id/toolbar"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent">
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="@dimen/padding_md">
+
+                    <TextView
+                        android:id="@+id/navTargetText"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:text="@string/nav_target_format"
+                        android:textAppearance="?attr/textAppearanceTitleMedium"
+                        android:textColor="?attr/colorOnSurface"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/stopNavButton"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <TextView
+                        android:id="@+id/navDistanceText"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/nav_distance_format"
+                        android:textAppearance="?attr/textAppearanceBodyMedium"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/stopNavButton"
+                        app:layout_constraintTop_toBottomOf="@id/navTargetText" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/prevNavButton"
+                        style="@style/Widget.Compassor.Button.Text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="上一个"
+                        android:visibility="gone"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/skipNavButton" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/skipNavButton"
+                        style="@style/Widget.Compassor.Button.Text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="跳过"
+                        android:visibility="gone"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/stopNavButton" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/stopNavButton"
+                        style="@style/Widget.Compassor.Button.Outlined"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/stop_navigation"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/radarCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="@dimen/margin_md"
-                android:layout_marginEnd="@dimen/margin_md"
-                android:layout_marginBottom="@dimen/margin_md"
-                app:cardCornerRadius="@dimen/corner_radius_lg"
+                android:layout_marginStart="16dp"
+                android:layout_marginEnd="16dp"
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="24dp"
                 app:cardElevation="@dimen/card_elevation"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent">
 
                 <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/radarContent"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
+                    android:layout_height="wrap_content"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackground">
 
                     <com.growsnova.compassor.RadarCompassView
                         android:id="@+id/radarView"
@@ -63,6 +146,16 @@
                         android:background="@color/radar_background"
                         android:minHeight="@dimen/radar_height_min"
                         android:maxHeight="@dimen/radar_height_max"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent" />
+
+                    <com.growsnova.compassor.SimpleCompassView
+                        android:id="@+id/simpleCompassView"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/radar_height_default"
+                        android:background="@color/radar_background"
+                        android:visibility="gone"
                         app:layout_constraintTop_toTopOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintEnd_toEndOf="parent" />

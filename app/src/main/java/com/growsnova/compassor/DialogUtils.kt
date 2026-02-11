@@ -3,7 +3,6 @@ package com.growsnova.compassor
 import android.content.Context
 import android.view.LayoutInflater
 import android.widget.Toast
-import androidx.appcompat.app.AlertDialog
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
@@ -31,7 +30,7 @@ object DialogUtils {
         editText.setText(initialValue)
         textInputLayout.hint = hint
         
-        MaterialAlertDialogBuilder(context)
+        val dialog = MaterialAlertDialogBuilder(context)
             .setTitle(title)
             .setView(view)
             .setPositiveButton(R.string.save) { _, _ ->
@@ -43,7 +42,23 @@ object DialogUtils {
             .setNegativeButton(R.string.cancel) { _, _ ->
                 onNegative()
             }
-            .show()
+            .create()
+
+        editText.setOnEditorActionListener { _, actionId, event ->
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_DONE ||
+                (event != null && event.keyCode == android.view.KeyEvent.KEYCODE_ENTER && event.action == android.view.KeyEvent.ACTION_DOWN)) {
+                val input = editText.text.toString().trim()
+                if (input.isNotEmpty()) {
+                    onPositive(input)
+                    dialog.dismiss()
+                }
+                true
+            } else {
+                false
+            }
+        }
+
+        dialog.show()
     }
 
     /**
@@ -100,7 +115,65 @@ object DialogUtils {
             .setPositiveButton(R.string.confirm) { _, _ ->
                 onDismiss()
             }
+            .setOnCancelListener { onDismiss() }
             .show()
+    }
+
+    /**
+     * Shows a Material Design 3 single choice dialog
+     */
+    fun showSingleChoiceDialog(
+        context: Context,
+        title: String,
+        items: Array<String>,
+        checkedItem: Int = -1,
+        onItemSelected: (Int) -> Unit,
+        onPositive: () -> Unit,
+        onNegative: () -> Unit = {}
+    ) {
+        MaterialAlertDialogBuilder(context)
+            .setTitle(title)
+            .setSingleChoiceItems(items, checkedItem) { _, which ->
+                onItemSelected(which)
+            }
+            .setPositiveButton(R.string.confirm) { _, _ ->
+                onPositive()
+            }
+            .setNegativeButton(R.string.cancel) { _, _ ->
+                onNegative()
+            }
+            .show()
+    }
+
+    /**
+     * Shows a Material Design 3 list dialog
+     */
+    fun showListDialog(
+        context: Context,
+        title: String,
+        items: Array<String>,
+        onItemSelected: (Int) -> Unit,
+        positiveButtonText: Int? = null,
+        onPositive: (() -> Unit)? = null,
+        neutralButtonText: Int? = null,
+        onNeutral: (() -> Unit)? = null
+    ) {
+        val builder = MaterialAlertDialogBuilder(context)
+            .setTitle(title)
+            .setItems(items) { _, which ->
+                onItemSelected(which)
+            }
+        
+        positiveButtonText?.let { text ->
+            builder.setPositiveButton(text) { _, _ -> onPositive?.invoke() }
+        }
+        
+        neutralButtonText?.let { text ->
+            builder.setNeutralButton(text) { _, _ -> onNeutral?.invoke() }
+        }
+        
+        builder.setNegativeButton(R.string.cancel, null)
+        builder.show()
     }
 
     /**

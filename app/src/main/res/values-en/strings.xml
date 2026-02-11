@@ -88,4 +88,5 @@
     <string name="navigation_completed">Route navigation completed: %s</string>
     <string name="reached_destination_next_waypoint">Reached location, heading to next: %s</string>
     <string name="looping_route_restart">Route looping, returning to start: %s</string>
+    <string name="navigation_data_error">Navigation data error, invalid data cleared</string>
 </resources>

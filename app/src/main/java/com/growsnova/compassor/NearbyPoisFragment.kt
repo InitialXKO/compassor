@@ -182,7 +182,7 @@ class PoiListAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PoiViewHolder {
         val view = LayoutInflater.from(parent.context)
-            .inflate(android.R.layout.simple_list_item_1, parent, false)
+            .inflate(R.layout.item_poi, parent, false)
         return PoiViewHolder(view)
     }
 
@@ -193,8 +193,16 @@ class PoiListAdapter(
     override fun getItemCount() = poiItems.size
 
     class PoiViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val titleView: TextView = itemView.findViewById(R.id.poiTitle)
+        private val snippetView: TextView = itemView.findViewById(R.id.poiSnippet)
+
+        init {
+            itemView.applyTouchScale()
+        }
+
         fun bind(poiItem: PoiItem, onPoiClicked: (PoiItem) -> Unit) {
-            (itemView as TextView).text = poiItem.title
+            titleView.text = poiItem.title
+            snippetView.text = poiItem.snippet ?: poiItem.adName
             itemView.setOnClickListener { onPoiClicked(poiItem) }
         }
     }
