@@ -56,6 +56,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private var isRequestingLocationUpdates = false
     private var myCurrentLatLng: LatLng? = null
     private var isFirstLocation = true
+    private var isFollowMode = true
     private val systemLocationListener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
             handleLocationUpdate(location)
@@ -436,6 +437,29 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         aMap.setOnMapLongClickListener { latLng ->
             showMapLongClickOptionsDialog(latLng)
         }
+
+        // 处理手动交互
+        aMap.setOnMapTouchListener { event ->
+            if (event.action == android.view.MotionEvent.ACTION_DOWN) {
+                isFollowMode = false
+            }
+        }
+
+        aMap.setOnCameraChangeListener(object : AMap.OnCameraChangeListener {
+            override fun onCameraChange(p0: CameraPosition?) {}
+            override fun onCameraChangeFinish(position: CameraPosition?) {
+                // 如果相机停止移动且位于当前位置附近，则恢复自动跟随模式
+                position?.target?.let { target ->
+                    myCurrentLatLng?.let { myLoc ->
+                        val results = FloatArray(1)
+                        Location.distanceBetween(myLoc.latitude, myLoc.longitude, target.latitude, target.longitude, results)
+                        if (results[0] < 5f) { // 5米范围内认为是在当前位置
+                            isFollowMode = true
+                        }
+                    }
+                }
+            }
+        })
     }
 
     private fun checkAndRequestPermissions() {
@@ -675,10 +699,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
             if (isFirstLocation) {
                 aMap.moveCamera(CameraUpdateFactory.newLatLngZoom(newLatLng, 15f))
-            } else {
-                aMap.animateCamera(CameraUpdateFactory.newLatLngZoom(newLatLng, 15f))
+                isFirstLocation = false
+            } else if (isFollowMode) {
+                // 保持当前的缩放级别，只更新中心点位置
+                // 使用 newLatLng 替代 newLatLngZoom 以修复“缩放地图总是过一会就回到原来的比例”的问题
+                aMap.animateCamera(CameraUpdateFactory.newLatLng(newLatLng))
             }
-            isFirstLocation = false
         }
 
         // 更新雷达视图
@@ -779,6 +805,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun setTargetLocation(latLng: LatLng, title: String) {
+        // 设置新目标时恢复跟随模式
+        isFollowMode = true
+
         // Validate input
         if (!latLng.latitude.isFinite() || !latLng.longitude.isFinite() ||
             latLng.latitude < -90 || latLng.latitude > 90 ||
