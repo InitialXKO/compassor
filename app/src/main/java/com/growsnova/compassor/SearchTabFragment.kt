@@ -1,4 +1,6 @@
 package com.growsnova.compassor
+import javax.inject.Inject
+import dagger.hilt.android.AndroidEntryPoint
 
 import android.content.Context
 import android.os.Bundle
@@ -28,6 +30,7 @@ import com.amap.api.services.poisearch.PoiSearch
 import kotlinx.coroutines.launch
 
 @Suppress("DEPRECATION")
+@AndroidEntryPoint
 class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
 
     private var currentLatLng: LatLng? = null
@@ -41,6 +44,9 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
     private lateinit var adapter: PoiListAdapter
     private var pendingQuery: String? = null
     private var searchJob: kotlinx.coroutines.Job? = null
+
+    @Inject
+    lateinit var searchRepository: com.growsnova.compassor.data.repository.SearchRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,7 +70,7 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
         recyclerView.layoutManager = LinearLayoutManager(context)
         adapter = PoiListAdapter(poiItems) { poiItem ->
             val waypoint = Waypoint(
-                id = System.currentTimeMillis(),
+                id = 0L,
                 name = poiItem.title,
                 latitude = poiItem.latLonPoint.latitude,
                 longitude = poiItem.latLonPoint.longitude
@@ -169,8 +175,7 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
 
     private fun saveSearchHistory(query: String) {
         lifecycleScope.launch {
-            val db = AppDatabase.getDatabase(requireContext())
-            db.searchHistoryDao().insert(SearchHistory(query = query))
+            searchRepository.insertSearchHistory(query)
         }
     }
     

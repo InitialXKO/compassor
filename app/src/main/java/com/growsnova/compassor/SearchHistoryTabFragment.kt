@@ -1,4 +1,6 @@
 package com.growsnova.compassor
+import javax.inject.Inject
+import dagger.hilt.android.AndroidEntryPoint
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -13,6 +15,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class SearchHistoryTabFragment : Fragment() {
 
     private val viewModel: CreateRouteViewModel by activityViewModels()
@@ -21,7 +24,9 @@ class SearchHistoryTabFragment : Fragment() {
     private lateinit var clearHistoryButton: Button
     private lateinit var historyAdapter: SearchHistoryAdapter
     private var searchHistories: MutableList<SearchHistory> = mutableListOf()
-    private val db by lazy { AppDatabase.getDatabase(requireContext()) }
+
+    @Inject
+    lateinit var searchRepository: com.growsnova.compassor.data.repository.SearchRepository
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -58,7 +63,7 @@ class SearchHistoryTabFragment : Fragment() {
 
     private fun loadSearchHistory() {
         lifecycleScope.launch {
-            val histories = db.searchHistoryDao().getRecentSearches()
+            val histories = searchRepository.getRecentSearches()
             searchHistories.clear()
             searchHistories.addAll(histories)
             activity?.runOnUiThread {
@@ -70,14 +75,14 @@ class SearchHistoryTabFragment : Fragment() {
 
     private fun deleteSearchHistory(history: SearchHistory) {
         lifecycleScope.launch {
-            db.searchHistoryDao().delete(history.id)
+            searchRepository.deleteSearchHistory(history.id)
             loadSearchHistory()
         }
     }
 
     private fun clearAllHistory() {
         lifecycleScope.launch {
-            db.searchHistoryDao().clearAll()
+            searchRepository.clearAllHistory()
             loadSearchHistory()
         }
     }

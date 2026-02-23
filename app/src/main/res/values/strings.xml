@@ -90,4 +90,19 @@
     <string name="off_route_warning">偏离路线！请检查方向</string>
     <string name="route_completed">路线已完成</string>
     <string name="navigation_data_error">导航数据错误，已清除无效数据</string>
+    <string name="default_destination_name">目的地</string>
+    <string name="reset_to_start">已重置到起点</string>
+    <string name="back_to_prev_waypoint">已返回到上一个点: %s</string>
+    <string name="back_to_last_waypoint">已返回到最后一个点: %s</string>
+    <string name="select_location_title">选择一个地点</string>
+    <string name="update_waypoint_title">更新收藏地点</string>
+    <string name="update_waypoint_message">附近已存在一个相似的收藏地点 \'%1$s\'。您想用新的位置和名称 \'%2$s\' 更新它吗？</string>
+    <string name="search_failed_format">搜索失败: %d</string>
+    <string name="skin_default">默认</string>
+    <string name="skin_forest">森林</string>
+    <string name="skin_ocean">海洋</string>
+    <string name="skin_default_desc">默认蓝色主题</string>
+    <string name="skin_forest_desc">森林绿色主题</string>
+    <string name="skin_ocean_desc">海洋蓝色主题</string>
+    <string name="route_saved_format">路线 \'%s\' 已保存</string>
 </resources>

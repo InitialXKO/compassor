@@ -81,4 +81,26 @@
     <string name="drag_to_reorder">Drag to reorder</string>
     <string name="search">Search</string>
     <string name="navigation_data_error">Navigation data error, invalid data cleared</string>
+    <string name="nav_target_format">Target: %s</string>
+    <string name="nav_distance_format">Distance: %s</string>
+    <string name="stop_navigation">Stop Navigation</string>
+    <string name="arrival_notification">Arrived at: %s</string>
+    <string name="next_waypoint_notification">Next: %s</string>
+    <string name="off_route_warning">Off route! Check direction</string>
+    <string name="route_completed">Route completed</string>
+    <string name="default_destination_name">Destination</string>
+    <string name="reset_to_start">Reset to start</string>
+    <string name="back_to_prev_waypoint">Returned to previous point: %s</string>
+    <string name="back_to_last_waypoint">Returned to last point: %s</string>
+    <string name="select_location_title">Select a location</string>
+    <string name="update_waypoint_title">Update Favorite Location</string>
+    <string name="update_waypoint_message">A similar location \'%1$s\' already exists nearby. Do you want to update it with the new name \'%2$s\' and position?</string>
+    <string name="search_failed_format">Search failed: %d</string>
+    <string name="skin_default">Default</string>
+    <string name="skin_forest">Forest</string>
+    <string name="skin_ocean">Ocean</string>
+    <string name="skin_default_desc">Default blue theme</string>
+    <string name="skin_forest_desc">Forest green theme</string>
+    <string name="skin_ocean_desc">Ocean blue theme</string>
+    <string name="route_saved_format">Route \'%s\' saved</string>
 </resources>

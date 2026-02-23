@@ -15,4 +15,10 @@ interface WaypointDao {
 
     @Query("SELECT * FROM waypoints")
     suspend fun getAllWaypoints(): List<Waypoint>
+
+    @Query("SELECT * FROM waypoints")
+    fun getAllWaypointsFlow(): kotlinx.coroutines.flow.Flow<List<Waypoint>>
+
+    @Query("SELECT * FROM waypoints WHERE id = :id")
+    suspend fun getWaypointById(id: Long): Waypoint?
 }
