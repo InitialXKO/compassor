@@ -8,21 +8,24 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.growsnova.compassor.data.repository.WaypointRepository
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class SavedWaypointsFragment : Fragment() {
 
-    private var waypoints: ArrayList<Waypoint> = arrayListOf()
-    private val viewModel: CreateRouteViewModel by activityViewModels()
+    @Inject lateinit var waypointRepository: WaypointRepository
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        arguments?.let {
-            val waypointWrapper = it.getSerializableCompat<WaypointListWrapper>(ARG_WAYPOINTS)
-            waypoints = waypointWrapper?.waypoints ?: arrayListOf()
-        }
-    }
+    private val viewModel: CreateRouteViewModel by activityViewModels()
+    private lateinit var adapter: WaypointSelectionAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -35,26 +38,38 @@ class SavedWaypointsFragment : Fragment() {
         emptyStateButton?.applyTouchScale()
         
         recyclerView.layoutManager = LinearLayoutManager(context)
-        recyclerView.adapter = WaypointSelectionAdapter(waypoints) { waypoint ->
+        adapter = WaypointSelectionAdapter(emptyList()) { waypoint ->
             viewModel.addWaypoint(waypoint)
         }
+        recyclerView.adapter = adapter
 
-        // Handle empty state button click
         emptyStateButton?.setOnClickListener {
             val intent = Intent(requireContext(), MainActivity::class.java)
             intent.putExtra("open_add_waypoint", true)
             startActivity(intent)
         }
 
-        updateEmptyState(view)
+        setupObservers()
         return view
     }
 
-    private fun updateEmptyState(view: View) {
+    private fun setupObservers() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                waypointRepository.getAllWaypointsFlow().collectLatest { waypoints ->
+                    adapter.updateWaypoints(waypoints)
+                    updateEmptyState(waypoints.isEmpty())
+                }
+            }
+        }
+    }
+
+    private fun updateEmptyState(isEmpty: Boolean) {
+        val view = view ?: return
         val emptyState = view.findViewById<View>(R.id.emptyState)
         val recyclerView = view.findViewById<RecyclerView>(R.id.savedWaypointsRecyclerView)
         
-        if (waypoints.isEmpty()) {
+        if (isEmpty) {
             emptyState?.visibility = View.VISIBLE
             recyclerView.visibility = View.GONE
         } else {
@@ -64,22 +79,20 @@ class SavedWaypointsFragment : Fragment() {
     }
 
     companion object {
-        private const val ARG_WAYPOINTS = "waypoints"
-
         @JvmStatic
-        fun newInstance(waypointsWrapper: WaypointListWrapper) =
-            SavedWaypointsFragment().apply {
-                arguments = Bundle().apply {
-                    putSerializable(ARG_WAYPOINTS, waypointsWrapper)
-                }
-            }
+        fun newInstance() = SavedWaypointsFragment()
     }
 }
 
 class WaypointSelectionAdapter(
-    private val waypoints: List<Waypoint>,
+    private var waypoints: List<Waypoint>,
     private val onWaypointClicked: (Waypoint) -> Unit
 ) : RecyclerView.Adapter<WaypointSelectionAdapter.WaypointViewHolder>() {
+
+    fun updateWaypoints(newWaypoints: List<Waypoint>) {
+        waypoints = newWaypoints
+        notifyDataSetChanged()
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): WaypointViewHolder {
         val view = LayoutInflater.from(parent.context)

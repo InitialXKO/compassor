@@ -8,20 +8,27 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.growsnova.compassor.data.repository.SearchRepository
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class SearchHistoryTabFragment : Fragment() {
+
+    @Inject lateinit var searchRepository: SearchRepository
 
     private val viewModel: CreateRouteViewModel by activityViewModels()
     private lateinit var historyRecyclerView: RecyclerView
     private lateinit var historyLabel: TextView
     private lateinit var clearHistoryButton: Button
     private lateinit var historyAdapter: SearchHistoryAdapter
-    private var searchHistories: MutableList<SearchHistory> = mutableListOf()
-    private val db by lazy { AppDatabase.getDatabase(requireContext()) }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -34,56 +41,40 @@ class SearchHistoryTabFragment : Fragment() {
         
         historyRecyclerView.layoutManager = LinearLayoutManager(context)
         historyAdapter = SearchHistoryAdapter(
-            searchHistories,
+            emptyList(),
             onItemClick = { history ->
-                // Switch to search tab and set the query
                 val parentFragment = parentFragment
                 if (parentFragment is SearchFragment) {
                     parentFragment.switchToSearchTab(history.query)
                 }
             },
             onDeleteClick = { history ->
-                deleteSearchHistory(history)
+                lifecycleScope.launch { searchRepository.deleteSearchHistory(history.id) }
             }
         )
         historyRecyclerView.adapter = historyAdapter
 
         clearHistoryButton.setOnClickListener {
-            clearAllHistory()
+            lifecycleScope.launch { searchRepository.clearSearchHistory() }
         }
 
-        loadSearchHistory()
+        setupObservers()
         return view
     }
 
-    private fun loadSearchHistory() {
-        lifecycleScope.launch {
-            val histories = db.searchHistoryDao().getRecentSearches()
-            searchHistories.clear()
-            searchHistories.addAll(histories)
-            activity?.runOnUiThread {
-                historyAdapter.notifyDataSetChanged()
-                updateHistoryVisibility()
+    private fun setupObservers() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                searchRepository.getSearchHistoryFlow().collectLatest { history ->
+                    historyAdapter.updateData(history)
+                    updateHistoryVisibility(history.isEmpty())
+                }
             }
         }
     }
 
-    private fun deleteSearchHistory(history: SearchHistory) {
-        lifecycleScope.launch {
-            db.searchHistoryDao().delete(history.id)
-            loadSearchHistory()
-        }
-    }
-
-    private fun clearAllHistory() {
-        lifecycleScope.launch {
-            db.searchHistoryDao().clearAll()
-            loadSearchHistory()
-        }
-    }
-
-    private fun updateHistoryVisibility() {
-        if (searchHistories.isEmpty()) {
+    private fun updateHistoryVisibility(isEmpty: Boolean) {
+        if (isEmpty) {
             historyRecyclerView.visibility = View.GONE
             historyLabel.visibility = View.GONE
             clearHistoryButton.visibility = View.GONE
@@ -94,9 +85,5 @@ class SearchHistoryTabFragment : Fragment() {
             clearHistoryButton.visibility = View.VISIBLE
             view?.findViewById<View>(R.id.emptyState)?.visibility = View.GONE
         }
-    }
-
-    fun refreshHistory() {
-        loadSearchHistory()
     }
 }

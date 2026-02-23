@@ -2,8 +2,11 @@ package com.growsnova.compassor
 
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
-class CreateRouteViewModel : ViewModel() {
+@HiltViewModel
+class CreateRouteViewModel @Inject constructor() : ViewModel() {
     val selectedWaypoints = MutableLiveData<MutableList<Waypoint>>(mutableListOf())
 
     fun addWaypoint(waypoint: Waypoint) {
@@ -20,9 +23,11 @@ class CreateRouteViewModel : ViewModel() {
 
     fun moveWaypoint(fromPosition: Int, toPosition: Int) {
         val currentList = selectedWaypoints.value ?: mutableListOf()
-        val movedItem = currentList.removeAt(fromPosition)
-        currentList.add(toPosition, movedItem)
-        selectedWaypoints.value = currentList
+        if (fromPosition in currentList.indices && toPosition in currentList.indices) {
+            val movedItem = currentList.removeAt(fromPosition)
+            currentList.add(toPosition, movedItem)
+            selectedWaypoints.value = currentList
+        }
     }
     
     fun setWaypoints(waypoints: List<Waypoint>) {

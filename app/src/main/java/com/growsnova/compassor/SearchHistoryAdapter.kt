@@ -8,10 +8,15 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
 class SearchHistoryAdapter(
-    private val searchHistories: List<SearchHistory>,
+    private var searchHistories: List<SearchHistory>,
     private val onItemClick: (SearchHistory) -> Unit,
     private val onDeleteClick: (SearchHistory) -> Unit
 ) : RecyclerView.Adapter<SearchHistoryAdapter.SearchHistoryViewHolder>() {
+
+    fun updateData(newData: List<SearchHistory>) {
+        searchHistories = newData
+        notifyDataSetChanged()
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SearchHistoryViewHolder {
         val view = LayoutInflater.from(parent.context)
