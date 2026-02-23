@@ -1,15 +1,21 @@
 package com.growsnova.compassor
+import dagger.hilt.android.AndroidEntryPoint
 
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.launch
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.amap.api.maps.model.LatLng
 
+@AndroidEntryPoint
 class CreateRouteActivity : AppCompatActivity() {
 
     private lateinit var waypoints: List<Waypoint>
@@ -24,7 +30,7 @@ class CreateRouteActivity : AppCompatActivity() {
         routeBeingEdited = intent.getSerializableExtraCompat<Route>("route_to_edit")
         routeBeingEdited?.let {
             title = getString(R.string.edit_route)
-            viewModel.selectedWaypoints.value = it.waypoints
+            viewModel.setWaypoints(it.waypoints)
         }
 
         val waypointWrapper = intent.getSerializableExtraCompat<WaypointListWrapper>("waypoints_wrapper")
@@ -49,8 +55,12 @@ class CreateRouteActivity : AppCompatActivity() {
         selectedWaypointsRecyclerView.adapter = adapter
         selectedWaypointsRecyclerView.layoutManager = LinearLayoutManager(this)
 
-        viewModel.selectedWaypoints.observe(this) { waypoints ->
-            adapter.updateWaypoints(waypoints)
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.selectedWaypoints.collect { waypoints ->
+                    adapter.updateWaypoints(waypoints)
+                }
+            }
         }
 
         val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.Callback() {
@@ -118,7 +128,7 @@ class CreateRouteActivity : AppCompatActivity() {
         saveRouteButton.applyTouchScale()
         saveRouteButton.setOnClickListener {
             val selectedWaypoints = viewModel.selectedWaypoints.value
-            if (selectedWaypoints.isNullOrEmpty() || selectedWaypoints.size < 2) {
+            if (selectedWaypoints.isEmpty() || selectedWaypoints.size < 2) {
                 DialogUtils.showErrorToast(this, "需要至少选择2个收藏地点来保存路线")
                 return@setOnClickListener
             }
@@ -138,9 +148,9 @@ class CreateRouteActivity : AppCompatActivity() {
                 initialValue = initialName,
                 onPositive = { routeName ->
                     val newRoute = Route(
-                        id = routeBeingEdited?.id ?: System.currentTimeMillis(),
+                        id = routeBeingEdited?.id ?: 0L,
                         name = routeName,
-                        waypoints = selectedWaypoints,
+                        waypoints = selectedWaypoints.toMutableList(),
                         isLooping = routeBeingEdited?.isLooping ?: false
                     )
 

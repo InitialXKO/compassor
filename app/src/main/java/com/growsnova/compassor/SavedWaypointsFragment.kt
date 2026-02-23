@@ -1,4 +1,5 @@
 package com.growsnova.compassor
+import dagger.hilt.android.AndroidEntryPoint
 
 import android.content.Intent
 import android.os.Bundle
@@ -11,6 +12,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
+@AndroidEntryPoint
 class SavedWaypointsFragment : Fragment() {
 
     private var waypoints: ArrayList<Waypoint> = arrayListOf()

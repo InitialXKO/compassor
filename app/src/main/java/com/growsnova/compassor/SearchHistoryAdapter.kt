@@ -8,7 +8,7 @@ import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
 class SearchHistoryAdapter(
-    private val searchHistories: List<SearchHistory>,
+    var searchHistories: List<SearchHistory>,
     private val onItemClick: (SearchHistory) -> Unit,
     private val onDeleteClick: (SearchHistory) -> Unit
 ) : RecyclerView.Adapter<SearchHistoryAdapter.SearchHistoryViewHolder>() {

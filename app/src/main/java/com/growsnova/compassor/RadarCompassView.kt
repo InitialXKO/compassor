@@ -2,10 +2,6 @@ package com.growsnova.compassor
 
 import android.content.Context
 import android.graphics.*
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
 import android.location.Location
 import android.util.AttributeSet
 import android.view.View
@@ -17,7 +13,7 @@ class RadarCompassView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
-) : View(context, attrs, defStyleAttr), SensorEventListener {
+) : View(context, attrs, defStyleAttr) {
 
     // 位置数据
     private var myLocation: LatLng = LatLng(0.0, 0.0)
@@ -27,19 +23,6 @@ class RadarCompassView @JvmOverloads constructor(
     private var deviceAzimuth: Float = 0.0f // 设备朝向角
     private var scanAngle: Float = 0.0f // 扫描线当前角度
     private var lastDrawTime: Long = 0
-
-    // 传感器
-    private val sensorManager: SensorManager =
-        context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
-    private val accelerometer: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-    private val magnetometer: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
-
-    private val gravity = FloatArray(3)
-    private val geomagnetic = FloatArray(3)
-    private val rotationMatrix = FloatArray(9)
-    private val orientation = FloatArray(3)
-    private var smoothedAzimuth: Float = 0f
-    private val alphaFilter = 0.15f // 滤波系数，越小越平滑但延迟越高
 
     private var skin: RadarSkin = RadarSkin()
 
@@ -138,8 +121,11 @@ class RadarCompassView @JvmOverloads constructor(
 
     init {
         setSkin(this.skin)
-        // 注册传感器监听
-        registerSensors()
+    }
+
+    fun setAzimuth(azimuth: Float) {
+        this.deviceAzimuth = azimuth
+        invalidate()
     }
 
     fun setSkin(skin: RadarSkin) {
@@ -158,55 +144,6 @@ class RadarCompassView @JvmOverloads constructor(
         invalidate()
     }
 
-    private fun registerSensors() {
-        accelerometer?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
-        }
-        magnetometer?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
-        }
-    }
-
-    private fun unregisterSensors() {
-        sensorManager.unregisterListener(this)
-    }
-
-    override fun onSensorChanged(event: SensorEvent?) {
-        event?.let {
-            when (it.sensor.type) {
-                Sensor.TYPE_ACCELEROMETER -> {
-                    System.arraycopy(it.values, 0, gravity, 0, it.values.size)
-                }
-                Sensor.TYPE_MAGNETIC_FIELD -> {
-                    System.arraycopy(it.values, 0, geomagnetic, 0, it.values.size)
-                }
-            }
-
-            // 计算旋转矩阵和方向
-            if (SensorManager.getRotationMatrix(rotationMatrix, null, gravity, geomagnetic)) {
-                SensorManager.getOrientation(rotationMatrix, orientation)
-                var azimuth = Math.toDegrees(orientation[0].toDouble()).toFloat()
-                if (azimuth < 0) azimuth += 360f
-                
-                // 低通滤波处理抖动
-                smoothedAzimuth = smoothRotation(smoothedAzimuth, azimuth, alphaFilter)
-                deviceAzimuth = smoothedAzimuth
-                
-                invalidate() // 触发重绘
-            }
-        }
-    }
-
-    private fun smoothRotation(current: Float, target: Float, alpha: Float): Float {
-        var diff = target - current
-        if (diff > 180) diff -= 360
-        else if (diff < -180) diff += 360
-        return current + alpha * diff
-    }
-
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-        // 不需要处理
-    }
 
     fun updateTarget(myLoc: LatLng, targetLoc: LatLng) {
         this.myLocation = myLoc
@@ -467,13 +404,4 @@ class RadarCompassView @JvmOverloads constructor(
         return bearing
     }
 
-    override fun onAttachedToWindow() {
-        super.onAttachedToWindow()
-        registerSensors()
-    }
-
-    override fun onDetachedFromWindow() {
-        super.onDetachedFromWindow()
-        unregisterSensors()
-    }
 }

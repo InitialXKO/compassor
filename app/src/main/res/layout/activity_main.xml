@@ -178,6 +178,8 @@
 
         </androidx.constraintlayout.widget.ConstraintLayout>
 
+        <include layout="@layout/layout_search_results_sheet" />
+
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
     <com.google.android.material.navigation.NavigationView

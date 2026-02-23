@@ -1,4 +1,5 @@
 package com.growsnova.compassor
+import dagger.hilt.android.AndroidEntryPoint
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -19,6 +20,7 @@ import com.amap.api.services.poisearch.PoiSearch
 import com.google.android.material.chip.ChipGroup
 
 @Suppress("DEPRECATION")
+@AndroidEntryPoint
 class NearbyPoisFragment : Fragment(), PoiSearch.OnPoiSearchListener {
 
     private var currentLatLng: LatLng? = null
@@ -50,7 +52,7 @@ class NearbyPoisFragment : Fragment(), PoiSearch.OnPoiSearchListener {
         recyclerView.layoutManager = LinearLayoutManager(context)
         adapter = PoiListAdapter(filteredPois) { poiItem ->
             val waypoint = Waypoint(
-                id = System.currentTimeMillis(),
+                id = 0L,
                 name = poiItem.title,
                 latitude = poiItem.latLonPoint.latitude,
                 longitude = poiItem.latLonPoint.longitude
@@ -160,35 +162,3 @@ class NearbyPoisFragment : Fragment(), PoiSearch.OnPoiSearchListener {
     }
 }
 
-class PoiListAdapter(
-    private val poiItems: List<PoiItem>,
-    private val onPoiClicked: (PoiItem) -> Unit
-) : RecyclerView.Adapter<PoiListAdapter.PoiViewHolder>() {
-
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PoiViewHolder {
-        val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_poi, parent, false)
-        return PoiViewHolder(view)
-    }
-
-    override fun onBindViewHolder(holder: PoiViewHolder, position: Int) {
-        holder.bind(poiItems[position], onPoiClicked)
-    }
-
-    override fun getItemCount() = poiItems.size
-
-    class PoiViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val titleView: TextView = itemView.findViewById(R.id.poiTitle)
-        private val snippetView: TextView = itemView.findViewById(R.id.poiSnippet)
-
-        init {
-            itemView.applyTouchScale()
-        }
-
-        fun bind(poiItem: PoiItem, onPoiClicked: (PoiItem) -> Unit) {
-            titleView.text = poiItem.title
-            snippetView.text = poiItem.snippet ?: poiItem.adName
-            itemView.setOnClickListener { onPoiClicked(poiItem) }
-        }
-    }
-}
