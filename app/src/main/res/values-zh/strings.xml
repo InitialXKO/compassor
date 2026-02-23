@@ -42,7 +42,6 @@
     <string name="custom_location">自定义位置</string>
     <string name="search_location">搜索地点</string>
     <string name="search_results">搜索结果</string>
-    <string name="search_results_count">%d 个结果</string>
     <string name="manage_waypoints_title">管理收藏地点</string>
     <string name="in_routes"> (在路线中: %s)</string>
     <string name="import_skin">导入皮肤</string>
@@ -77,19 +76,9 @@
     <string name="edit_route">编辑路线</string>
     <string name="delete_route">删除路线</string>
     <string name="navigation_started">开始路线导航: %s</string>
-    <string name="confirm_start_navigation">是否开始导航路线: %s?</string>
     <string name="need_at_least_two_waypoints">需要至少选择2个收藏地点来保存路线</string>
     <string name="save_route_hint">从 %1$s 到 %2$s</string>
     <string name="drag_to_reorder">拖动以重新排序</string>
     <string name="search">搜索</string>
-    <string name="network_unavailable">网络不可用，请检查网络连接</string>
-    <string name="loading">加载中...</string>
-    <string name="nav_target_format">目标: %s</string>
-    <string name="nav_distance_format">距离: %s</string>
-    <string name="stop_navigation">停止导航</string>
-    <string name="arrival_notification">已到达地点: %s</string>
-    <string name="next_waypoint_notification">前往下一个: %s</string>
-    <string name="off_route_warning">偏离路线！请检查方向</string>
-    <string name="route_completed">路线已完成</string>
     <string name="navigation_data_error">导航数据错误，已清除无效数据</string>
 </resources>

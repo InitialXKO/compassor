@@ -3,10 +3,9 @@ package com.growsnova.compassor
 import android.graphics.Color
 
 object DefaultSkins {
-    val default = RadarSkin("默认")
+    val default = RadarSkin()
 
     val forest = RadarSkin(
-        name = "森林",
         backgroundColor = Color.parseColor("#1B2631"),
         compassRingColor = Color.parseColor("#7D8C8C"),
         innerRingColor = Color.parseColor("#5A6B6B"),
@@ -21,7 +20,6 @@ object DefaultSkins {
     )
 
     val ocean = RadarSkin(
-        name = "海洋",
         backgroundColor = Color.parseColor("#0E2F44"),
         compassRingColor = Color.parseColor("#85C1E9"),
         innerRingColor = Color.parseColor("#5DADE2"),

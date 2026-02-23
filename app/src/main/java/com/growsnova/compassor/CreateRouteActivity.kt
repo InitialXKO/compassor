@@ -6,12 +6,10 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.ItemTouchHelper
-import dagger.hilt.android.AndroidEntryPoint
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.amap.api.maps.model.LatLng
 
-@AndroidEntryPoint
 class CreateRouteActivity : AppCompatActivity() {
 
     private lateinit var waypoints: List<Waypoint>
@@ -36,7 +34,7 @@ class CreateRouteActivity : AppCompatActivity() {
         val viewPager = findViewById<androidx.viewpager2.widget.ViewPager2>(R.id.viewPager)
         val tabLayout = findViewById<com.google.android.material.tabs.TabLayout>(R.id.tabLayout)
 
-        viewPager.adapter = CreateRoutePagerAdapter(this, currentLatLng)
+        viewPager.adapter = CreateRoutePagerAdapter(this, waypoints, currentLatLng)
 
         com.google.android.material.tabs.TabLayoutMediator(tabLayout, viewPager) { tab, position ->
             tab.text = when (position) {
@@ -121,7 +119,7 @@ class CreateRouteActivity : AppCompatActivity() {
         saveRouteButton.setOnClickListener {
             val selectedWaypoints = viewModel.selectedWaypoints.value
             if (selectedWaypoints.isNullOrEmpty() || selectedWaypoints.size < 2) {
-                DialogUtils.showErrorToast(this, getString(R.string.need_at_least_two_waypoints))
+                DialogUtils.showErrorToast(this, "需要至少选择2个收藏地点来保存路线")
                 return@setOnClickListener
             }
 
@@ -166,7 +164,7 @@ class CreateRouteActivity : AppCompatActivity() {
         DialogUtils.showConfirmationDialog(
             context = this,
             title = getString(R.string.start_navigation),
-            message = getString(R.string.confirm_start_navigation, route.name),
+            message = "是否开始导航路线: ${route.name}?",
             onPositive = {
                 resultIntent.putExtra("start_navigation", true)
                 setResult(RESULT_OK, resultIntent)

@@ -2,10 +2,9 @@ import java.util.Properties
 import java.io.FileInputStream
 
 plugins {
-    alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.kapt)
-    alias(libs.plugins.hilt.android)
+    id("com.android.application")
+    id("org.jetbrains.kotlin.android")
+    id("kotlin-kapt")
 }
 
 // 加载签名配置（如果存在）
@@ -76,37 +75,36 @@ android {
 
 dependencies {
     // Android核心库
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
-    implementation(libs.androidx.constraintlayout)
+    implementation("androidx.core:core-ktx:1.12.0")
+    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("com.google.android.material:material:1.11.0")
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
 
     // 高德地图SDK
-    implementation(libs.amap.map3d)
-    implementation(libs.amap.search)
+    // 3dmap 9.8.3已整合location功能，无需单独引入location SDK
+    implementation("com.amap.api:3dmap:9.8.3")
+    implementation("com.amap.api:search:9.7.1")
 
-    // 协程支持
-    implementation(libs.kotlinx.coroutines.android)
+    // 协程支持（用于异步操作）
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 
     // JSON序列化
-    implementation(libs.gson)
+    implementation("com.google.code.gson:gson:2.10.1")
 
-    // UI 组件
-    implementation(libs.androidx.recyclerview)
-    implementation(libs.androidx.activity.ktx)
-    implementation(libs.androidx.fragment.ktx)
+    // RecyclerView for waypoint selection
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
 
-    // Room
-    implementation(libs.androidx.room.runtime)
-    kapt(libs.androidx.room.compiler)
-    implementation(libs.androidx.room.ktx)
+    // ViewModel and LiveData KTX libraries
+    implementation("androidx.activity:activity-ktx:1.8.2")
+    implementation("androidx.fragment:fragment-ktx:1.6.2")
 
-    // Hilt
-    implementation(libs.hilt.android)
-    kapt(libs.hilt.compiler)
+    // Room Persistence Library
+    implementation("androidx.room:room-runtime:2.6.1")
+    kapt("androidx.room:room-compiler:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
 
-    // 测试库
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
+    // 测试库（保留但不强制使用）
+    testImplementation("junit:junit:4.13.2")
+    androidTestImplementation("androidx.test.ext:junit:1.1.5")
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
 }

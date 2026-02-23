@@ -42,7 +42,6 @@
     <string name="custom_location">Custom Location</string>
     <string name="search_location">Search Location</string>
     <string name="search_results">Search Results</string>
-    <string name="search_results_count">%d results</string>
     <string name="manage_waypoints_title">Manage Favorite Locations</string>
     <string name="in_routes"> (In routes: %s)</string>
     <string name="import_skin">Import Skin</string>
@@ -77,19 +76,9 @@
     <string name="edit_route">Edit Route</string>
     <string name="delete_route">Delete Route</string>
     <string name="navigation_started">Started route navigation: %s</string>
-    <string name="confirm_start_navigation">Start navigation for route: %s?</string>
     <string name="need_at_least_two_waypoints">Need at least 2 waypoints to save route</string>
     <string name="save_route_hint">From %1$s to %2$s</string>
     <string name="drag_to_reorder">Drag to reorder</string>
     <string name="search">Search</string>
-    <string name="network_unavailable">Network unavailable, please check your connection</string>
-    <string name="loading">Loading...</string>
-    <string name="nav_target_format">Target: %s</string>
-    <string name="nav_distance_format">Distance: %s</string>
-    <string name="stop_navigation">Stop Navigation</string>
-    <string name="arrival_notification">Arrived at: %s</string>
-    <string name="next_waypoint_notification">Next: %s</string>
-    <string name="off_route_warning">Off route! Please check direction</string>
-    <string name="route_completed">Route completed</string>
     <string name="navigation_data_error">Navigation data error, invalid data cleared</string>
 </resources>

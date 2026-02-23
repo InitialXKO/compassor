@@ -2,18 +2,19 @@ package com.growsnova.compassor
 
 import android.content.Context
 import android.os.Bundle
-import android.text.Editable
-import android.text.TextWatcher
-import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.KeyEvent
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
+import android.text.Editable
+import android.text.TextWatcher
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
@@ -23,17 +24,11 @@ import com.amap.api.maps.model.LatLng
 import com.amap.api.services.core.LatLonPoint
 import com.amap.api.services.core.PoiItem
 import com.amap.api.services.poisearch.PoiResult
-import com.growsnova.compassor.data.repository.SearchRepository
-import com.growsnova.compassor.manager.SearchManager
-import dagger.hilt.android.AndroidEntryPoint
+import com.amap.api.services.poisearch.PoiSearch
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 
-@AndroidEntryPoint
-class SearchTabFragment : Fragment() {
-
-    @Inject lateinit var searchManager: SearchManager
-    @Inject lateinit var searchRepository: SearchRepository
+@Suppress("DEPRECATION")
+class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
 
     private var currentLatLng: LatLng? = null
     private val viewModel: CreateRouteViewModel by activityViewModels()
@@ -41,6 +36,7 @@ class SearchTabFragment : Fragment() {
     private lateinit var searchEditText: EditText
     private lateinit var searchButton: Button
     private lateinit var progressBar: ProgressBar
+    private lateinit var poiSearch: PoiSearch
     private var poiItems: MutableList<PoiItem> = mutableListOf()
     private lateinit var adapter: PoiListAdapter
     private var pendingQuery: String? = null
@@ -74,7 +70,7 @@ class SearchTabFragment : Fragment() {
                 longitude = poiItem.latLonPoint.longitude
             )
             viewModel.addWaypoint(waypoint)
-            DialogUtils.showSuccessToast(requireContext(), getString(R.string.waypoint_saved, poiItem.title))
+            DialogUtils.showSuccessToast(requireContext(), "${poiItem.title} added to route")
         }
         recyclerView.adapter = adapter
 
@@ -85,7 +81,7 @@ class SearchTabFragment : Fragment() {
                 val query = s?.toString()?.trim() ?: ""
                 if (query.length >= 2) {
                     searchJob = lifecycleScope.launch {
-                        kotlinx.coroutines.delay(500)
+                        kotlinx.coroutines.delay(500) // Debounce 500ms
                         performSearch(hideKeyboard = false)
                     }
                 }
@@ -124,7 +120,7 @@ class SearchTabFragment : Fragment() {
                 return
             }
             searchPois(keyword)
-            lifecycleScope.launch { searchRepository.insertSearchHistory(keyword) }
+            saveSearchHistory(keyword)
             if (hideKeyboard) {
                 hideKeyboard()
             }
@@ -138,26 +134,44 @@ class SearchTabFragment : Fragment() {
 
     private fun searchPois(keyword: String) {
         progressBar.visibility = View.VISIBLE
-        searchManager.search(keyword, nearbyPoint = currentLatLng?.let { LatLonPoint(it.latitude, it.longitude) }, listener = object : SearchManager.SearchListener {
-            override fun onPoiSearched(result: PoiResult?, errorCode: Int) {
-                progressBar.visibility = View.GONE
-                if (errorCode == 1000 && result != null) {
-                    poiItems.clear()
-                    poiItems.addAll(result.pois)
-                    adapter.notifyDataSetChanged()
+        val query = PoiSearch.Query(keyword, "", "")
+        query.pageSize = 20
+        poiSearch = PoiSearch(context, query)
+        poiSearch.setOnPoiSearchListener(this)
+        currentLatLng?.let {
+             poiSearch.bound = PoiSearch.SearchBound(LatLonPoint(it.latitude, it.longitude), 50000)
+        }
+        poiSearch.searchPOIAsyn()
+        
+        view?.findViewById<TextView>(R.id.resultsLabel)?.visibility = View.VISIBLE
+        view?.findViewById<RecyclerView>(R.id.searchResultsRecyclerView)?.visibility = View.VISIBLE
+        view?.findViewById<View>(R.id.emptyState)?.visibility = View.GONE
+    }
 
-                    if (poiItems.isEmpty()) {
-                        view?.findViewById<TextView>(R.id.resultsLabel)?.visibility = View.GONE
-                        view?.findViewById<RecyclerView>(R.id.searchResultsRecyclerView)?.visibility = View.GONE
-                        view?.findViewById<View>(R.id.emptyState)?.visibility = View.VISIBLE
-                    } else {
-                        view?.findViewById<TextView>(R.id.resultsLabel)?.visibility = View.VISIBLE
-                        view?.findViewById<RecyclerView>(R.id.searchResultsRecyclerView)?.visibility = View.VISIBLE
-                        view?.findViewById<View>(R.id.emptyState)?.visibility = View.GONE
-                    }
+    override fun onPoiSearched(result: PoiResult?, rCode: Int) {
+        progressBar.visibility = View.GONE
+        if (rCode == 1000) {
+            result?.pois?.let {
+                poiItems.clear()
+                poiItems.addAll(it)
+                adapter.notifyDataSetChanged()
+                
+                if (poiItems.isEmpty()) {
+                    view?.findViewById<TextView>(R.id.resultsLabel)?.visibility = View.GONE
+                    view?.findViewById<RecyclerView>(R.id.searchResultsRecyclerView)?.visibility = View.GONE
+                    view?.findViewById<View>(R.id.emptyState)?.visibility = View.VISIBLE
                 }
             }
-        })
+        }
+    }
+
+    override fun onPoiItemSearched(p0: PoiItem?, p1: Int) {}
+
+    private fun saveSearchHistory(query: String) {
+        lifecycleScope.launch {
+            val db = AppDatabase.getDatabase(requireContext())
+            db.searchHistoryDao().insert(SearchHistory(query = query))
+        }
     }
     
     fun setSearchQuery(query: String) {

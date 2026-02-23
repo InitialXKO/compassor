@@ -2,6 +2,10 @@ package com.growsnova.compassor
 
 import android.content.Context
 import android.graphics.*
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.location.Location
 import android.util.AttributeSet
 import android.view.View
@@ -13,7 +17,7 @@ class RadarCompassView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
-) : View(context, attrs, defStyleAttr) {
+) : View(context, attrs, defStyleAttr), SensorEventListener {
 
     // 位置数据
     private var myLocation: LatLng = LatLng(0.0, 0.0)
@@ -24,25 +28,118 @@ class RadarCompassView @JvmOverloads constructor(
     private var scanAngle: Float = 0.0f // 扫描线当前角度
     private var lastDrawTime: Long = 0
 
+    // 传感器
+    private val sensorManager: SensorManager =
+        context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    private val accelerometer: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+    private val magnetometer: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+
+    private val gravity = FloatArray(3)
+    private val geomagnetic = FloatArray(3)
+    private val rotationMatrix = FloatArray(9)
+    private val orientation = FloatArray(3)
+    private var smoothedAzimuth: Float = 0f
+    private val alphaFilter = 0.15f // 滤波系数，越小越平滑但延迟越高
+
     private var skin: RadarSkin = RadarSkin()
 
-    // 画笔
-    private val backgroundPaint = Paint().apply { style = Paint.Style.FILL }
-    private val scanPaint = Paint().apply { style = Paint.Style.FILL; isAntiAlias = true }
-    private val glowPaint = Paint().apply { style = Paint.Style.FILL; isAntiAlias = true }
-    private val compassRingPaint = Paint().apply { style = Paint.Style.STROKE; strokeWidth = 4f; alpha = 180; isAntiAlias = true }
-    private val innerRingPaint = Paint().apply { style = Paint.Style.STROKE; strokeWidth = 2f; alpha = 120; isAntiAlias = true }
-    private val crosshairPaint = Paint().apply { style = Paint.Style.STROKE; strokeWidth = 3f; isAntiAlias = true }
-    private val targetPaint = Paint().apply { style = Paint.Style.FILL; isAntiAlias = true }
-    private val targetRingPaint = Paint().apply { style = Paint.Style.STROKE; strokeWidth = 3f; alpha = 150; isAntiAlias = true }
-    private val targetLinePaint = Paint().apply { style = Paint.Style.STROKE; strokeWidth = 3f; alpha = 200; isAntiAlias = true; pathEffect = DashPathEffect(floatArrayOf(10f, 5f), 0f) }
-    private val distanceTextPaint = Paint().apply { textSize = 48f; textAlign = Paint.Align.CENTER; isAntiAlias = true; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD) }
-    private val infoTextPaint = Paint().apply { textSize = 28f; textAlign = Paint.Align.CENTER; isAntiAlias = true }
-    private val directionTextPaint = Paint().apply { textSize = 36f; textAlign = Paint.Align.CENTER; isAntiAlias = true; typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD) }
-    private val tickPaint = Paint().apply { style = Paint.Style.STROKE; strokeWidth = 2f; isAntiAlias = true }
+    // 画笔 - FPS游戏风格
+    private val backgroundPaint = Paint().apply {
+        style = Paint.Style.FILL
+    }
+
+    // 扫描特效
+    private val scanPaint = Paint().apply {
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+
+    // 发光效果
+    private val glowPaint = Paint().apply {
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+
+    // 指南针外环
+    private val compassRingPaint = Paint().apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 4f
+        alpha = 180
+        isAntiAlias = true
+    }
+
+    // 内环（更细的辅助环）
+    private val innerRingPaint = Paint().apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
+        alpha = 120
+        isAntiAlias = true
+    }
+
+    // 中心十字准星
+    private val crosshairPaint = Paint().apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+        isAntiAlias = true
+    }
+
+    // 目标点主色（橙色警告色）
+    private val targetPaint = Paint().apply {
+        style = Paint.Style.FILL
+        isAntiAlias = true
+    }
+
+    // 目标点外圈
+    private val targetRingPaint = Paint().apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+        alpha = 150
+        isAntiAlias = true
+    }
+
+    // 目标指示线
+    private val targetLinePaint = Paint().apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 3f
+        alpha = 200
+        isAntiAlias = true
+        pathEffect = DashPathEffect(floatArrayOf(10f, 5f), 0f)
+    }
+
+    // 距离文本
+    private val distanceTextPaint = Paint().apply {
+        textSize = 48f
+        textAlign = Paint.Align.CENTER
+        isAntiAlias = true
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    }
+
+    // 辅助信息文本
+    private val infoTextPaint = Paint().apply {
+        textSize = 28f
+        textAlign = Paint.Align.CENTER
+        isAntiAlias = true
+    }
+
+    // 方向标记文本（N/E/S/W）
+    private val directionTextPaint = Paint().apply {
+        textSize = 36f
+        textAlign = Paint.Align.CENTER
+        isAntiAlias = true
+        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    }
+
+    // 刻度线
+    private val tickPaint = Paint().apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
+        isAntiAlias = true
+    }
 
     init {
         setSkin(this.skin)
+        // 注册传感器监听
+        registerSensors()
     }
 
     fun setSkin(skin: RadarSkin) {
@@ -61,9 +158,54 @@ class RadarCompassView @JvmOverloads constructor(
         invalidate()
     }
 
-    fun updateAzimuth(azimuth: Float) {
-        this.deviceAzimuth = azimuth
-        invalidate()
+    private fun registerSensors() {
+        accelerometer?.let {
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
+        }
+        magnetometer?.let {
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
+        }
+    }
+
+    private fun unregisterSensors() {
+        sensorManager.unregisterListener(this)
+    }
+
+    override fun onSensorChanged(event: SensorEvent?) {
+        event?.let {
+            when (it.sensor.type) {
+                Sensor.TYPE_ACCELEROMETER -> {
+                    System.arraycopy(it.values, 0, gravity, 0, it.values.size)
+                }
+                Sensor.TYPE_MAGNETIC_FIELD -> {
+                    System.arraycopy(it.values, 0, geomagnetic, 0, it.values.size)
+                }
+            }
+
+            // 计算旋转矩阵和方向
+            if (SensorManager.getRotationMatrix(rotationMatrix, null, gravity, geomagnetic)) {
+                SensorManager.getOrientation(rotationMatrix, orientation)
+                var azimuth = Math.toDegrees(orientation[0].toDouble()).toFloat()
+                if (azimuth < 0) azimuth += 360f
+                
+                // 低通滤波处理抖动
+                smoothedAzimuth = smoothRotation(smoothedAzimuth, azimuth, alphaFilter)
+                deviceAzimuth = smoothedAzimuth
+                
+                invalidate() // 触发重绘
+            }
+        }
+    }
+
+    private fun smoothRotation(current: Float, target: Float, alpha: Float): Float {
+        var diff = target - current
+        if (diff > 180) diff -= 360
+        else if (diff < -180) diff += 360
+        return current + alpha * diff
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+        // 不需要处理
     }
 
     fun updateTarget(myLoc: LatLng, targetLoc: LatLng) {
@@ -71,15 +213,16 @@ class RadarCompassView @JvmOverloads constructor(
         this.targetLocation = targetLoc
         this.distance = calculateDistance(myLoc, targetLoc)
         this.bearing = calculateBearing(myLoc, targetLoc)
-        invalidate()
+        invalidate() // 触发重绘
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+
         val currentTime = System.currentTimeMillis()
         if (lastDrawTime > 0) {
             val elapsed = currentTime - lastDrawTime
-            scanAngle = (scanAngle + elapsed * 0.1f) % 360f
+            scanAngle = (scanAngle + elapsed * 0.1f) % 360f // 扫描速度
         }
         lastDrawTime = currentTime
 
@@ -87,26 +230,52 @@ class RadarCompassView @JvmOverloads constructor(
         val centerY = height / 2f
         val radius = minOf(centerX, centerY) * 0.7f
 
+        // 1. 绘制背景
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), backgroundPaint)
+
+        // 1.5 绘制扫描发光特效
         drawScanGlow(canvas, centerX, centerY, radius)
+
+        // 2. 绘制指南针环和刻度
         drawCompassRing(canvas, centerX, centerY, radius)
+
+        // 3. 绘制中心十字准星
         drawCrosshair(canvas, centerX, centerY)
+
+        // 4. 绘制方向标识（N, S, E, W）
         drawDirectionMarkers(canvas, centerX, centerY, radius)
 
+        // 5. 计算相对方位角（目标方位 - 设备朝向）
         var relativeBearing = bearing - deviceAzimuth
         if (relativeBearing < 0) relativeBearing += 360f
         if (relativeBearing >= 360) relativeBearing -= 360f
 
+        // 6. 绘制目标路点指示器
         if (distance > 0) {
             drawTargetWaypoint(canvas, centerX, centerY, radius, relativeBearing)
         }
+
+        // 7. 显示距离和方位信息
         drawInfoPanel(canvas, centerX, centerY, radius, relativeBearing)
+
         postInvalidateOnAnimation()
     }
 
     private fun drawScanGlow(canvas: Canvas, centerX: Float, centerY: Float, radius: Float) {
+        val sweepGradient = SweepGradient(centerX, centerY, 
+            intArrayOf(Color.TRANSPARENT, Color.TRANSPARENT, Color.parseColor("#2058A6FF"), Color.parseColor("#4058A6FF")),
+            floatArrayOf(0f, (scanAngle - 45f) / 360f, (scanAngle - 10f) / 360f, scanAngle / 360f)
+        )
+        
+        // Handle wrap around for SweepGradient if necessary, or just rotate the canvas
         canvas.save()
         canvas.rotate(scanAngle, centerX, centerY)
-        val colors = intArrayOf(Color.TRANSPARENT, Color.TRANSPARENT, skin.compassRingColor and 0x00FFFFFF or 0x10000000, skin.compassRingColor and 0x00FFFFFF or 0x30000000)
+        val colors = intArrayOf(
+            Color.TRANSPARENT, 
+            Color.TRANSPARENT, 
+            skin.compassRingColor and 0x00FFFFFF or 0x10000000, 
+            skin.compassRingColor and 0x00FFFFFF or 0x30000000
+        )
         val positions = floatArrayOf(0f, 0.7f, 0.9f, 1f)
         scanPaint.shader = SweepGradient(centerX, centerY, colors, positions)
         canvas.drawCircle(centerX, centerY, radius, scanPaint)
@@ -114,27 +283,38 @@ class RadarCompassView @JvmOverloads constructor(
     }
 
     private fun drawCompassRing(canvas: Canvas, centerX: Float, centerY: Float, radius: Float) {
+        // 绘制外环
         canvas.drawCircle(centerX, centerY, radius, compassRingPaint)
+
+        // 绘制内环
         canvas.drawCircle(centerX, centerY, radius * 0.85f, innerRingPaint)
+
+        // 绘制刻度线（每10度一个小刻度，每90度一个大刻度）
         for (angle in 0 until 360 step 10) {
             val adjustedAngle = angle - deviceAzimuth
             val radian = Math.toRadians(adjustedAngle.toDouble())
+
             val startRadius: Float
             val endRadius: Float
             val paint: Paint
+
             if (angle % 90 == 0) {
+                // 主方向刻度（N/E/S/W）更长更粗
                 startRadius = radius * 0.92f
                 endRadius = radius * 1.0f
                 paint = compassRingPaint
             } else {
+                // 普通刻度
                 startRadius = radius * 0.95f
                 endRadius = radius * 1.0f
                 paint = tickPaint
             }
+
             val startX = centerX + startRadius * sin(radian).toFloat()
             val startY = centerY - startRadius * cos(radian).toFloat()
             val endX = centerX + endRadius * sin(radian).toFloat()
             val endY = centerY - endRadius * cos(radian).toFloat()
+
             canvas.drawLine(startX, startY, endX, endY, paint)
         }
     }
@@ -142,10 +322,17 @@ class RadarCompassView @JvmOverloads constructor(
     private fun drawCrosshair(canvas: Canvas, centerX: Float, centerY: Float) {
         val crossSize = 25f
         val gap = 8f
+
+        // 上
         canvas.drawLine(centerX, centerY - gap, centerX, centerY - gap - crossSize, crosshairPaint)
+        // 下
         canvas.drawLine(centerX, centerY + gap, centerX, centerY + gap + crossSize, crosshairPaint)
+        // 左
         canvas.drawLine(centerX - gap, centerY, centerX - gap - crossSize, centerY, crosshairPaint)
+        // 右
         canvas.drawLine(centerX + gap, centerY, centerX + gap + crossSize, centerY, crosshairPaint)
+
+        // 中心点
         canvas.drawCircle(centerX, centerY, 3f, crosshairPaint)
     }
 
@@ -154,26 +341,47 @@ class RadarCompassView @JvmOverloads constructor(
         val targetRadius = radius * 0.75f
         val targetX = centerX + targetRadius * sin(radian).toFloat()
         val targetY = centerY - targetRadius * cos(radian).toFloat()
+
+        // 绘制指向目标的虚线 - 从中心到目标点
         canvas.drawLine(centerX, centerY, targetX, targetY, targetLinePaint)
+
+        // 绘制目标发光效果
         val pulse = (sin(System.currentTimeMillis() / 200.0) * 0.5 + 0.5).toFloat()
         val glowSize = 40f + 20f * pulse
         val colors = intArrayOf(skin.targetColor and 0x00FFFFFF or 0x60000000, Color.TRANSPARENT)
         glowPaint.shader = RadialGradient(targetX, targetY, glowSize, colors, null, Shader.TileMode.CLAMP)
         canvas.drawCircle(targetX, targetY, glowSize, glowPaint)
+
+        // 绘制目标点外圈（脉冲效果）
         canvas.drawCircle(targetX, targetY, 25f + 5f * pulse, targetRingPaint)
         canvas.drawCircle(targetX, targetY, 20f, targetRingPaint)
+
+        // 绘制目标点中心
         canvas.drawCircle(targetX, targetY, 12f, targetPaint)
-        val distanceText = if (distance < 1000) "${distance.toInt()}m" else "%.1fkm".format(distance / 1000)
+
+        // 在目标点上方显示距离
+        val distanceText = if (distance < 1000) {
+            "${distance.toInt()}m"
+        } else {
+            "%.1fkm".format(distance / 1000)
+        }
+
         val textY = targetY - 45f - 5f * pulse
         canvas.drawText(distanceText, targetX, textY, distanceTextPaint)
     }
 
     private fun drawInfoPanel(canvas: Canvas, centerX: Float, centerY: Float, radius: Float, relativeBearing: Float) {
         val infoY = centerY + radius + 80
+
+        // 主要距离信息
         val distanceText = formatDistance(distance)
         canvas.drawText(distanceText, centerX, infoY, distanceTextPaint)
+
+        // 方位角信息
         val bearingText = "${bearing.toInt()}°"
         canvas.drawText(bearingText, centerX, infoY + 50, infoTextPaint)
+
+        // 相对方位信息（小字）
         val relativeText = getRelativeDirection(relativeBearing)
         canvas.drawText(relativeText, centerX, infoY + 85, infoTextPaint)
     }
@@ -194,17 +402,35 @@ class RadarCompassView @JvmOverloads constructor(
 
     private fun drawDirectionMarkers(canvas: Canvas, centerX: Float, centerY: Float, radius: Float) {
         val textRadius = radius + 45
-        val directions = listOf(Pair("N", 0f), Pair("E", 90f), Pair("S", 180f), Pair("W", 270f))
+
+        // 定义方向及其角度
+        val directions = listOf(
+            Pair("N", 0f),
+            Pair("E", 90f),
+            Pair("S", 180f),
+            Pair("W", 270f)
+        )
+
         for ((direction, baseAngle) in directions) {
             val adjustedAngle = baseAngle - deviceAzimuth
             val radian = Math.toRadians(adjustedAngle.toDouble())
+
             val x = centerX + textRadius * sin(radian).toFloat()
-            val y = centerY - textRadius * cos(radian).toFloat() + 12f
+            val y = centerY - textRadius * cos(radian).toFloat() + 12f // 微调文字垂直位置
+
+            // 北方向使用高亮色
             val paint = if (direction == "N") {
-                directionTextPaint.apply { color = Color.parseColor("#58A6FF"); alpha = 255 }
+                directionTextPaint.apply {
+                    color = Color.parseColor("#58A6FF")
+                    alpha = 255
+                }
             } else {
-                directionTextPaint.apply { color = Color.parseColor("#8B949E"); alpha = 180 }
+                directionTextPaint.apply {
+                    color = Color.parseColor("#8B949E")
+                    alpha = 180
+                }
             }
+
             canvas.drawText(direction, x, y, paint)
         }
     }
@@ -217,17 +443,37 @@ class RadarCompassView @JvmOverloads constructor(
         }
     }
 
+    // 计算两点间距离（米）
     private fun calculateDistance(from: LatLng, to: LatLng): Float {
         val results = FloatArray(1)
-        Location.distanceBetween(from.latitude, from.longitude, to.latitude, to.longitude, results)
+        Location.distanceBetween(
+            from.latitude, from.longitude,
+            to.latitude, to.longitude,
+            results
+        )
         return results[0]
     }
 
+    // 计算从from指向to的方位角（正北为0度，顺时针增加）
     private fun calculateBearing(from: LatLng, to: LatLng): Float {
         val results = FloatArray(2)
-        Location.distanceBetween(from.latitude, from.longitude, to.latitude, to.longitude, results)
+        Location.distanceBetween(
+            from.latitude, from.longitude,
+            to.latitude, to.longitude,
+            results
+        )
         var bearing = results[1]
         if (bearing < 0) bearing += 360f
         return bearing
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        registerSensors()
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+        unregisterSensors()
     }
 }

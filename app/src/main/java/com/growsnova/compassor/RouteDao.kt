@@ -1,26 +1,21 @@
 package com.growsnova.compassor
 
 import androidx.room.*
-import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface RouteDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(route: Route): Long
+    suspend fun insertRoute(route: Route): Long
 
     @Update
-    suspend fun update(route: Route)
+    suspend fun updateRoute(route: Route)
 
     @Delete
-    suspend fun delete(route: Route)
+    suspend fun deleteRoute(route: Route)
 
     @Transaction
     @Query("SELECT * FROM routes")
     suspend fun getRoutesWithWaypoints(): List<RouteWithWaypoints>
-
-    @Transaction
-    @Query("SELECT * FROM routes")
-    fun getRoutesWithWaypointsFlow(): Flow<List<RouteWithWaypoints>>
 
     @Transaction
     @Query("SELECT * FROM routes WHERE id = :routeId")

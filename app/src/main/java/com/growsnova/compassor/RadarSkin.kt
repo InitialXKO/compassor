@@ -7,7 +7,6 @@ import androidx.annotation.AttrRes
 import androidx.core.content.ContextCompat
 
 data class RadarSkin(
-    val name: String = "Default",
     val backgroundColor: Int = Color.parseColor("#0D1117"),
     val compassRingColor: Int = Color.parseColor("#58A6FF"),
     val innerRingColor: Int = Color.parseColor("#21262D"),
@@ -22,7 +21,6 @@ data class RadarSkin(
 ) {
     companion object {
         fun createFromTheme(context: Context): RadarSkin {
-            val name = "Dynamic"
             val primary = getThemeColor(context, com.google.android.material.R.attr.colorPrimary)
             val surface = getThemeColor(context, com.google.android.material.R.attr.colorSurface)
             val onSurface = getThemeColor(context, com.google.android.material.R.attr.colorOnSurface)
@@ -32,7 +30,6 @@ data class RadarSkin(
             val outline = getThemeColor(context, com.google.android.material.R.attr.colorOutline)
 
             return RadarSkin(
-                name = name,
                 backgroundColor = surface,
                 compassRingColor = primary,
                 innerRingColor = surfaceVariant,

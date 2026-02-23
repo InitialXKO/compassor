@@ -8,24 +8,21 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.growsnova.compassor.data.repository.WaypointRepository
-import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
-import javax.inject.Inject
 
-@AndroidEntryPoint
 class SavedWaypointsFragment : Fragment() {
 
-    @Inject lateinit var waypointRepository: WaypointRepository
-
+    private var waypoints: ArrayList<Waypoint> = arrayListOf()
     private val viewModel: CreateRouteViewModel by activityViewModels()
-    private lateinit var adapter: WaypointSelectionAdapter
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        arguments?.let {
+            val waypointWrapper = it.getSerializableCompat<WaypointListWrapper>(ARG_WAYPOINTS)
+            waypoints = waypointWrapper?.waypoints ?: arrayListOf()
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -38,38 +35,26 @@ class SavedWaypointsFragment : Fragment() {
         emptyStateButton?.applyTouchScale()
         
         recyclerView.layoutManager = LinearLayoutManager(context)
-        adapter = WaypointSelectionAdapter(emptyList()) { waypoint ->
+        recyclerView.adapter = WaypointSelectionAdapter(waypoints) { waypoint ->
             viewModel.addWaypoint(waypoint)
         }
-        recyclerView.adapter = adapter
 
+        // Handle empty state button click
         emptyStateButton?.setOnClickListener {
             val intent = Intent(requireContext(), MainActivity::class.java)
             intent.putExtra("open_add_waypoint", true)
             startActivity(intent)
         }
 
-        setupObservers()
+        updateEmptyState(view)
         return view
     }
 
-    private fun setupObservers() {
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                waypointRepository.getAllWaypointsFlow().collectLatest { waypoints ->
-                    adapter.updateWaypoints(waypoints)
-                    updateEmptyState(waypoints.isEmpty())
-                }
-            }
-        }
-    }
-
-    private fun updateEmptyState(isEmpty: Boolean) {
-        val view = view ?: return
+    private fun updateEmptyState(view: View) {
         val emptyState = view.findViewById<View>(R.id.emptyState)
         val recyclerView = view.findViewById<RecyclerView>(R.id.savedWaypointsRecyclerView)
         
-        if (isEmpty) {
+        if (waypoints.isEmpty()) {
             emptyState?.visibility = View.VISIBLE
             recyclerView.visibility = View.GONE
         } else {
@@ -79,20 +64,22 @@ class SavedWaypointsFragment : Fragment() {
     }
 
     companion object {
+        private const val ARG_WAYPOINTS = "waypoints"
+
         @JvmStatic
-        fun newInstance() = SavedWaypointsFragment()
+        fun newInstance(waypointsWrapper: WaypointListWrapper) =
+            SavedWaypointsFragment().apply {
+                arguments = Bundle().apply {
+                    putSerializable(ARG_WAYPOINTS, waypointsWrapper)
+                }
+            }
     }
 }
 
 class WaypointSelectionAdapter(
-    private var waypoints: List<Waypoint>,
+    private val waypoints: List<Waypoint>,
     private val onWaypointClicked: (Waypoint) -> Unit
 ) : RecyclerView.Adapter<WaypointSelectionAdapter.WaypointViewHolder>() {
-
-    fun updateWaypoints(newWaypoints: List<Waypoint>) {
-        waypoints = newWaypoints
-        notifyDataSetChanged()
-    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): WaypointViewHolder {
         val view = LayoutInflater.from(parent.context)
