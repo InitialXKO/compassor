@@ -4,9 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ProgressBar
 import android.widget.TextView
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -15,17 +13,20 @@ import com.amap.api.maps.model.LatLng
 import com.amap.api.services.core.LatLonPoint
 import com.amap.api.services.core.PoiItem
 import com.amap.api.services.poisearch.PoiResult
-import com.amap.api.services.poisearch.PoiSearch
 import com.google.android.material.chip.ChipGroup
+import com.growsnova.compassor.manager.SearchManager
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
-@Suppress("DEPRECATION")
-class NearbyPoisFragment : Fragment(), PoiSearch.OnPoiSearchListener {
+@AndroidEntryPoint
+class NearbyPoisFragment : Fragment() {
+
+    @Inject lateinit var searchManager: SearchManager
 
     private var currentLatLng: LatLng? = null
     private val viewModel: CreateRouteViewModel by activityViewModels()
     private lateinit var recyclerView: RecyclerView
     private lateinit var categoryChipGroup: ChipGroup
-    private lateinit var poiSearch: PoiSearch
     private var poiItems: MutableList<PoiItem> = mutableListOf()
     private var filteredPois: MutableList<PoiItem> = mutableListOf()
     private lateinit var adapter: PoiListAdapter
@@ -56,7 +57,7 @@ class NearbyPoisFragment : Fragment(), PoiSearch.OnPoiSearchListener {
                 longitude = poiItem.latLonPoint.longitude
             )
             viewModel.addWaypoint(waypoint)
-            DialogUtils.showSuccessToast(requireContext(), "${poiItem.title} added to route")
+            DialogUtils.showSuccessToast(requireContext(), getString(R.string.waypoint_saved, poiItem.title))
         }
         recyclerView.adapter = adapter
 
@@ -97,18 +98,25 @@ class NearbyPoisFragment : Fragment(), PoiSearch.OnPoiSearchListener {
     }
 
     private fun updatePoiCount() {
-        view?.findViewById<TextView>(R.id.poiCount)?.text = "${filteredPois.size} 个结果"
+        view?.findViewById<TextView>(R.id.poiCount)?.text = getString(R.string.search_results_count, filteredPois.size)
     }
 
     private fun searchNearbyPois() {
         currentLatLng?.let {
             showLoading(true)
-            val query = PoiSearch.Query("", "", "") // Search all categories
-            query.pageSize = 50
-            poiSearch = PoiSearch(context, query)
-            poiSearch.setOnPoiSearchListener(this)
-            poiSearch.bound = PoiSearch.SearchBound(LatLonPoint(it.latitude, it.longitude), 5000) // 5km
-            poiSearch.searchPOIAsyn()
+            searchManager.search("", nearbyPoint = LatLonPoint(it.latitude, it.longitude), listener = object : SearchManager.SearchListener {
+                override fun onPoiSearched(result: PoiResult?, errorCode: Int) {
+                    showLoading(false)
+                    if (errorCode == 1000 && result != null) {
+                        poiItems.clear()
+                        poiItems.addAll(result.pois)
+                        filterPois()
+                        showEmpty(filteredPois.isEmpty())
+                    } else {
+                        showEmpty(true)
+                    }
+                }
+            })
         }
     }
 
@@ -123,29 +131,6 @@ class NearbyPoisFragment : Fragment(), PoiSearch.OnPoiSearchListener {
         view?.findViewById<RecyclerView>(R.id.nearbyPoisRecyclerView)?.visibility = if (show) View.GONE else View.VISIBLE
         view?.findViewById<View>(R.id.loadingState)?.visibility = View.GONE
     }
-
-    override fun onPoiSearched(result: PoiResult?, rCode: Int) {
-        showLoading(false)
-        if (rCode == 1000) {
-            result?.pois?.let {
-                poiItems.clear()
-                poiItems.addAll(it)
-                filterPois()
-                
-                if (filteredPois.isEmpty()) {
-                    showEmpty(true)
-                } else {
-                    showEmpty(false)
-                }
-            } ?: run {
-                showEmpty(true)
-            }
-        } else {
-            showEmpty(true)
-        }
-    }
-
-    override fun onPoiItemSearched(p0: PoiItem?, p1: Int) {}
 
     companion object {
         private const val ARG_LATLNG = "latlng"

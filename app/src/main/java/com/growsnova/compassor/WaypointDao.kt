@@ -1,18 +1,22 @@
 package com.growsnova.compassor
 
 import androidx.room.*
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface WaypointDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(waypoint: Waypoint): Long
+    suspend fun insertWaypoint(waypoint: Waypoint): Long
 
     @Update
-    suspend fun update(waypoint: Waypoint)
+    suspend fun updateWaypoint(waypoint: Waypoint)
 
     @Delete
-    suspend fun delete(waypoint: Waypoint)
+    suspend fun deleteWaypoint(waypoint: Waypoint)
 
     @Query("SELECT * FROM waypoints")
     suspend fun getAllWaypoints(): List<Waypoint>
+
+    @Query("SELECT * FROM waypoints")
+    fun getAllWaypointsFlow(): Flow<List<Waypoint>>
 }
