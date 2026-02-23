@@ -42,7 +42,6 @@
     <string name="custom_location">自定义位置</string>
     <string name="search_location">搜索地点</string>
     <string name="search_results">搜索结果</string>
-    <string name="search_results_count">%d 个结果</string>
     <string name="manage_waypoints_title">管理收藏地点</string>
     <string name="in_routes"> (在路线中: %s)</string>
     <string name="import_skin">导入皮肤</string>
@@ -77,7 +76,6 @@
     <string name="edit_route">编辑路线</string>
     <string name="delete_route">删除路线</string>
     <string name="navigation_started">开始路线导航: %s</string>
-    <string name="confirm_start_navigation">是否开始导航路线: %s?</string>
     <string name="need_at_least_two_waypoints">需要至少选择2个收藏地点来保存路线</string>
     <string name="save_route_hint">从 %1$s 到 %2$s</string>
     <string name="drag_to_reorder">拖动以重新排序</string>
