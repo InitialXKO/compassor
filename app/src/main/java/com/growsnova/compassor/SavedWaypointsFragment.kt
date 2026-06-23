@@ -7,6 +7,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import android.widget.ImageView
+import com.bumptech.glide.Glide
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -97,6 +99,8 @@ class WaypointSelectionAdapter(
 
     class WaypointViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         private val nameView: TextView = itemView.findViewById(R.id.waypointName)
+        private val remarksView: TextView = itemView.findViewById(R.id.waypointRemarks)
+        private val iconView: ImageView = itemView.findViewById(R.id.waypointIcon)
 
         init {
             itemView.applyTouchScale()
@@ -104,6 +108,24 @@ class WaypointSelectionAdapter(
 
         fun bind(waypoint: Waypoint, onWaypointClicked: (Waypoint) -> Unit) {
             nameView.text = waypoint.name
+            
+            if (waypoint.remarks.isNullOrEmpty()) {
+                remarksView.visibility = View.GONE
+            } else {
+                remarksView.text = waypoint.remarks
+                remarksView.visibility = View.VISIBLE
+            }
+
+            if (waypoint.photoPath != null) {
+                Glide.with(itemView.context)
+                    .load(waypoint.photoPath)
+                    .centerCrop()
+                    .placeholder(android.R.drawable.ic_menu_mylocation)
+                    .into(iconView)
+            } else {
+                iconView.setImageResource(android.R.drawable.ic_menu_mylocation)
+            }
+
             itemView.setOnClickListener { onWaypointClicked(waypoint) }
         }
     }

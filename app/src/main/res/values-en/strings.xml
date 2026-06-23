@@ -103,4 +103,9 @@
     <string name="skin_forest_desc">Forest green theme</string>
     <string name="skin_ocean_desc">Ocean blue theme</string>
     <string name="route_saved_format">Route \'%s\' saved</string>
+    <string name="remarks_hint">Enter remarks</string>
+    <string name="take_photo">Take Photo</string>
+    <string name="waypoint_details">Waypoint Details</string>
+    <string name="view_details">View Details</string>
+    <string name="camera_permission_denied">Camera permission denied, cannot take photo</string>
 </resources>

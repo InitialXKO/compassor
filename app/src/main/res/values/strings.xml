@@ -105,4 +105,9 @@
     <string name="skin_forest_desc">森林绿色主题</string>
     <string name="skin_ocean_desc">海洋蓝色主题</string>
     <string name="route_saved_format">路线 \'%s\' 已保存</string>
+    <string name="remarks_hint">输入备注信息</string>
+    <string name="take_photo">拍照</string>
+    <string name="waypoint_details">地点详情</string>
+    <string name="view_details">查看详情</string>
+    <string name="camera_permission_denied">相机权限被拒绝，无法拍照</string>
 </resources>
