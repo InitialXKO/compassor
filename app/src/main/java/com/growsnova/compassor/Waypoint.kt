@@ -10,5 +10,7 @@ data class Waypoint(
     var id: Long = 0,
     var name: String = "",
     var latitude: Double = 0.0,
-    var longitude: Double = 0.0
+    var longitude: Double = 0.0,
+    var photoPath: String? = null,
+    var remarks: String? = null
 ) : Serializable

@@ -11,12 +11,15 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
+import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.Lifecycle
@@ -36,6 +39,7 @@ import com.amap.api.services.core.PoiItem
 import com.amap.api.services.geocoder.GeocodeSearch
 import com.amap.api.services.geocoder.RegeocodeQuery
 import com.amap.api.services.geocoder.RegeocodeResult
+import com.bumptech.glide.Glide
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -47,9 +51,14 @@ import com.growsnova.compassor.manager.NavigationManager
 import com.growsnova.compassor.ui.viewmodel.LocationViewModel
 import com.growsnova.compassor.ui.viewmodel.MapViewModel
 import com.growsnova.compassor.ui.viewmodel.NavigationViewModel
+import com.growsnova.compassor.CoordTransform
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -64,6 +73,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var navigationView: NavigationView
     private lateinit var toolbar: androidx.appcompat.widget.Toolbar
+    
+    private var currentPhotoPath: String? = null
+    private var waypointPhotoImageView: ImageView? = null
 
     // Navigation UI
     private lateinit var navigationStatusCard: MaterialCardView
@@ -101,6 +113,24 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private val skinPickerLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { importSkinFromFile(it) }
+    }
+
+    private val takePhotoLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        if (success) {
+            currentPhotoPath?.let { path ->
+                waypointPhotoImageView?.let { imageView ->
+                    Glide.with(this).load(path).centerCrop().into(imageView)
+                }
+            }
+        }
+    }
+
+    private val requestCameraPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+        if (isGranted) {
+            startCamera()
+        } else {
+            DialogUtils.showErrorToast(this, getString(R.string.camera_permission_denied))
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -368,26 +398,84 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
+    private fun startCamera() {
+        val photoFile = try {
+            createImageFile()
+        } catch (ex: Exception) {
+            null
+        }
+        photoFile?.also {
+            val photoURI = FileProvider.getUriForFile(this, "${packageName}.fileprovider", it)
+            takePhotoLauncher.launch(photoURI)
+        }
+    }
+
+    private fun createImageFile(): File {
+        val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val storageDir = getExternalFilesDir(android.os.Environment.DIRECTORY_PICTURES)
+        return File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir).apply {
+            currentPhotoPath = absolutePath
+        }
+    }
+
     private fun showSaveWaypointDialog(latLng: LatLng, waypointToEdit: Waypoint? = null, defaultName: String? = null) {
-        val title = if (waypointToEdit == null) getString(R.string.save_location) else getString(R.string.edit_name)
-        val initialValue = waypointToEdit?.name ?: defaultName ?: ""
+        val title = if (waypointToEdit == null) getString(R.string.save_location) else getString(R.string.waypoint_details)
+        val view = layoutInflater.inflate(R.layout.dialog_waypoint_details, null)
         
-        DialogUtils.showInputDialog(
-            context = this,
-            title = title,
-            hint = getString(R.string.waypoint_name_hint),
-            initialValue = initialValue,
-            onPositive = { name ->
-                if (waypointToEdit == null) {
-                    addWaypoint(latLng, name)
+        val nameEditText = view.findViewById<EditText>(R.id.nameEditText)
+        val remarksEditText = view.findViewById<EditText>(R.id.remarksEditText)
+        val photoImageView = view.findViewById<ImageView>(R.id.waypointPhoto)
+        val takePhotoButton = view.findViewById<MaterialButton>(R.id.takePhotoButton)
+        val coordinatesText = view.findViewById<TextView>(R.id.coordinatesText)
+
+        waypointPhotoImageView = photoImageView
+        currentPhotoPath = waypointToEdit?.photoPath
+        
+        nameEditText.setText(waypointToEdit?.name ?: defaultName ?: "")
+        remarksEditText.setText(waypointToEdit?.remarks ?: "")
+        val wgs84 = CoordTransform.gcj02ToWgs84(latLng.latitude, latLng.longitude)
+        coordinatesText.text = "Lat: %.6f, Lon: %.6f (WGS-84)".format(wgs84.first, wgs84.second)
+
+        if (currentPhotoPath != null) {
+            Glide.with(this).load(currentPhotoPath).centerCrop().into(photoImageView)
+        }
+
+        takePhotoButton.setOnClickListener {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                startCamera()
+            } else {
+                requestCameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+            }
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(title)
+            .setView(view)
+            .setPositiveButton(R.string.save) { _, _ ->
+                val name = nameEditText.text.toString().trim()
+                val remarks = remarksEditText.text.toString().trim()
+                if (name.isNotEmpty()) {
+                    if (waypointToEdit == null) {
+                        addWaypoint(latLng, name, currentPhotoPath, remarks)
+                    } else {
+                        waypointToEdit.name = name
+                        waypointToEdit.photoPath = currentPhotoPath
+                        waypointToEdit.remarks = remarks
+                        updateWaypoint(waypointToEdit, name, latLng)
+                    }
                 } else {
-                    updateWaypoint(waypointToEdit, name)
+                    DialogUtils.showErrorToast(this@MainActivity, getString(R.string.waypoint_name_empty))
                 }
             }
-        )
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun addWaypoint(latLng: LatLng, name: String) {
+        addWaypoint(latLng, name, null, null)
+    }
+
+    private fun addWaypoint(latLng: LatLng, name: String, photoPath: String?, remarks: String?) {
         val existing = mapViewModel.waypoints.value.find {
             val dist = FloatArray(1)
             android.location.Location.distanceBetween(latLng.latitude, latLng.longitude, it.latitude, it.longitude, dist)
@@ -397,10 +485,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (existing != null) {
             DialogUtils.showConfirmationDialog(this, getString(R.string.update_waypoint_title),
                 getString(R.string.update_waypoint_message, existing.name, name),
-                onPositive = { updateWaypoint(existing, name, latLng) }
+                onPositive = { 
+                    existing.photoPath = photoPath
+                    existing.remarks = remarks
+                    updateWaypoint(existing, name, latLng) 
+                }
             )
         } else {
-            navigationViewModel.addWaypoint(Waypoint(name = name, latitude = latLng.latitude, longitude = latLng.longitude))
+            navigationViewModel.addWaypoint(Waypoint(name = name, latitude = latLng.latitude, longitude = latLng.longitude, photoPath = photoPath, remarks = remarks))
             DialogUtils.showSuccessToast(this, getString(R.string.waypoint_saved, name))
         }
     }
@@ -444,7 +536,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun showWaypointOptionsDialog(waypoint: Waypoint) {
-        val options = arrayOf(getString(R.string.set_destination), getString(R.string.edit_name), getString(R.string.delete))
+        val options = arrayOf(getString(R.string.set_destination), getString(R.string.view_details), getString(R.string.delete))
         DialogUtils.showOptionsDialog(this, waypoint.name, options) { which ->
             when (which) {
                 0 -> navigationViewModel.setTarget(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
