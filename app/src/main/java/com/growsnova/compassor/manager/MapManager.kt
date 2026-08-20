@@ -24,6 +24,7 @@ class MapManager @Inject constructor(
     private var guidancePolyline: Polyline? = null
     private var multiPointOverlay: MultiPointOverlay? = null
     private var locationListener: com.amap.api.maps.LocationSource.OnLocationChangedListener? = null
+    private var isFirstLocation = true
 
     fun initialize(map: AMap) {
         this.aMap = map
@@ -52,6 +53,11 @@ class MapManager @Inject constructor(
             time = System.currentTimeMillis()
         }
         locationListener?.onLocationChanged(location)
+
+        if (isFirstLocation) {
+            isFirstLocation = false
+            animateToLocation(latLng, 16f)
+        }
     }
 
     private fun setupMapSettings() {
