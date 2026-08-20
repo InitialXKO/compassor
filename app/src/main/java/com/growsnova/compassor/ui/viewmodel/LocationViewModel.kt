@@ -29,6 +29,8 @@ class LocationViewModel @Inject constructor(
     private val _errorFlow = MutableSharedFlow<String>(replay = 0)
     val errorFlow: SharedFlow<String> = _errorFlow.asSharedFlow()
 
+    private var isFirstLocation = true
+
     init {
         startLocationUpdates()
         startOrientationUpdates()
@@ -39,6 +41,7 @@ class LocationViewModel @Inject constructor(
             deviceLocationManager.getLocationFlow().collect { location ->
                 val (gcjLat, gcjLng) = CoordTransform.wgs84ToGcj02(location.latitude, location.longitude)
                 _currentLocation.value = LatLng(gcjLat, gcjLng)
+                isFirstLocation = false
             }
         }
     }
@@ -50,4 +53,6 @@ class LocationViewModel @Inject constructor(
             }
         }
     }
+
+    fun isFirstLocationUpdate(): Boolean = isFirstLocation
 }
