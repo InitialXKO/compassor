@@ -372,8 +372,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private fun getThemeColor(attr: Int): Int {
         val typedValue = android.util.TypedValue()
-        theme.resolveAttribute(attr, typedValue, true)
-        return typedValue.data
+        if (theme.resolveAttribute(attr, typedValue, true)) {
+            return if (typedValue.resourceId != 0) {
+                ContextCompat.getColor(this, typedValue.resourceId)
+            } else {
+                typedValue.data
+            }
+        }
+        return android.graphics.Color.BLACK
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
