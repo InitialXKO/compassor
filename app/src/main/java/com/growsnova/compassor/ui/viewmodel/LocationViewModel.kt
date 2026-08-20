@@ -37,6 +37,7 @@ class LocationViewModel @Inject constructor(
     private fun startLocationUpdates() {
         viewModelScope.launch(exceptionHandler) {
             deviceLocationManager.getLocationFlow().collect { location ->
+                sensorOrientationManager.updateLocation(location)
                 val (gcjLat, gcjLng) = CoordTransform.wgs84ToGcj02(location.latitude, location.longitude)
                 _currentLocation.value = LatLng(gcjLat, gcjLng)
             }
