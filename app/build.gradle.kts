@@ -109,7 +109,7 @@ dependencies {
 
     // Glide
     implementation(libs.glide)
-    kapt(libs.glide-compiler)
+    kapt(libs.glideCompiler)
 
     // 测试库
     testImplementation(libs.junit)
