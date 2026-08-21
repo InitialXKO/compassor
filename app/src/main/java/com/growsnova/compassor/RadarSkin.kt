@@ -46,8 +46,14 @@ data class RadarSkin(
 
         private fun getThemeColor(context: Context, @AttrRes attrRes: Int): Int {
             val typedValue = TypedValue()
-            context.theme.resolveAttribute(attrRes, typedValue, true)
-            return typedValue.data
+            if (context.theme.resolveAttribute(attrRes, typedValue, true)) {
+                return if (typedValue.resourceId != 0) {
+                    ContextCompat.getColor(context, typedValue.resourceId)
+                } else {
+                    typedValue.data
+                }
+            }
+            return Color.BLACK
         }
     }
 }

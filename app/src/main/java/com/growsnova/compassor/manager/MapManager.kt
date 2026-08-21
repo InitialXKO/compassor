@@ -184,7 +184,6 @@ class MapManager @Inject constructor(
                     .addAll(remainingPoints)
                     .color(primaryColor and 0xCCFFFFFF.toInt())
                     .width(12f)
-                    .useGradient(true)
             )
         }
 
