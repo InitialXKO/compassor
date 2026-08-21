@@ -9,6 +9,7 @@ import com.growsnova.compassor.manager.DeviceLocationManager
 import com.growsnova.compassor.manager.SensorOrientationManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -29,14 +30,28 @@ class LocationViewModel @Inject constructor(
     private val _errorFlow = MutableSharedFlow<String>(replay = 0)
     val errorFlow: SharedFlow<String> = _errorFlow.asSharedFlow()
 
+    private var locationJob: Job? = null
+
     init {
         startLocationUpdates()
         startOrientationUpdates()
     }
 
     private fun startLocationUpdates() {
-        viewModelScope.launch(exceptionHandler) {
+        locationJob?.cancel()
+        locationJob = viewModelScope.launch(exceptionHandler) {
             deviceLocationManager.getLocationFlow().collect { location ->
+                sensorOrientationManager.updateLocation(location)
+                val (gcjLat, gcjLng) = CoordTransform.wgs84ToGcj02(location.latitude, location.longitude)
+                _currentLocation.value = LatLng(gcjLat, gcjLng)
+            }
+        }
+    }
+
+    fun retryLocation() {
+        if (_currentLocation.value == null) {
+            startLocationUpdates()
+            deviceLocationManager.requestSingleLocationUpdate { location ->
                 sensorOrientationManager.updateLocation(location)
                 val (gcjLat, gcjLng) = CoordTransform.wgs84ToGcj02(location.latitude, location.longitude)
                 _currentLocation.value = LatLng(gcjLat, gcjLng)
