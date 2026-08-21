@@ -54,6 +54,7 @@ import com.growsnova.compassor.ui.viewmodel.NavigationViewModel
 import com.growsnova.compassor.CoordTransform
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.io.File
 import java.text.SimpleDateFormat
@@ -286,11 +287,21 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 }
 
                 launch {
-                    navigationViewModel.currentRoute.collectLatest { route ->
+                    combine(
+                        navigationViewModel.currentRoute,
+                        navigationViewModel.currentWaypointIndex,
+                        locationViewModel.currentLocation
+                    ) { route, index, loc ->
+                        Triple(route, index, loc)
+                    }.collectLatest { (route, index, loc) ->
                         if (route != null) {
-                            mapManager.drawRoute(route.waypoints, navigationViewModel.currentWaypointIndex.value,
-                                getThemeColor(com.google.android.material.R.attr.colorPrimary),
-                                getThemeColor(com.google.android.material.R.attr.colorOutline))
+                            mapManager.drawRoute(
+                                waypoints = route.waypoints,
+                                currentIndex = index,
+                                userLocation = loc,
+                                primaryColor = getThemeColor(com.google.android.material.R.attr.colorPrimary),
+                                traveledColor = getThemeColor(com.google.android.material.R.attr.colorOutline)
+                            )
                         } else {
                             mapManager.clearRoute()
                         }

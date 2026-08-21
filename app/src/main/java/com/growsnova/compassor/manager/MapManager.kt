@@ -19,8 +19,8 @@ class MapManager @Inject constructor(
     private var aMap: AMap? = null
     private val waypointMarkers = mutableMapOf<Long, Marker>()
     private var targetMarker: Marker? = null
-    private var routePolyline: Polyline? = null
-    private var traveledPolyline: Polyline? = null
+    private var completedPolyline: Polyline? = null
+    private var remainingPolyline: Polyline? = null
     private var guidancePolyline: Polyline? = null
     private var multiPointOverlay: MultiPointOverlay? = null
     private var locationListener: com.amap.api.maps.LocationSource.OnLocationChangedListener? = null
@@ -178,35 +178,54 @@ class MapManager @Inject constructor(
         targetMarker = null
     }
 
-    fun drawRoute(waypoints: List<Waypoint>, currentIndex: Int, primaryColor: Int, traveledColor: Int) {
+    fun drawRoute(
+        waypoints: List<Waypoint>,
+        currentIndex: Int,
+        userLocation: LatLng? = null,
+        primaryColor: Int = android.graphics.Color.BLUE,
+        traveledColor: Int = android.graphics.Color.GRAY
+    ) {
         val map = aMap ?: return
-        routePolyline?.remove()
-        traveledPolyline?.remove()
+        completedPolyline?.remove()
+        completedPolyline = null
+        remainingPolyline?.remove()
+        remainingPolyline = null
 
         if (waypoints.size < 2) return
 
-        val points = waypoints.map { LatLng(it.latitude, it.longitude) }
+        val waypointsLatLng = waypoints.map { LatLng(it.latitude, it.longitude) }
 
-        // Traveled portion
+        // 灰线：已走过的航点 → 用户当前位置
         if (currentIndex > 0) {
-            val traveledPoints = points.subList(0, currentIndex + 1)
-            traveledPolyline = map.addPolyline(
-                PolylineOptions()
-                    .addAll(traveledPoints)
-                    .color(traveledColor and 0x80FFFFFF.toInt())
-                    .width(10f)
-                    .setDottedLine(true)
-            )
+            val completed = if (userLocation != null) {
+                waypoints.take(currentIndex).map { LatLng(it.latitude, it.longitude) } + userLocation
+            } else {
+                waypointsLatLng.take(currentIndex + 1)
+            }
+            if (completed.size >= 2) {
+                completedPolyline = map.addPolyline(
+                    PolylineOptions()
+                        .addAll(completed)
+                        .color(traveledColor)
+                        .width(10f)
+                )
+            }
         }
 
-        // Remaining portion
-        val remainingPoints = points.subList(currentIndex.coerceAtLeast(0), points.size)
-        if (remainingPoints.size > 1) {
-            routePolyline = map.addPolyline(
+        // 蓝线：用户当前位置 → 当前及后续航点
+        val remainingWaypoints = waypointsLatLng.drop(currentIndex.coerceAtLeast(0))
+        val remaining = if (userLocation != null) {
+            listOf(userLocation) + remainingWaypoints
+        } else {
+            remainingWaypoints
+        }
+
+        if (remaining.size >= 2) {
+            remainingPolyline = map.addPolyline(
                 PolylineOptions()
-                    .addAll(remainingPoints)
-                    .color(primaryColor and 0xCCFFFFFF.toInt())
-                    .width(12f)
+                    .addAll(remaining)
+                    .color(primaryColor)
+                    .width(10f)
             )
         }
 
@@ -248,10 +267,10 @@ class MapManager @Inject constructor(
     }
 
     fun clearRoute() {
-        routePolyline?.remove()
-        routePolyline = null
-        traveledPolyline?.remove()
-        traveledPolyline = null
+        completedPolyline?.remove()
+        completedPolyline = null
+        remainingPolyline?.remove()
+        remainingPolyline = null
         guidancePolyline?.remove()
         guidancePolyline = null
     }
