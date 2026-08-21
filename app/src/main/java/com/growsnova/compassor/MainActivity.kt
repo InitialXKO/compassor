@@ -263,6 +263,18 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         if (target != null) {
                             mapManager.setTargetLocation(target.first, target.second)
                             window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+                            // 立即使用最后已知位置绘制导向线并更新雷达/罗盘，避免等待下一个定位样本导致延迟
+                            val lastLoc = locationViewModel.currentLocation.value
+                            if (lastLoc != null) {
+                                // 更新导航逻辑（可选）以确保状态一致
+                                navigationViewModel.updateLocation(lastLoc)
+
+                                // 立刻刷新 UI 组件
+                                radarView.updateTarget(lastLoc, target.first)
+                                simpleCompassView.updateTarget(lastLoc, target.first)
+                                mapManager.updateGuidanceLine(lastLoc, target.first, getThemeColor(com.google.android.material.R.attr.colorPrimary))
+                            }
                         } else {
                             mapManager.clearTarget()
                             mapManager.clearRoute()
