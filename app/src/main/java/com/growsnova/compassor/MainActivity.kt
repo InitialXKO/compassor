@@ -230,7 +230,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     locationViewModel.currentLocation.collectLatest { location ->
                         location?.let {
                             hasRetriedLocation = false
-                            mapManager.updateMyLocation(it)
+                            mapManager.updateMyLocation(it, locationViewModel.azimuth.value)
                             if (mapViewModel.isFollowMode.value) {
                                 mapManager.animateToLocation(it)
                             }
@@ -249,6 +249,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     locationViewModel.azimuth.collectLatest { azimuth ->
                         radarView.setAzimuth(azimuth)
                         simpleCompassView.setAzimuth(azimuth)
+                        mapManager.updateMyLocationAzimuth(azimuth)
                     }
                 }
 

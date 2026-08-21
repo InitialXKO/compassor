@@ -25,6 +25,8 @@ class MapManager @Inject constructor(
     private var multiPointOverlay: MultiPointOverlay? = null
     private var locationListener: com.amap.api.maps.LocationSource.OnLocationChangedListener? = null
     private var isFirstLocation = true
+    private var lastLatLng: LatLng? = null
+    private var lastAzimuth: Float? = null
 
     fun initialize(map: AMap) {
         this.aMap = map
@@ -45,12 +47,19 @@ class MapManager @Inject constructor(
         aMap?.isMyLocationEnabled = true
     }
 
-    fun updateMyLocation(latLng: LatLng) {
+    fun updateMyLocation(latLng: LatLng, azimuth: Float? = null) {
+        lastLatLng = latLng
+        if (azimuth != null) {
+            lastAzimuth = azimuth
+        }
+        val currentAzimuth = azimuth ?: lastAzimuth
+
         val location = android.location.Location("custom").apply {
             latitude = latLng.latitude
             longitude = latLng.longitude
             accuracy = 10f // dummy
             time = System.currentTimeMillis()
+            currentAzimuth?.let { bearing = it }
         }
         locationListener?.onLocationChanged(location)
 
@@ -58,6 +67,20 @@ class MapManager @Inject constructor(
             isFirstLocation = false
             animateToLocation(latLng, 16f)
         }
+    }
+
+    fun updateMyLocationAzimuth(azimuth: Float) {
+        lastAzimuth = azimuth
+        val latLng = lastLatLng ?: return
+
+        val location = android.location.Location("custom").apply {
+            latitude = latLng.latitude
+            longitude = latLng.longitude
+            accuracy = 10f // dummy
+            time = System.currentTimeMillis()
+            bearing = azimuth
+        }
+        locationListener?.onLocationChanged(location)
     }
 
     private fun setupMapSettings() {
