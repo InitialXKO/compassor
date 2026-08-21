@@ -16,10 +16,8 @@ class CompassorApplication : Application() {
 
     private fun applySavedThemeMode() {
         val prefs = getSharedPreferences(AppConstants.PREFS_NAME, MODE_PRIVATE)
-        val themeMode = prefs.getInt(AppConstants.PREF_THEME_MODE, -1)
-        if (themeMode != -1) {
-            AppCompatDelegate.setDefaultNightMode(themeMode)
-        }
+        val themeMode = prefs.getInt(AppConstants.PREF_THEME_MODE, AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
+        AppCompatDelegate.setDefaultNightMode(themeMode)
     }
 
     private fun setupGlobalExceptionHandler() {

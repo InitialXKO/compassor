@@ -137,7 +137,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        loadThemePreference()
 
         AMapLocationClient.updatePrivacyShow(this, true, true)
         AMapLocationClient.updatePrivacyAgree(this, true)
@@ -148,13 +147,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         setupObservers()
         checkAndRequestPermissions()
         handleNavigationIntent()
-    }
-
-    private fun loadThemePreference() {
-        val themeMode = navigationRepository.getThemeMode()
-        if (themeMode != -1 && AppCompatDelegate.getDefaultNightMode() != themeMode) {
-            AppCompatDelegate.setDefaultNightMode(themeMode)
-        }
     }
 
     private fun initViews(savedInstanceState: Bundle?) {
@@ -686,12 +678,24 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             else -> 0
         }
         
-        MaterialAlertDialogBuilder(this).setTitle(R.string.theme_settings).setSingleChoiceItems(themeOptions, currentSelection) { dialog, which ->
-            val newMode = when (which) { 1 -> AppCompatDelegate.MODE_NIGHT_NO; 2 -> AppCompatDelegate.MODE_NIGHT_YES; else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM }
-            navigationRepository.saveThemeMode(newMode)
-            dialog.dismiss()
-            AppCompatDelegate.setDefaultNightMode(newMode)
-        }.setNegativeButton(R.string.cancel, null).show()
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.theme_settings)
+            .setSingleChoiceItems(themeOptions, currentSelection) { dialog, which ->
+                val newMode = when (which) {
+                    1 -> AppCompatDelegate.MODE_NIGHT_NO
+                    2 -> AppCompatDelegate.MODE_NIGHT_YES
+                    else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+                }
+                navigationRepository.saveThemeMode(newMode)
+                dialog.dismiss()
+                if (AppCompatDelegate.getDefaultNightMode() != newMode) {
+                    window.decorView.post {
+                        AppCompatDelegate.setDefaultNightMode(newMode)
+                    }
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun importSkinFromFile(uri: android.net.Uri) {
