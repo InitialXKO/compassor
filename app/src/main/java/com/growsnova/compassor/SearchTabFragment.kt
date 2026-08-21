@@ -145,7 +145,7 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
         poiSearch = PoiSearch(context, query)
         poiSearch.setOnPoiSearchListener(this)
         currentLatLng?.let {
-             poiSearch.bound = PoiSearch.SearchBound(LatLonPoint(it.latitude, it.longitude), 50000)
+             poiSearch.bound = PoiSearch.SearchBound(LatLonPoint(it.latitude, it.longitude), 50000, true)
         }
         poiSearch.searchPOIAsyn()
         

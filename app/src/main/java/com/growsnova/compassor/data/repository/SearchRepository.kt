@@ -56,14 +56,28 @@ class SearchRepository @Inject constructor(
     }
 
     @Suppress("DEPRECATION")
-    suspend fun searchPOI(keyword: String, center: LatLonPoint?): Result<PoiResult> = suspendCancellableCoroutine { continuation ->
+    suspend fun searchPOI(keyword: String, center: LatLonPoint?): Result<PoiResult> {
+        if (center != null) {
+            val nearbyResult = executePoiSearch(keyword, center, isDistanceSort = true)
+            if (nearbyResult.isSuccess) {
+                val poiResult = nearbyResult.getOrNull()
+                if (poiResult != null && !poiResult.pois.isNullOrEmpty()) {
+                    return nearbyResult
+                }
+            }
+        }
+        return executePoiSearch(keyword, null, isDistanceSort = false)
+    }
+
+    @Suppress("DEPRECATION")
+    private suspend fun executePoiSearch(keyword: String, center: LatLonPoint?, isDistanceSort: Boolean): Result<PoiResult> = suspendCancellableCoroutine { continuation ->
         val query = PoiSearch.Query(keyword, "", "")
         query.pageSize = 10
         query.pageNum = 1
 
         val poiSearch = PoiSearch(context, query)
         center?.let {
-            poiSearch.bound = PoiSearch.SearchBound(it, AppConstants.POI_SEARCH_RADIUS)
+            poiSearch.bound = PoiSearch.SearchBound(it, AppConstants.POI_SEARCH_RADIUS, isDistanceSort)
         }
 
         poiSearch.setOnPoiSearchListener(object : PoiSearch.OnPoiSearchListener {
