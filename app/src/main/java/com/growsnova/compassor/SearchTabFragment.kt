@@ -45,6 +45,11 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
     private var pendingQuery: String? = null
     private var searchJob: kotlinx.coroutines.Job? = null
 
+    private val radiusTiers = listOf(5000, 15000, 50000, -1)
+    private var currentRadiusIndex = 0
+    private var currentKeyword = ""
+    private var hasMoreRadius = true
+
     @Inject
     lateinit var searchRepository: com.growsnova.compassor.data.repository.SearchRepository
 
@@ -68,7 +73,12 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
         searchButton.applyTouchScale()
         
         recyclerView.layoutManager = LinearLayoutManager(context)
-        adapter = PoiListAdapter(poiItems) { poiItem ->
+        adapter = PoiListAdapter(
+            poiItems = poiItems,
+            userLocation = currentLatLng,
+            hasMoreRadius = false,
+            onLoadMoreClicked = { expandSearchRadius() }
+        ) { poiItem ->
             val waypoint = Waypoint(
                 id = 0L,
                 name = poiItem.title,
@@ -125,7 +135,11 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
                 DialogUtils.showErrorToast(requireContext(), getString(R.string.network_unavailable))
                 return
             }
-            searchPois(keyword)
+            currentKeyword = keyword
+            currentRadiusIndex = 0
+            poiItems.clear()
+            hasMoreRadius = true
+            searchPoisTier()
             saveSearchHistory(keyword)
             if (hideKeyboard) {
                 hideKeyboard()
@@ -133,40 +147,64 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
         }
     }
 
-    private fun hideKeyboard() {
-        val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-        imm.hideSoftInputFromWindow(searchEditText.windowToken, 0)
+    private fun expandSearchRadius() {
+        if (currentRadiusIndex < radiusTiers.size - 1) {
+            currentRadiusIndex++
+            searchPoisTier()
+        } else {
+            hasMoreRadius = false
+            adapter.updateData(poiItems, currentLatLng, hasMore = false)
+        }
     }
 
-    private fun searchPois(keyword: String) {
+    private fun searchPoisTier() {
+        if (currentKeyword.isEmpty()) return
         progressBar.visibility = View.VISIBLE
-        val query = PoiSearch.Query(keyword, "", "")
+        val query = PoiSearch.Query(currentKeyword, "", "")
         query.pageSize = 20
         poiSearch = PoiSearch(context, query)
         poiSearch.setOnPoiSearchListener(this)
-        currentLatLng?.let {
-             poiSearch.bound = PoiSearch.SearchBound(LatLonPoint(it.latitude, it.longitude), 50000, true)
+
+        val radius = radiusTiers.getOrNull(currentRadiusIndex) ?: -1
+        if (currentLatLng != null && radius > 0) {
+            poiSearch.bound = PoiSearch.SearchBound(LatLonPoint(currentLatLng!!.latitude, currentLatLng!!.longitude), radius, true)
         }
         poiSearch.searchPOIAsyn()
-        
+
         view?.findViewById<TextView>(R.id.resultsLabel)?.visibility = View.VISIBLE
         view?.findViewById<RecyclerView>(R.id.searchResultsRecyclerView)?.visibility = View.VISIBLE
         view?.findViewById<View>(R.id.emptyState)?.visibility = View.GONE
     }
 
+    private fun hideKeyboard() {
+        val imm = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(searchEditText.windowToken, 0)
+    }
+
     override fun onPoiSearched(result: PoiResult?, rCode: Int) {
         progressBar.visibility = View.GONE
         if (rCode == 1000) {
-            result?.pois?.let {
-                poiItems.clear()
-                poiItems.addAll(it)
-                adapter.notifyDataSetChanged()
-                
+            result?.pois?.let { newPois ->
+                val existingIds = poiItems.map { it.poiId }.toSet()
+                val filteredNew = newPois.filter { it.poiId !in existingIds }
+                poiItems.addAll(filteredNew)
+
+                hasMoreRadius = currentRadiusIndex < radiusTiers.size - 1
+                adapter.updateData(poiItems, currentLatLng, hasMore = hasMoreRadius)
+
                 if (poiItems.isEmpty()) {
-                    view?.findViewById<TextView>(R.id.resultsLabel)?.visibility = View.GONE
-                    view?.findViewById<RecyclerView>(R.id.searchResultsRecyclerView)?.visibility = View.GONE
-                    view?.findViewById<View>(R.id.emptyState)?.visibility = View.VISIBLE
+                    if (currentRadiusIndex < radiusTiers.size - 1) {
+                        expandSearchRadius()
+                    } else {
+                        view?.findViewById<TextView>(R.id.resultsLabel)?.visibility = View.GONE
+                        view?.findViewById<RecyclerView>(R.id.searchResultsRecyclerView)?.visibility = View.GONE
+                        view?.findViewById<View>(R.id.emptyState)?.visibility = View.VISIBLE
+                    }
                 }
+            }
+        } else {
+            if (currentRadiusIndex < radiusTiers.size - 1) {
+                expandSearchRadius()
             }
         }
     }

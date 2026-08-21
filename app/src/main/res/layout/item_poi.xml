@@ -64,6 +64,15 @@
 
         </LinearLayout>
 
+        <TextView
+            android:id="@+id/poiDistance"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:textAppearance="?attr/textAppearanceLabelMedium"
+            android:textColor="?attr/colorPrimary"
+            android:visibility="gone" />
+
         <ImageView
             android:layout_width="20dp"
             android:layout_height="20dp"

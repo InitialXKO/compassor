@@ -57,8 +57,13 @@ class SearchRepository @Inject constructor(
 
     @Suppress("DEPRECATION")
     suspend fun searchPOI(keyword: String, center: LatLonPoint?): Result<PoiResult> {
-        if (center != null) {
-            val nearbyResult = executePoiSearch(keyword, center, isDistanceSort = true)
+        return searchPOIWithRadius(keyword, center, AppConstants.POI_SEARCH_RADIUS)
+    }
+
+    @Suppress("DEPRECATION")
+    suspend fun searchPOIWithRadius(keyword: String, center: LatLonPoint?, radius: Int?): Result<PoiResult> {
+        if (center != null && radius != null && radius > 0) {
+            val nearbyResult = executePoiSearch(keyword, center, radius, isDistanceSort = true)
             if (nearbyResult.isSuccess) {
                 val poiResult = nearbyResult.getOrNull()
                 if (poiResult != null && !poiResult.pois.isNullOrEmpty()) {
@@ -66,18 +71,18 @@ class SearchRepository @Inject constructor(
                 }
             }
         }
-        return executePoiSearch(keyword, null, isDistanceSort = false)
+        return executePoiSearch(keyword, null, null, isDistanceSort = false)
     }
 
     @Suppress("DEPRECATION")
-    private suspend fun executePoiSearch(keyword: String, center: LatLonPoint?, isDistanceSort: Boolean): Result<PoiResult> = suspendCancellableCoroutine { continuation ->
+    private suspend fun executePoiSearch(keyword: String, center: LatLonPoint?, radius: Int?, isDistanceSort: Boolean): Result<PoiResult> = suspendCancellableCoroutine { continuation ->
         val query = PoiSearch.Query(keyword, "", "")
-        query.pageSize = 10
+        query.pageSize = 20
         query.pageNum = 1
 
         val poiSearch = PoiSearch(context, query)
-        center?.let {
-            poiSearch.bound = PoiSearch.SearchBound(it, AppConstants.POI_SEARCH_RADIUS, isDistanceSort)
+        if (center != null && radius != null && radius > 0) {
+            poiSearch.bound = PoiSearch.SearchBound(center, radius, isDistanceSort)
         }
 
         poiSearch.setOnPoiSearchListener(object : PoiSearch.OnPoiSearchListener {
