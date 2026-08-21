@@ -678,8 +678,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         MaterialAlertDialogBuilder(this).setTitle(R.string.theme_settings).setSingleChoiceItems(themeOptions, currentSelection) { dialog, which ->
             val newMode = when (which) { 1 -> AppCompatDelegate.MODE_NIGHT_NO; 2 -> AppCompatDelegate.MODE_NIGHT_YES; else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM }
             navigationRepository.saveThemeMode(newMode)
-            AppCompatDelegate.setDefaultNightMode(newMode)
             dialog.dismiss()
+            AppCompatDelegate.setDefaultNightMode(newMode)
         }.setNegativeButton(R.string.cancel, null).show()
     }
 

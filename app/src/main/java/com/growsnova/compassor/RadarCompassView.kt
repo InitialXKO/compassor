@@ -358,12 +358,12 @@ class RadarCompassView @JvmOverloads constructor(
             // 北方向使用高亮色
             val paint = if (direction == "N") {
                 directionTextPaint.apply {
-                    color = Color.parseColor("#58A6FF")
+                    color = skin.directionTextColor
                     alpha = 255
                 }
             } else {
                 directionTextPaint.apply {
-                    color = Color.parseColor("#8B949E")
+                    color = skin.infoTextColor
                     alpha = 180
                 }
             }
