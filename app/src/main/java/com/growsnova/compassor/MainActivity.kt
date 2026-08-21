@@ -216,7 +216,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         val recyclerView = findViewById<RecyclerView>(R.id.searchResultsRecyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
-        searchResultsAdapter = PoiListAdapter(emptyList()) { poiItem ->
+        searchResultsAdapter = PoiListAdapter(
+            poiItems = emptyList(),
+            userLocation = locationViewModel.currentLocation.value,
+            hasMoreRadius = navigationViewModel.hasMoreRadiusTiers.value,
+            onLoadMoreClicked = { navigationViewModel.expandSearchRadius() }
+        ) { poiItem ->
             val latLng = LatLng(poiItem.latLonPoint.latitude, poiItem.latLonPoint.longitude)
             navigationViewModel.setTarget(latLng, poiItem.title)
             bottomSheetBehavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_HIDDEN
@@ -305,7 +310,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 launch {
                     navigationViewModel.searchResults.collectLatest { results ->
                         if (results.isNotEmpty()) {
-                            searchResultsAdapter.updateData(results)
+                            searchResultsAdapter.updateData(
+                                results,
+                                locationViewModel.currentLocation.value,
+                                navigationViewModel.hasMoreRadiusTiers.value
+                            )
                             bottomSheetBehavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
                         } else {
                             DialogUtils.showToast(this@MainActivity, getString(R.string.no_result))

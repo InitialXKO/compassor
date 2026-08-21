@@ -35,6 +35,16 @@ class NavigationViewModel @Inject constructor(
     private val _searchResults = MutableSharedFlow<List<com.amap.api.services.core.PoiItem>>(replay = 0)
     val searchResults: SharedFlow<List<com.amap.api.services.core.PoiItem>> = _searchResults.asSharedFlow()
 
+    private val _hasMoreRadiusTiers = MutableStateFlow(true)
+    val hasMoreRadiusTiers: StateFlow<Boolean> = _hasMoreRadiusTiers.asStateFlow()
+
+    private var currentSearchKeyword: String? = null
+    private var currentSearchLocation: LatLng? = null
+    private var currentRadiusTierIndex: Int = 0
+    private val accumulatedPois = mutableListOf<com.amap.api.services.core.PoiItem>()
+
+    private val radiusTiers = listOf(5000, 15000, 50000, -1) // meters (-1 for global)
+
     private val _errorFlow = MutableSharedFlow<String>(replay = 0)
     val errorFlow: SharedFlow<String> = _errorFlow.asSharedFlow()
 
@@ -83,13 +93,47 @@ class NavigationViewModel @Inject constructor(
     }
 
     fun searchPOI(keyword: String, myLocation: LatLng?) {
+        currentSearchKeyword = keyword
+        currentSearchLocation = myLocation
+        currentRadiusTierIndex = 0
+        accumulatedPois.clear()
+        _hasMoreRadiusTiers.value = true
+
+        fetchPoiRadiusTier()
+    }
+
+    fun expandSearchRadius() {
+        if (currentRadiusTierIndex < radiusTiers.size - 1) {
+            currentRadiusTierIndex++
+            fetchPoiRadiusTier()
+        } else {
+            _hasMoreRadiusTiers.value = false
+        }
+    }
+
+    private fun fetchPoiRadiusTier() {
+        val keyword = currentSearchKeyword ?: return
+        val location = currentSearchLocation
         viewModelScope.launch(exceptionHandler) {
-            val center = myLocation?.let { LatLonPoint(it.latitude, it.longitude) }
-            val result = searchRepository.searchPOI(keyword, center)
-            result.onSuccess {
-                _searchResults.emit(it.pois)
+            val center = location?.let { LatLonPoint(it.latitude, it.longitude) }
+            val radius = radiusTiers.getOrNull(currentRadiusTierIndex)
+            val result = searchRepository.searchPOIWithRadius(keyword, center, if (radius != null && radius > 0) radius else null)
+            result.onSuccess { poiResult ->
+                val newPois = poiResult.pois ?: emptyList()
+                val existingIds = accumulatedPois.map { it.poiId }.toSet()
+                val filteredNew = newPois.filter { it.poiId !in existingIds }
+                accumulatedPois.addAll(filteredNew)
+
+                _hasMoreRadiusTiers.value = currentRadiusTierIndex < radiusTiers.size - 1
+                _searchResults.emit(ArrayList(accumulatedPois))
             }.onFailure {
-                _errorFlow.emit(it.message ?: "Search failed")
+                if (currentRadiusTierIndex < radiusTiers.size - 1) {
+                    expandSearchRadius()
+                } else {
+                    _hasMoreRadiusTiers.value = false
+                    _searchResults.emit(ArrayList(accumulatedPois))
+                    _errorFlow.emit(it.message ?: "Search failed")
+                }
             }
         }
     }
