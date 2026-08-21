@@ -51,4 +51,49 @@ class DeviceLocationManager @Inject constructor(
             locationManager.removeUpdates(listener)
         }
     }
+
+    @SuppressLint("MissingPermission")
+    fun requestSingleLocationUpdate(onLocationReceived: (Location) -> Unit) {
+        val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
+        for (provider in providers) {
+            if (locationManager.isProviderEnabled(provider)) {
+                val lastKnown = locationManager.getLastKnownLocation(provider)
+                if (lastKnown != null) {
+                    onLocationReceived(lastKnown)
+                    return
+                }
+            }
+        }
+
+        val singleListener = object : LocationListener {
+            override fun onLocationChanged(location: Location) {
+                onLocationReceived(location)
+                try {
+                    locationManager.removeUpdates(this)
+                } catch (e: Exception) {
+                    // Ignore
+                }
+            }
+            @Deprecated("Deprecated in Java")
+            override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+            override fun onProviderEnabled(provider: String) {}
+            override fun onProviderDisabled(provider: String) {}
+        }
+
+        for (provider in providers) {
+            if (locationManager.isProviderEnabled(provider)) {
+                try {
+                    locationManager.requestLocationUpdates(
+                        provider,
+                        0L,
+                        0f,
+                        singleListener,
+                        Looper.getMainLooper()
+                    )
+                } catch (e: Exception) {
+                    // Ignore missing permissions or disabled provider
+                }
+            }
+        }
+    }
 }

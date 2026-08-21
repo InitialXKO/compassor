@@ -93,6 +93,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private val mapViewModel: MapViewModel by viewModels()
     private val navigationViewModel: NavigationViewModel by viewModels()
 
+    private var hasRetriedLocation = false
+
     @Inject
     lateinit var mapManager: MapManager
 
@@ -235,6 +237,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 launch {
                     locationViewModel.currentLocation.collectLatest { location ->
                         location?.let {
+                            hasRetriedLocation = false
                             mapManager.updateMyLocation(it)
                             if (mapViewModel.isFollowMode.value) {
                                 mapManager.animateToLocation(it)
@@ -378,6 +381,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             ActivityCompat.requestPermissions(this, needed.toTypedArray(), AppConstants.LOCATION_PERMISSION_REQUEST_CODE)
         } else {
             setupAMapLocationStyle()
+            if (locationViewModel.currentLocation.value == null && !hasRetriedLocation) {
+                hasRetriedLocation = true
+                locationViewModel.retryLocation()
+            }
         }
     }
 
@@ -408,6 +415,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (requestCode == AppConstants.LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
                 setupAMapLocationStyle()
+                if (locationViewModel.currentLocation.value == null && !hasRetriedLocation) {
+                    hasRetriedLocation = true
+                    locationViewModel.retryLocation()
+                }
             } else {
                 DialogUtils.showErrorToast(this, getString(R.string.location_permission_denied))
             }
@@ -764,7 +775,14 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         R.id.action_search -> { showSearchDialog(); true }; else -> super.onOptionsItemSelected(item)
     }
 
-    override fun onResume() { super.onResume(); mapView.onResume() }
+    override fun onResume() {
+        super.onResume()
+        mapView.onResume()
+        if (locationViewModel.currentLocation.value == null && !hasRetriedLocation) {
+            hasRetriedLocation = true
+            locationViewModel.retryLocation()
+        }
+    }
     override fun onPause() { super.onPause(); mapView.onPause() }
     override fun onDestroy() { super.onDestroy(); mapView.onDestroy() }
     override fun onSaveInstanceState(outState: Bundle) { super.onSaveInstanceState(outState); mapView.onSaveInstanceState(outState) }
