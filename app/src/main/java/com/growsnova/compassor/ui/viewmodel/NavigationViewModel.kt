@@ -193,12 +193,6 @@ class NavigationViewModel @Inject constructor(
             loadRoutes()
 
             navigationManager.onWaypointDeleted(waypoint.id)
-
-            if (currentRoute.value == null &&
-                targetLocation.value?.first?.latitude == waypoint.latitude &&
-                targetLocation.value?.first?.longitude == waypoint.longitude) {
-                navigationManager.stopNavigation()
-            }
         }
     }
 
