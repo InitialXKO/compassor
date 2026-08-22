@@ -271,10 +271,10 @@ class MapManager @Inject constructor(
         }
 
         // 蓝线：从导航起点(或前一航点) → 当前及后续航点
-        val remaining = if (currentIndex == 0) {
+        val remaining = if (currentIndex <= 0) {
             listOf(startPt) + waypointsLatLng
         } else {
-            waypointsLatLng.drop(currentIndex - 1)
+            waypointsLatLng.drop((currentIndex - 1).coerceAtLeast(0))
         }
 
         if (remaining.size >= 2) {
