@@ -215,10 +215,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             poiItems = emptyList(),
             userLocation = locationViewModel.currentLocation.value,
             hasMoreRadius = navigationViewModel.hasMoreRadiusTiers.value,
-            onLoadMoreClicked = { navigationViewModel.expandSearchRadius() }
+            onLoadMoreClicked = { navigationViewModel.expandSearchRadius() },
+            onAddPoiClicked = { poiItem ->
+                val latLng = LatLng(poiItem.latLonPoint.latitude, poiItem.latLonPoint.longitude)
+                val floor = FloorUtils.extractFloorFromPoi(poiItem)
+                showSaveWaypointDialog(latLng, defaultName = poiItem.title, defaultFloor = floor)
+            }
         ) { poiItem ->
             val latLng = LatLng(poiItem.latLonPoint.latitude, poiItem.latLonPoint.longitude)
-            val floor = FloorUtils.parseFloor(poiItem.indoorData?.floor)
+            val floor = FloorUtils.extractFloorFromPoi(poiItem)
             val displayName = if (floor != null) {
                 "${poiItem.title} (${FloorUtils.formatFloor(floor, this)})"
             } else {
@@ -498,7 +503,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
-    private fun showSaveWaypointDialog(latLng: LatLng, waypointToEdit: Waypoint? = null, defaultName: String? = null) {
+    private fun showSaveWaypointDialog(latLng: LatLng, waypointToEdit: Waypoint? = null, defaultName: String? = null, defaultFloor: Int? = null) {
         val title = if (waypointToEdit == null) getString(R.string.save_location) else getString(R.string.waypoint_details)
         val view = layoutInflater.inflate(R.layout.dialog_waypoint_details, null)
         
@@ -514,7 +519,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         
         nameEditText.setText(waypointToEdit?.name ?: defaultName ?: "")
         remarksEditText.setText(waypointToEdit?.remarks ?: "")
-        floorEditText.setText(waypointToEdit?.floor?.toString() ?: "")
+        floorEditText.setText(waypointToEdit?.floor?.toString() ?: defaultFloor?.toString() ?: "")
         val wgs84 = CoordTransform.gcj02ToWgs84(latLng.latitude, latLng.longitude)
         coordinatesText.text = "Lat: %.6f, Lon: %.6f (WGS-84)".format(wgs84.first, wgs84.second)
 

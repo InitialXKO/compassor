@@ -55,7 +55,8 @@ class NearbyPoisFragment : Fragment(), PoiSearch.OnPoiSearchListener {
                 id = 0L,
                 name = poiItem.title,
                 latitude = poiItem.latLonPoint.latitude,
-                longitude = poiItem.latLonPoint.longitude
+                longitude = poiItem.latLonPoint.longitude,
+                floor = FloorUtils.extractFloorFromPoi(poiItem)
             )
             viewModel.addWaypoint(waypoint)
             DialogUtils.showSuccessToast(requireContext(), "${poiItem.title} added to route")

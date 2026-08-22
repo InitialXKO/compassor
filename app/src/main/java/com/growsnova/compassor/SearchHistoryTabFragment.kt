@@ -61,6 +61,11 @@ class SearchHistoryTabFragment : Fragment() {
         return view
     }
 
+    override fun onResume() {
+        super.onResume()
+        loadSearchHistory()
+    }
+
     private fun loadSearchHistory() {
         lifecycleScope.launch {
             val histories = searchRepository.getRecentSearches()

@@ -14,6 +14,7 @@ class PoiListAdapter(
     private var userLocation: LatLng? = null,
     private var hasMoreRadius: Boolean = false,
     private var onLoadMoreClicked: (() -> Unit)? = null,
+    private val onAddPoiClicked: ((PoiItem) -> Unit)? = null,
     private val onPoiClicked: (PoiItem) -> Unit
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
@@ -54,7 +55,7 @@ class PoiListAdapter(
 
     override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
         if (holder is PoiViewHolder) {
-            holder.bind(poiItems[position], userLocation, onPoiClicked)
+            holder.bind(poiItems[position], userLocation, onPoiClicked, onAddPoiClicked)
         } else if (holder is LoadMoreViewHolder) {
             holder.bind(onLoadMoreClicked)
         }
@@ -76,12 +77,17 @@ class PoiListAdapter(
             addPoiButton?.applyTouchScale()
         }
 
-        fun bind(poiItem: PoiItem, userLocation: LatLng?, onPoiClicked: (PoiItem) -> Unit) {
+        fun bind(
+            poiItem: PoiItem,
+            userLocation: LatLng?,
+            onPoiClicked: (PoiItem) -> Unit,
+            onAddPoiClicked: ((PoiItem) -> Unit)?
+        ) {
             titleView.text = poiItem.title
             snippetView.text = poiItem.snippet ?: poiItem.adName
 
             val floorText = FloorUtils.formatFloor(
-                FloorUtils.parseFloor(poiItem.indoorData?.floor),
+                FloorUtils.extractFloorFromPoi(poiItem),
                 itemView.context
             )
             if (floorText != null) {
@@ -120,7 +126,13 @@ class PoiListAdapter(
             }
 
             itemView.setOnClickListener { onPoiClicked(poiItem) }
-            addPoiButton?.setOnClickListener { onPoiClicked(poiItem) }
+            addPoiButton?.setOnClickListener {
+                if (onAddPoiClicked != null) {
+                    onAddPoiClicked.invoke(poiItem)
+                } else {
+                    onPoiClicked(poiItem)
+                }
+            }
         }
     }
 
