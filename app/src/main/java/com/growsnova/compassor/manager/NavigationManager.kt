@@ -31,13 +31,19 @@ class NavigationManager @Inject constructor(
         _currentRoute.value = route
         _currentWaypointIndex.value = 0
         val firstWaypoint = route.waypoints[0]
-        setTarget(LatLng(firstWaypoint.latitude, firstWaypoint.longitude), firstWaypoint.name)
+        updateTargetInternal(LatLng(firstWaypoint.latitude, firstWaypoint.longitude), firstWaypoint.name)
         saveState()
     }
 
     fun setTarget(latLng: LatLng, name: String) {
-        _targetLocation.value = Pair(latLng, name)
+        _currentRoute.value = null
+        _currentWaypointIndex.value = -1
+        updateTargetInternal(latLng, name)
         saveState()
+    }
+
+    private fun updateTargetInternal(latLng: LatLng, name: String) {
+        _targetLocation.value = Pair(latLng, name)
     }
 
     fun stopNavigation() {
@@ -53,13 +59,13 @@ class NavigationManager @Inject constructor(
         if (index < route.waypoints.size - 1) {
             _currentWaypointIndex.value = index + 1
             val nextWaypoint = route.waypoints[index + 1]
-            setTarget(LatLng(nextWaypoint.latitude, nextWaypoint.longitude), nextWaypoint.name)
+            updateTargetInternal(LatLng(nextWaypoint.latitude, nextWaypoint.longitude), nextWaypoint.name)
             saveState()
             return nextWaypoint.name
         } else if (route.isLooping) {
             _currentWaypointIndex.value = 0
             val firstWaypoint = route.waypoints[0]
-            setTarget(LatLng(firstWaypoint.latitude, firstWaypoint.longitude), firstWaypoint.name)
+            updateTargetInternal(LatLng(firstWaypoint.latitude, firstWaypoint.longitude), firstWaypoint.name)
             saveState()
             return firstWaypoint.name
         }
@@ -73,14 +79,14 @@ class NavigationManager @Inject constructor(
         if (index > 0) {
             _currentWaypointIndex.value = index - 1
             val prevWaypoint = route.waypoints[index - 1]
-            setTarget(LatLng(prevWaypoint.latitude, prevWaypoint.longitude), prevWaypoint.name)
+            updateTargetInternal(LatLng(prevWaypoint.latitude, prevWaypoint.longitude), prevWaypoint.name)
             saveState()
             return prevWaypoint.name
         } else if (route.isLooping) {
             val lastIndex = route.waypoints.size - 1
             _currentWaypointIndex.value = lastIndex
             val lastWaypoint = route.waypoints[lastIndex]
-            setTarget(LatLng(lastWaypoint.latitude, lastWaypoint.longitude), lastWaypoint.name)
+            updateTargetInternal(LatLng(lastWaypoint.latitude, lastWaypoint.longitude), lastWaypoint.name)
             saveState()
             return lastWaypoint.name
         }
