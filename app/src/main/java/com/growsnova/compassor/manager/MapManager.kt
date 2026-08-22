@@ -87,8 +87,18 @@ class MapManager @Inject constructor(
         aMap?.apply {
             uiSettings.isZoomControlsEnabled = true
             uiSettings.isCompassEnabled = true
-            uiSettings.isMyLocationButtonEnabled = true
+            uiSettings.isMyLocationButtonEnabled = false
             mapType = AMap.MAP_TYPE_NORMAL
+        }
+    }
+
+    fun resetBearing() {
+        aMap?.let { map ->
+            val currentCamera = map.cameraPosition
+            val updatedCamera = CameraPosition.builder(currentCamera)
+                .bearing(0f)
+                .build()
+            map.animateCamera(CameraUpdateFactory.newCameraPosition(updatedCamera))
         }
     }
 

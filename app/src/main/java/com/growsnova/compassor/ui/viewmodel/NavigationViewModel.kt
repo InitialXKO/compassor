@@ -205,8 +205,8 @@ class NavigationViewModel @Inject constructor(
                 if (it.id == 0L) waypointRepository.insertWaypoint(it) else it.id
             }
             val routeId = routeRepository.insertRoute(route)
-            waypointIds.forEach { id ->
-                routeRepository.insertRouteWaypointCrossRef(com.growsnova.compassor.RouteWaypointCrossRef(routeId, id))
+            waypointIds.forEachIndexed { index, id ->
+                routeRepository.insertRouteWaypointCrossRef(com.growsnova.compassor.RouteWaypointCrossRef(routeId, id, index))
             }
             loadRoutes()
             if (startNav) {
@@ -220,9 +220,9 @@ class NavigationViewModel @Inject constructor(
         viewModelScope.launch(exceptionHandler) {
             routeRepository.updateRoute(route)
             routeRepository.deleteCrossRefsForRoute(route.id)
-            waypoints.forEach { waypoint ->
+            waypoints.forEachIndexed { index, waypoint ->
                 val id = if (waypoint.id == 0L) waypointRepository.insertWaypoint(waypoint) else waypoint.id
-                routeRepository.insertRouteWaypointCrossRef(com.growsnova.compassor.RouteWaypointCrossRef(route.id, id))
+                routeRepository.insertRouteWaypointCrossRef(com.growsnova.compassor.RouteWaypointCrossRef(route.id, id, index))
             }
             loadRoutes()
             // If it's the current route, restart or update it

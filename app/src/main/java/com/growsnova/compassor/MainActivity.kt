@@ -190,6 +190,20 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         prevNavButton.applyTouchScale()
         prevNavButton.setOnClickListener { navigationViewModel.goToPreviousWaypoint() }
 
+        val btnResetBearing = findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.btnResetBearing)
+        val btnRecenter = findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.btnRecenter)
+
+        btnResetBearing.setOnClickListener {
+            mapManager.resetBearing()
+        }
+
+        btnRecenter.setOnClickListener {
+            mapViewModel.setFollowMode(true)
+            locationViewModel.currentLocation.value?.let { loc ->
+                mapManager.animateToLocation(loc, 16f)
+            } ?: DialogUtils.showErrorToast(this, getString(R.string.location_unavailable))
+        }
+
         mapView.onCreate(savedInstanceState)
         aMap = mapView.map
         mapManager.initialize(aMap)
@@ -704,7 +718,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 navigationRepository.saveThemeMode(selectedMode)
                 dialog.dismiss()
                 if (AppCompatDelegate.getDefaultNightMode() != selectedMode) {
-                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    window.decorView.post {
                         AppCompatDelegate.setDefaultNightMode(selectedMode)
                     }
                 }

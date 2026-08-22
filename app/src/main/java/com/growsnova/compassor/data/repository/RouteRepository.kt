@@ -9,19 +9,27 @@ class RouteRepository @Inject constructor(
     private val routeDao: RouteDao
 ) {
     suspend fun getRoutesWithWaypoints(): List<Route> {
-        return routeDao.getRoutesWithWaypoints().map {
-            val route = it.route
+        return routeDao.getRoutesWithWaypoints().map { routeWithWaypoints ->
+            val route = routeWithWaypoints.route
+            val crossRefs = routeDao.getCrossRefsForRoute(route.id)
+            val waypointMap = routeWithWaypoints.waypoints.associateBy { it.id }
+            val sortedWaypoints = crossRefs.mapNotNull { crossRef -> waypointMap[crossRef.waypointId] }
+
             route.waypoints.clear()
-            route.waypoints.addAll(it.waypoints)
+            route.waypoints.addAll(sortedWaypoints)
             route
         }
     }
 
     suspend fun getRouteWithWaypoints(routeId: Long): Route? {
-        return routeDao.getRouteWithWaypoints(routeId)?.let {
-            val route = it.route
+        return routeDao.getRouteWithWaypoints(routeId)?.let { routeWithWaypoints ->
+            val route = routeWithWaypoints.route
+            val crossRefs = routeDao.getCrossRefsForRoute(route.id)
+            val waypointMap = routeWithWaypoints.waypoints.associateBy { it.id }
+            val sortedWaypoints = crossRefs.mapNotNull { crossRef -> waypointMap[crossRef.waypointId] }
+
             route.waypoints.clear()
-            route.waypoints.addAll(it.waypoints)
+            route.waypoints.addAll(sortedWaypoints)
             route
         }
     }
