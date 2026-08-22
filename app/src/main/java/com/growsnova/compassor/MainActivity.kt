@@ -269,7 +269,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 launch {
                     navigationViewModel.targetLocation.collectLatest { target ->
                         if (target != null) {
-                            mapManager.setTargetLocation(target.first, target.second)
+                            mapManager.setTargetLocation(target.first, target.second) {
+                                showTargetMarkerOptionsDialog(target.first, target.second)
+                            }
                             window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
                             // 动态为地图设置 Padding 避免导航卡片遮挡原生地图控件
@@ -443,6 +445,25 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 }
             } else {
                 DialogUtils.showErrorToast(this, getString(R.string.location_permission_denied))
+            }
+        }
+    }
+
+    private fun showTargetMarkerOptionsDialog(latLng: LatLng, name: String) {
+        val savedWaypoint = mapViewModel.waypoints.value.find {
+            val dist = FloatArray(1)
+            android.location.Location.distanceBetween(latLng.latitude, latLng.longitude, it.latitude, it.longitude, dist)
+            dist[0] < 5
+        }
+        if (savedWaypoint != null) {
+            showWaypointOptionsDialog(savedWaypoint)
+        } else {
+            val options = arrayOf(getString(R.string.save_location), getString(R.string.stop_navigation))
+            DialogUtils.showOptionsDialog(this, name, options) { which ->
+                when (which) {
+                    0 -> showSaveWaypointDialog(latLng, defaultName = name)
+                    1 -> navigationViewModel.stopNavigation()
+                }
             }
         }
     }
