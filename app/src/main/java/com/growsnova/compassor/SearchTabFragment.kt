@@ -85,7 +85,7 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
                 name = poiItem.title,
                 latitude = poiItem.latLonPoint.latitude,
                 longitude = poiItem.latLonPoint.longitude,
-                floor = FloorUtils.parseFloor(poiItem.indoorData?.floor)
+                floor = FloorUtils.extractFloorFromPoi(poiItem)
             )
             viewModel.addWaypoint(waypoint)
             DialogUtils.showSuccessToast(requireContext(), "${poiItem.title} added to route")
@@ -232,6 +232,12 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
     private fun saveSearchHistory(query: String) {
         lifecycleScope.launch {
             searchRepository.insertSearchHistory(query)
+            (parentFragment as? SearchFragment)?.let { parent ->
+                parent.childFragmentManager.fragments
+                    .filterIsInstance<SearchHistoryTabFragment>()
+                    .firstOrNull()
+                    ?.refreshHistory()
+            }
         }
     }
     
