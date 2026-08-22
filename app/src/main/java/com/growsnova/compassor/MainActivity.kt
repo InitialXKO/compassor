@@ -818,7 +818,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     override fun onResume() {
         super.onResume()
         mapView.onResume()
-        if (locationViewModel.currentLocation.value == null && !hasRetriedLocation) {
+        val hasPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (hasPermission && locationViewModel.currentLocation.value == null && !hasRetriedLocation) {
             hasRetriedLocation = true
             locationViewModel.retryLocation()
         }
