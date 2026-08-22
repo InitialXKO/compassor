@@ -102,6 +102,13 @@ class MapManager @Inject constructor(
         }
     }
 
+    fun setMapPadding(left: Int, top: Int, right: Int, bottom: Int) {
+        aMap?.setPointToCenter(
+            context.resources.displayMetrics.widthPixels / 2,
+            (context.resources.displayMetrics.heightPixels - top - bottom) / 2 + top
+        )
+    }
+
     fun updateWaypoints(waypoints: List<Waypoint>, onMarkerClick: (Waypoint) -> Unit) {
         val map = aMap ?: return
 

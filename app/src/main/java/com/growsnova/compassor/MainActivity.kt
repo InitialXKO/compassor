@@ -689,7 +689,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val skin = when (skinName) {
             "Forest" -> DefaultSkins.forest
             "Ocean" -> DefaultSkins.ocean
-            else -> DefaultSkins.default
+            else -> RadarSkin.createFromTheme(this)
         }
         radarView.setSkin(skin)
         simpleCompassView.setSkin(skin)
