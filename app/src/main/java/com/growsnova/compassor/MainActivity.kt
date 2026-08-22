@@ -401,13 +401,18 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun setupAMapLocationStyle() {
-        val primaryColor = getThemeColor(com.google.android.material.R.attr.colorPrimary)
-        aMap.myLocationStyle = com.amap.api.maps.model.MyLocationStyle().apply {
-            myLocationType(com.amap.api.maps.model.MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE_NO_CENTER)
-            strokeColor(primaryColor)
-            radiusFillColor(primaryColor and 0x30FFFFFF)
+        if (!::aMap.isInitialized) return
+        try {
+            val primaryColor = getThemeColor(com.google.android.material.R.attr.colorPrimary)
+            aMap.myLocationStyle = com.amap.api.maps.model.MyLocationStyle().apply {
+                myLocationType(com.amap.api.maps.model.MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE_NO_CENTER)
+                strokeColor(primaryColor)
+                radiusFillColor(primaryColor and 0x30FFFFFF)
+            }
+            aMap.isMyLocationEnabled = true
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Failed to setup location style", e)
         }
-        aMap.isMyLocationEnabled = true
     }
 
     private fun getThemeColor(attr: Int): Int {
