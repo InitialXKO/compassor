@@ -19,6 +19,7 @@ class MapManager @Inject constructor(
     private var aMap: AMap? = null
     private val waypointMarkers = mutableMapOf<Long, Marker>()
     private var targetMarker: Marker? = null
+    private var targetMarkerClickListener: (() -> Unit)? = null
     private var completedPolyline: Polyline? = null
     private var remainingPolyline: Polyline? = null
     private var guidancePolyline: Polyline? = null
@@ -153,9 +154,13 @@ class MapManager @Inject constructor(
         }
 
         map.setOnMarkerClickListener { marker ->
-            val waypointId = waypointMarkers.entries.find { it.value == marker }?.key
-            if (waypointId != null) {
-                waypoints.find { it.id == waypointId }?.let { onMarkerClick(it) }
+            if (marker == targetMarker) {
+                targetMarkerClickListener?.invoke()
+            } else {
+                val waypointId = waypointMarkers.entries.find { it.value == marker }?.key
+                if (waypointId != null) {
+                    waypoints.find { it.id == waypointId }?.let { onMarkerClick(it) }
+                }
             }
             true
         }
@@ -179,8 +184,9 @@ class MapManager @Inject constructor(
         multiPointOverlay?.items = items
     }
 
-    fun setTargetLocation(latLng: LatLng, title: String) {
+    fun setTargetLocation(latLng: LatLng, title: String, onTargetClick: (() -> Unit)? = null) {
         val map = aMap ?: return
+        targetMarkerClickListener = onTargetClick
         targetMarker?.remove()
         targetMarker = map.addMarker(
             MarkerOptions()
@@ -289,6 +295,11 @@ class MapManager @Inject constructor(
         completedPolyline = null
         remainingPolyline?.remove()
         remainingPolyline = null
+    }
+
+    fun clearAllNavigation() {
+        clearTarget()
+        clearRoute()
         guidancePolyline?.remove()
         guidancePolyline = null
     }
