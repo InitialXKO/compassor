@@ -53,6 +53,46 @@ class NavigationManager @Inject constructor(
         navigationRepository.clearNavigationState()
     }
 
+    fun onRouteDeleted(routeId: Long) {
+        if (_currentRoute.value?.id == routeId) {
+            stopNavigation()
+        }
+    }
+
+    fun onWaypointDeleted(waypointId: Long) {
+        val activeRoute = _currentRoute.value ?: run {
+            if (_targetLocation.value != null) {
+                // If single-target navigation was heading to a waypoint by location, check if target was deleted
+                // Note: single target handled by ViewModel or caller if needed
+            }
+            return
+        }
+
+        val deletedIndex = activeRoute.waypoints.indexOfFirst { it.id == waypointId }
+        if (deletedIndex == -1) return
+
+        val newWaypoints = activeRoute.waypoints.filter { it.id != waypointId }.toMutableList()
+        if (newWaypoints.size < 2) {
+            stopNavigation()
+            return
+        }
+
+        val currentIndex = _currentWaypointIndex.value
+        val updatedRoute = activeRoute.copy(waypoints = newWaypoints)
+
+        val newIndex = when {
+            currentIndex > deletedIndex -> currentIndex - 1
+            currentIndex == deletedIndex -> currentIndex.coerceAtMost(newWaypoints.size - 1)
+            else -> currentIndex
+        }
+
+        _currentRoute.value = updatedRoute
+        _currentWaypointIndex.value = newIndex
+        val targetWaypoint = newWaypoints[newIndex]
+        updateTargetInternal(LatLng(targetWaypoint.latitude, targetWaypoint.longitude), targetWaypoint.name)
+        saveState()
+    }
+
     fun skipNextWaypoint(): String? {
         val route = _currentRoute.value ?: return null
         val index = _currentWaypointIndex.value

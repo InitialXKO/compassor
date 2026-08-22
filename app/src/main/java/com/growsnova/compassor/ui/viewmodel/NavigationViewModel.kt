@@ -151,6 +151,7 @@ class NavigationViewModel @Inject constructor(
             routeRepository.deleteRoute(route)
             routeRepository.deleteCrossRefsForRoute(route.id)
             loadRoutes()
+            navigationManager.onRouteDeleted(route.id)
         }
     }
 
@@ -191,8 +192,10 @@ class NavigationViewModel @Inject constructor(
             waypointRepository.deleteWaypoint(waypoint)
             loadRoutes()
 
-            // If the deleted waypoint was part of current navigation, we might need to stop or skip
-            if (targetLocation.value?.first?.latitude == waypoint.latitude &&
+            navigationManager.onWaypointDeleted(waypoint.id)
+
+            if (currentRoute.value == null &&
+                targetLocation.value?.first?.latitude == waypoint.latitude &&
                 targetLocation.value?.first?.longitude == waypoint.longitude) {
                 navigationManager.stopNavigation()
             }
