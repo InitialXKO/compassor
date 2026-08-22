@@ -14,8 +14,14 @@ class CreateRouteViewModel @Inject constructor() : ViewModel() {
 
     fun addWaypoint(waypoint: Waypoint) {
         val currentList = _selectedWaypoints.value.toMutableList()
-        currentList.add(waypoint)
-        _selectedWaypoints.value = currentList
+        val exists = currentList.any {
+            (waypoint.id != 0L && it.id == waypoint.id) ||
+            (it.latitude == waypoint.latitude && it.longitude == waypoint.longitude)
+        }
+        if (!exists) {
+            currentList.add(waypoint)
+            _selectedWaypoints.value = currentList
+        }
     }
 
     fun removeWaypoint(waypoint: Waypoint) {

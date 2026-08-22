@@ -49,6 +49,7 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
     private var currentRadiusIndex = 0
     private var currentKeyword = ""
     private var hasMoreRadius = true
+    private var currentSearchRequestId = 0L
 
     @Inject
     lateinit var searchRepository: com.growsnova.compassor.data.repository.SearchRepository
@@ -136,10 +137,12 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
                 DialogUtils.showErrorToast(requireContext(), getString(R.string.network_unavailable))
                 return
             }
+            currentSearchRequestId++
             currentKeyword = keyword
             currentRadiusIndex = 0
             poiItems.clear()
             hasMoreRadius = true
+            adapter.updateData(poiItems, currentLatLng, hasMore = false)
             searchPoisTier()
             saveSearchHistory(keyword)
             if (hideKeyboard) {
@@ -161,10 +164,19 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
     private fun searchPoisTier() {
         if (currentKeyword.isEmpty()) return
         progressBar.visibility = View.VISIBLE
+        val requestIdAtStart = currentSearchRequestId
         val query = PoiSearch.Query(currentKeyword, "", "")
         query.pageSize = 20
         poiSearch = PoiSearch(context, query)
-        poiSearch.setOnPoiSearchListener(this)
+        poiSearch.setOnPoiSearchListener(object : PoiSearch.OnPoiSearchListener {
+            override fun onPoiSearched(result: PoiResult?, rCode: Int) {
+                if (requestIdAtStart == currentSearchRequestId) {
+                    this@SearchTabFragment.onPoiSearched(result, rCode)
+                }
+            }
+
+            override fun onPoiItemSearched(p0: PoiItem?, p1: Int) {}
+        })
 
         val radius = radiusTiers.getOrNull(currentRadiusIndex) ?: -1
         if (currentLatLng != null && radius > 0) {
@@ -204,8 +216,13 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
                 }
             }
         } else {
-            if (currentRadiusIndex < radiusTiers.size - 1) {
-                expandSearchRadius()
+            DialogUtils.showErrorToast(requireContext(), getString(R.string.no_result))
+            hasMoreRadius = false
+            adapter.updateData(poiItems, currentLatLng, hasMore = false)
+            if (poiItems.isEmpty()) {
+                view?.findViewById<TextView>(R.id.resultsLabel)?.visibility = View.GONE
+                view?.findViewById<RecyclerView>(R.id.searchResultsRecyclerView)?.visibility = View.GONE
+                view?.findViewById<View>(R.id.emptyState)?.visibility = View.VISIBLE
             }
         }
     }

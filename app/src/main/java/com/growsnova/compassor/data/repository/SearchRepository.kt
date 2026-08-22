@@ -25,6 +25,7 @@ class SearchRepository @Inject constructor(
     suspend fun getRecentSearches(): List<SearchHistory> = searchHistoryDao.getRecentSearches()
 
     suspend fun insertSearchHistory(query: String) {
+        searchHistoryDao.deleteByQuery(query)
         searchHistoryDao.insert(SearchHistory(query = query))
     }
 

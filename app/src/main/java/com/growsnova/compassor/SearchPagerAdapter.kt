@@ -3,16 +3,19 @@ package com.growsnova.compassor
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
 
-class SearchPagerAdapter(fragment: Fragment) : FragmentStateAdapter(fragment) {
+import com.amap.api.maps.model.LatLng
 
-    private val fragments: List<Fragment> = listOf(
-        SearchTabFragment(),
-        SearchHistoryTabFragment()
-    )
+class SearchPagerAdapter(
+    fragment: Fragment,
+    private val currentLatLng: LatLng?
+) : FragmentStateAdapter(fragment) {
 
-    override fun getItemCount(): Int = fragments.size
+    override fun getItemCount(): Int = 2
 
-    override fun createFragment(position: Int): Fragment = fragments[position]
-
-    fun getFragment(position: Int): Fragment = fragments[position]
+    override fun createFragment(position: Int): Fragment {
+        return when (position) {
+            0 -> SearchTabFragment.newInstance(currentLatLng)
+            else -> SearchHistoryTabFragment()
+        }
+    }
 }

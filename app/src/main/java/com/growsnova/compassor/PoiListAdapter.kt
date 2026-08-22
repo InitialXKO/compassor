@@ -69,9 +69,11 @@ class PoiListAdapter(
         private val snippetView: TextView = itemView.findViewById(R.id.poiSnippet)
         private val distanceView: TextView = itemView.findViewById(R.id.poiDistance)
         private val floorView: TextView = itemView.findViewById(R.id.poiFloor)
+        private val addPoiButton: View? = itemView.findViewById(R.id.addPoiButton)
 
         init {
             itemView.applyTouchScale()
+            addPoiButton?.applyTouchScale()
         }
 
         fun bind(poiItem: PoiItem, userLocation: LatLng?, onPoiClicked: (PoiItem) -> Unit) {
@@ -118,6 +120,7 @@ class PoiListAdapter(
             }
 
             itemView.setOnClickListener { onPoiClicked(poiItem) }
+            addPoiButton?.setOnClickListener { onPoiClicked(poiItem) }
         }
     }
 

@@ -13,6 +13,14 @@ class SearchFragment : Fragment() {
     private lateinit var viewPager: androidx.viewpager2.widget.ViewPager2
     private lateinit var tabLayout: TabLayout
     private lateinit var adapter: SearchPagerAdapter
+    private var currentLatLng: com.amap.api.maps.model.LatLng? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        arguments?.let {
+            currentLatLng = it.getParcelableCompat<com.amap.api.maps.model.LatLng>(ARG_LATLNG)
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -22,7 +30,7 @@ class SearchFragment : Fragment() {
         viewPager = view.findViewById(R.id.viewPager)
         tabLayout = view.findViewById(R.id.tabLayout)
         
-        adapter = SearchPagerAdapter(this)
+        adapter = SearchPagerAdapter(this, currentLatLng)
         viewPager.adapter = adapter
 
         TabLayoutMediator(tabLayout, viewPager) { tab, position ->
@@ -39,7 +47,7 @@ class SearchFragment : Fragment() {
     fun switchToSearchTab(query: String) {
         viewPager.currentItem = 0
         viewPager.post {
-            (adapter.getFragment(0) as? SearchTabFragment)?.setSearchQuery(query)
+            childFragmentManager.fragments.filterIsInstance<SearchTabFragment>().firstOrNull()?.setSearchQuery(query)
         }
     }
 

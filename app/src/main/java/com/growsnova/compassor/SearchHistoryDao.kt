@@ -6,6 +6,9 @@ import androidx.room.Query
 
 @Dao
 interface SearchHistoryDao {
+    @Query("DELETE FROM search_history WHERE query = :query")
+    suspend fun deleteByQuery(query: String)
+
     @Insert
     suspend fun insert(searchHistory: SearchHistory): Long
 
