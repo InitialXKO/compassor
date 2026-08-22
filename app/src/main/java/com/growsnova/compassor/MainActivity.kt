@@ -601,14 +601,51 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun showWaypointOptionsDialog(waypoint: Waypoint) {
-        val options = arrayOf(getString(R.string.set_destination), getString(R.string.view_details), getString(R.string.delete))
-        DialogUtils.showOptionsDialog(this, waypoint.name, options) { which ->
-            when (which) {
-                0 -> navigationViewModel.setTarget(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
-                1 -> showSaveWaypointDialog(LatLng(waypoint.latitude, waypoint.longitude), waypoint)
-                2 -> confirmDeleteWaypoint(waypoint)
+        val view = layoutInflater.inflate(R.layout.dialog_waypoint_options, null)
+
+        view.findViewById<TextView>(R.id.waypointName).text = waypoint.name
+
+        // 楼层
+        val floorView = view.findViewById<TextView>(R.id.waypointFloor)
+        val floorText = FloorUtils.formatFloor(waypoint.floor, this)
+        if (floorText != null) {
+            floorView.text = floorText
+            floorView.visibility = View.VISIBLE
+        }
+
+        // 照片
+        if (!waypoint.photoPath.isNullOrEmpty()) {
+            val photoView = view.findViewById<ImageView>(R.id.waypointPhoto)
+            Glide.with(this).load(waypoint.photoPath).centerCrop().into(photoView)
+            view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.photoCard).visibility = View.VISIBLE
+        }
+
+        val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setView(view).create()
+
+        view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSetDestination).apply {
+            applyTouchScale()
+            setOnClickListener {
+                dialog.dismiss()
+                navigationViewModel.setTarget(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
             }
         }
+        view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnViewDetails).apply {
+            applyTouchScale()
+            setOnClickListener {
+                dialog.dismiss()
+                showSaveWaypointDialog(LatLng(waypoint.latitude, waypoint.longitude), waypoint)
+            }
+        }
+        view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnDelete).apply {
+            applyTouchScale()
+            setOnClickListener {
+                dialog.dismiss()
+                confirmDeleteWaypoint(waypoint)
+            }
+        }
+
+        dialog.show()
     }
 
     private fun confirmDeleteWaypoint(waypoint: Waypoint) {

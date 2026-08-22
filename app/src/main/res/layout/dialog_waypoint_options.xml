@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="@dimen/padding_md">
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/photoCard"
+        android:layout_width="match_parent"
+        android:layout_height="160dp"
+        android:layout_marginBottom="@dimen/spacing_sm"
+        android:visibility="gone"
+        app:cardCornerRadius="@dimen/corner_radius_sm"
+        app:cardElevation="0dp"
+        app:strokeWidth="@dimen/stroke_width_thin"
+        app:strokeColor="?attr/colorOutlineVariant">
+        <ImageView
+            android:id="@+id/waypointPhoto"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_image_placeholder" />
+    </com.google.android.material.card.MaterialCardView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="@dimen/spacing_sm">
+        <TextView
+            android:id="@+id/waypointName"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textAppearance="?attr/textAppearanceTitleMedium"
+            android:textColor="?attr/colorOnSurface"
+            android:ellipsize="end"
+            android:maxLines="1" />
+        <TextView
+            android:id="@+id/waypointFloor"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/spacing_sm"
+            android:paddingHorizontal="6dp"
+            android:paddingVertical="2dp"
+            android:background="@drawable/floor_badge_background"
+            android:textAppearance="?attr/textAppearanceLabelSmall"
+            android:textColor="?attr/colorOnTertiaryContainer"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/stroke_width_thin"
+        android:background="?attr/colorOutlineVariant"
+        android:layout_marginBottom="@dimen/spacing_xs" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnSetDestination"
+        style="@style/Widget.Compassor.Button.Text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="start|center_vertical"
+        android:text="@string/set_destination"
+        app:icon="@android:drawable/ic_menu_mylocation"
+        app:iconGravity="textStart"
+        app:iconTint="?attr/colorPrimary" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnViewDetails"
+        style="@style/Widget.Compassor.Button.Text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="start|center_vertical"
+        android:text="@string/view_details"
+        app:icon="@android:drawable/ic_menu_info_details"
+        app:iconGravity="textStart"
+        app:iconTint="?attr/colorPrimary" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnDelete"
+        style="@style/Widget.Compassor.Button.Text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="start|center_vertical"
+        android:text="@string/delete"
+        app:icon="@android:drawable/ic_menu_delete"
+        app:iconGravity="textStart"
+        app:iconTint="?attr/colorError"
+        android:textColor="?attr/colorError" />
+</LinearLayout>
