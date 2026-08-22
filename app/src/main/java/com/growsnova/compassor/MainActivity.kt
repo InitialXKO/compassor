@@ -684,6 +684,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private fun showSettingsDialog() {
         val currentMode = navigationRepository.getThemeMode().let { if (it == -1) AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM else it }
         val themeOptions = arrayOf(getString(R.string.system_default), getString(R.string.light_mode), getString(R.string.dark_mode))
+        var selectedMode = currentMode
         val currentSelection = when (currentMode) {
             AppCompatDelegate.MODE_NIGHT_NO -> 1
             AppCompatDelegate.MODE_NIGHT_YES -> 2
@@ -692,17 +693,19 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.theme_settings)
-            .setSingleChoiceItems(themeOptions, currentSelection) { dialog, which ->
-                val newMode = when (which) {
+            .setSingleChoiceItems(themeOptions, currentSelection) { _, which ->
+                selectedMode = when (which) {
                     1 -> AppCompatDelegate.MODE_NIGHT_NO
                     2 -> AppCompatDelegate.MODE_NIGHT_YES
                     else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
                 }
-                navigationRepository.saveThemeMode(newMode)
+            }
+            .setPositiveButton(R.string.save) { dialog, _ ->
+                navigationRepository.saveThemeMode(selectedMode)
                 dialog.dismiss()
-                if (AppCompatDelegate.getDefaultNightMode() != newMode) {
-                    window.decorView.post {
-                        AppCompatDelegate.setDefaultNightMode(newMode)
+                if (AppCompatDelegate.getDefaultNightMode() != selectedMode) {
+                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                        AppCompatDelegate.setDefaultNightMode(selectedMode)
                     }
                 }
             }
