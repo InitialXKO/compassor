@@ -55,7 +55,9 @@ class NavigationManager @Inject constructor(
 
     fun onRouteDeleted(routeId: Long) {
         if (_currentRoute.value?.id == routeId) {
-            stopNavigation()
+            _currentRoute.value = null
+            _currentWaypointIndex.value = -1
+            saveState()
         }
     }
 
