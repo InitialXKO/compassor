@@ -61,6 +61,41 @@
                     android:layout_height="wrap_content"
                     android:padding="@dimen/padding_md">
 
+                    <LinearLayout
+                        android:id="@+id/navActionButtonsContainer"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/prevNavButton"
+                            style="@style/Widget.Compassor.Button.Text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/prev_waypoint"
+                            android:visibility="gone" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/skipNavButton"
+                            style="@style/Widget.Compassor.Button.Text"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/skip_waypoint"
+                            android:visibility="gone" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/stopNavButton"
+                            style="@style/Widget.Compassor.Button.Outlined"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/stop_navigation" />
+
+                    </LinearLayout>
+
                     <TextView
                         android:id="@+id/navTargetText"
                         android:layout_width="0dp"
@@ -68,8 +103,9 @@
                         android:text="@string/nav_target_format"
                         android:textAppearance="?attr/textAppearanceTitleMedium"
                         android:textColor="?attr/colorOnSurface"
+                        android:layout_marginEnd="8dp"
                         app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintEnd_toStartOf="@id/stopNavButton"
+                        app:layout_constraintEnd_toStartOf="@id/navActionButtonsContainer"
                         app:layout_constraintTop_toTopOf="parent" />
 
                     <TextView
@@ -80,41 +116,11 @@
                         android:text="@string/nav_distance_format"
                         android:textAppearance="?attr/textAppearanceBodyMedium"
                         android:textColor="?attr/colorOnSurfaceVariant"
+                        android:layout_marginEnd="8dp"
                         app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintEnd_toStartOf="@id/stopNavButton"
-                        app:layout_constraintTop_toBottomOf="@id/navTargetText" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/prevNavButton"
-                        style="@style/Widget.Compassor.Button.Text"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="上一个"
-                        android:visibility="gone"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toStartOf="@id/skipNavButton" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/skipNavButton"
-                        style="@style/Widget.Compassor.Button.Text"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="跳过"
-                        android:visibility="gone"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toStartOf="@id/stopNavButton" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/stopNavButton"
-                        style="@style/Widget.Compassor.Button.Outlined"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/stop_navigation"
-                        app:layout_constraintTop_toTopOf="parent"
-                        app:layout_constraintBottom_toBottomOf="parent"
-                        app:layout_constraintEnd_toEndOf="parent" />
+                        app:layout_constraintEnd_toStartOf="@id/navActionButtonsContainer"
+                        app:layout_constraintTop_toBottomOf="@id/navTargetText"
+                        app:layout_constraintBottom_toBottomOf="parent" />
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
