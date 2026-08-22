@@ -117,39 +117,6 @@
 
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Custom Map Controls (North Reset & Recenter Location) -->
-            <LinearLayout
-                android:id="@+id/mapControlsLayout"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginEnd="16dp"
-                android:layout_marginBottom="16dp"
-                android:orientation="vertical"
-                app:layout_constraintBottom_toTopOf="@id/radarCard"
-                app:layout_constraintEnd_toEndOf="parent">
-
-                <com.google.android.material.floatingactionbutton.FloatingActionButton
-                    android:id="@+id/btnResetBearing"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:contentDescription="方向回正"
-                    app:fabSize="mini"
-                    app:srcCompat="@drawable/ic_compass_north"
-                    app:tint="?attr/colorOnSurface"
-                    app:backgroundTint="?attr/colorSurface" />
-
-                <com.google.android.material.floatingactionbutton.FloatingActionButton
-                    android:id="@+id/btnRecenter"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:contentDescription="复位到当前位置"
-                    app:fabSize="mini"
-                    app:srcCompat="@drawable/ic_recenter"
-                    app:tint="?attr/colorOnSurface"
-                    app:backgroundTint="?attr/colorSurface" />
-
-            </LinearLayout>
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/radarCard"

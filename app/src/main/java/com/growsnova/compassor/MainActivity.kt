@@ -190,20 +190,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         prevNavButton.applyTouchScale()
         prevNavButton.setOnClickListener { navigationViewModel.goToPreviousWaypoint() }
 
-        val btnResetBearing = findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.btnResetBearing)
-        val btnRecenter = findViewById<com.google.android.material.floatingactionbutton.FloatingActionButton>(R.id.btnRecenter)
-
-        btnResetBearing.setOnClickListener {
-            mapManager.resetBearing()
-        }
-
-        btnRecenter.setOnClickListener {
-            mapViewModel.setFollowMode(true)
-            locationViewModel.currentLocation.value?.let { loc ->
-                mapManager.animateToLocation(loc, 16f)
-            } ?: DialogUtils.showErrorToast(this, getString(R.string.location_unavailable))
-        }
-
         mapView.onCreate(savedInstanceState)
         aMap = mapView.map
         mapManager.initialize(aMap)
@@ -280,6 +266,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                             mapManager.setTargetLocation(target.first, target.second)
                             window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+                            // 动态为地图设置 Padding 避免导航卡片遮挡原生地图控件
+                            val cardHeight = (120 * resources.displayMetrics.density).toInt()
+                            val radarHeight = (220 * resources.displayMetrics.density).toInt()
+                            mapManager.updatePadding(top = cardHeight, bottom = radarHeight)
+
                             // 立即使用最后已知位置绘制导向线并更新雷达/罗盘，避免等待下一个定位样本导致延迟
                             val lastLoc = locationViewModel.currentLocation.value
                             if (lastLoc != null) {
@@ -296,6 +287,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                             mapManager.clearRoute()
                             navigationStatusCard.visibility = View.GONE
                             window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+                            val radarHeight = (220 * resources.displayMetrics.density).toInt()
+                            mapManager.updatePadding(bottom = radarHeight)
                         }
                     }
                 }
@@ -805,7 +799,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean { menuInflater.inflate(R.menu.main_menu, menu); return true }
     override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean = when (item.itemId) {
+        R.id.action_reset_bearing -> { mapManager.resetBearing(); true }
         R.id.action_search -> { showSearchDialog(); true }; else -> super.onOptionsItemSelected(item)
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // 动态刷新 UI 主题色与皮肤，无需销毁重启 Activity
+        applySkin(navigationRepository.getSkinName())
+        setupAMapLocationStyle()
     }
 
     override fun onResume() {

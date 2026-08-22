@@ -87,9 +87,17 @@ class MapManager @Inject constructor(
         aMap?.apply {
             uiSettings.isZoomControlsEnabled = true
             uiSettings.isCompassEnabled = true
-            uiSettings.isMyLocationButtonEnabled = false
+            uiSettings.isMyLocationButtonEnabled = true
             mapType = AMap.MAP_TYPE_NORMAL
         }
+    }
+
+    fun updatePadding(left: Int = 0, top: Int = 0, right: Int = 0, bottom: Int = 0) {
+        val width = context.resources.displayMetrics.widthPixels
+        val height = context.resources.displayMetrics.heightPixels
+        val centerX = width / 2
+        val centerY = (height - top - bottom) / 2 + top
+        aMap?.setPointToCenter(centerX, centerY)
     }
 
     fun resetBearing() {
@@ -100,13 +108,6 @@ class MapManager @Inject constructor(
                 .build()
             map.animateCamera(CameraUpdateFactory.newCameraPosition(updatedCamera))
         }
-    }
-
-    fun setMapPadding(left: Int, top: Int, right: Int, bottom: Int) {
-        aMap?.setPointToCenter(
-            context.resources.displayMetrics.widthPixels / 2,
-            (context.resources.displayMetrics.heightPixels - top - bottom) / 2 + top
-        )
     }
 
     fun updateWaypoints(waypoints: List<Waypoint>, onMarkerClick: (Waypoint) -> Unit) {
