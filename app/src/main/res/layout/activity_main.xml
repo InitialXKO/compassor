@@ -61,13 +61,41 @@
                     android:layout_height="wrap_content"
                     android:padding="@dimen/padding_md">
 
+                    <TextView
+                        android:id="@+id/navTargetText"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:text="@string/nav_target_format"
+                        android:textAppearance="?attr/textAppearanceTitleMedium"
+                        android:textColor="?attr/colorOnSurface"
+                        android:maxLines="2"
+                        android:ellipsize="end"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <TextView
+                        android:id="@+id/navDistanceText"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:layout_marginEnd="8dp"
+                        android:text="@string/nav_distance_format"
+                        android:textAppearance="?attr/textAppearanceBodyMedium"
+                        android:textColor="?attr/colorOnSurfaceVariant"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toStartOf="@id/navActionButtonsContainer"
+                        app:layout_constraintTop_toBottomOf="@id/navTargetText"
+                        app:layout_constraintBottom_toBottomOf="parent" />
+
                     <LinearLayout
                         android:id="@+id/navActionButtonsContainer"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center_vertical"
-                        app:layout_constraintTop_toTopOf="parent"
+                        android:layout_marginTop="4dp"
+                        app:layout_constraintTop_toBottomOf="@id/navTargetText"
                         app:layout_constraintBottom_toBottomOf="parent"
                         app:layout_constraintEnd_toEndOf="parent">
 
@@ -95,32 +123,6 @@
                             android:text="@string/stop_navigation" />
 
                     </LinearLayout>
-
-                    <TextView
-                        android:id="@+id/navTargetText"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:text="@string/nav_target_format"
-                        android:textAppearance="?attr/textAppearanceTitleMedium"
-                        android:textColor="?attr/colorOnSurface"
-                        android:layout_marginEnd="8dp"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintEnd_toStartOf="@id/navActionButtonsContainer"
-                        app:layout_constraintTop_toTopOf="parent" />
-
-                    <TextView
-                        android:id="@+id/navDistanceText"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="@string/nav_distance_format"
-                        android:textAppearance="?attr/textAppearanceBodyMedium"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        android:layout_marginEnd="8dp"
-                        app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintEnd_toStartOf="@id/navActionButtonsContainer"
-                        app:layout_constraintTop_toBottomOf="@id/navTargetText"
-                        app:layout_constraintBottom_toBottomOf="parent" />
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
