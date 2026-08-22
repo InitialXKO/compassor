@@ -218,7 +218,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             onLoadMoreClicked = { navigationViewModel.expandSearchRadius() }
         ) { poiItem ->
             val latLng = LatLng(poiItem.latLonPoint.latitude, poiItem.latLonPoint.longitude)
-            navigationViewModel.setTarget(latLng, poiItem.title)
+            val floor = FloorUtils.parseFloor(poiItem.indoorData?.floor)
+            val displayName = if (floor != null) {
+                "${poiItem.title} (${FloorUtils.formatFloor(floor, this)})"
+            } else {
+                poiItem.title
+            }
+            navigationViewModel.setTarget(latLng, displayName)
             bottomSheetBehavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_HIDDEN
         }
         recyclerView.adapter = searchResultsAdapter
@@ -478,6 +484,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         
         val nameEditText = view.findViewById<EditText>(R.id.nameEditText)
         val remarksEditText = view.findViewById<EditText>(R.id.remarksEditText)
+        val floorEditText = view.findViewById<EditText>(R.id.floorEditText)
         val photoImageView = view.findViewById<ImageView>(R.id.waypointPhoto)
         val takePhotoButton = view.findViewById<MaterialButton>(R.id.takePhotoButton)
         val coordinatesText = view.findViewById<TextView>(R.id.coordinatesText)
@@ -487,6 +494,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         
         nameEditText.setText(waypointToEdit?.name ?: defaultName ?: "")
         remarksEditText.setText(waypointToEdit?.remarks ?: "")
+        floorEditText.setText(waypointToEdit?.floor?.toString() ?: "")
         val wgs84 = CoordTransform.gcj02ToWgs84(latLng.latitude, latLng.longitude)
         coordinatesText.text = "Lat: %.6f, Lon: %.6f (WGS-84)".format(wgs84.first, wgs84.second)
 
@@ -508,13 +516,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             .setPositiveButton(R.string.save) { _, _ ->
                 val name = nameEditText.text.toString().trim()
                 val remarks = remarksEditText.text.toString().trim()
+                val floor = floorEditText.text.toString().trim().toIntOrNull()
                 if (name.isNotEmpty()) {
                     if (waypointToEdit == null) {
-                        addWaypoint(latLng, name, currentPhotoPath, remarks)
+                        addWaypoint(latLng, name, currentPhotoPath, remarks, floor)
                     } else {
                         waypointToEdit.name = name
                         waypointToEdit.photoPath = currentPhotoPath
                         waypointToEdit.remarks = remarks
+                        waypointToEdit.floor = floor
                         updateWaypoint(waypointToEdit, name, latLng)
                     }
                 } else {
@@ -526,10 +536,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun addWaypoint(latLng: LatLng, name: String) {
-        addWaypoint(latLng, name, null, null)
+        addWaypoint(latLng, name, null, null, null)
     }
 
-    private fun addWaypoint(latLng: LatLng, name: String, photoPath: String?, remarks: String?) {
+    private fun addWaypoint(latLng: LatLng, name: String, photoPath: String?, remarks: String?, floor: Int?) {
         val existing = mapViewModel.waypoints.value.find {
             val dist = FloatArray(1)
             android.location.Location.distanceBetween(latLng.latitude, latLng.longitude, it.latitude, it.longitude, dist)
@@ -542,11 +552,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 onPositive = { 
                     existing.photoPath = photoPath
                     existing.remarks = remarks
+                    existing.floor = floor
                     updateWaypoint(existing, name, latLng) 
                 }
             )
         } else {
-            navigationViewModel.addWaypoint(Waypoint(name = name, latitude = latLng.latitude, longitude = latLng.longitude, photoPath = photoPath, remarks = remarks))
+            navigationViewModel.addWaypoint(Waypoint(name = name, latitude = latLng.latitude, longitude = latLng.longitude, photoPath = photoPath, remarks = remarks, floor = floor))
             DialogUtils.showSuccessToast(this, getString(R.string.waypoint_saved, name))
         }
     }
@@ -590,14 +601,51 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun showWaypointOptionsDialog(waypoint: Waypoint) {
-        val options = arrayOf(getString(R.string.set_destination), getString(R.string.view_details), getString(R.string.delete))
-        DialogUtils.showOptionsDialog(this, waypoint.name, options) { which ->
-            when (which) {
-                0 -> navigationViewModel.setTarget(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
-                1 -> showSaveWaypointDialog(LatLng(waypoint.latitude, waypoint.longitude), waypoint)
-                2 -> confirmDeleteWaypoint(waypoint)
+        val view = layoutInflater.inflate(R.layout.dialog_waypoint_options, null)
+
+        view.findViewById<TextView>(R.id.waypointName).text = waypoint.name
+
+        // 楼层
+        val floorView = view.findViewById<TextView>(R.id.waypointFloor)
+        val floorText = FloorUtils.formatFloor(waypoint.floor, this)
+        if (floorText != null) {
+            floorView.text = floorText
+            floorView.visibility = View.VISIBLE
+        }
+
+        // 照片
+        if (!waypoint.photoPath.isNullOrEmpty()) {
+            val photoView = view.findViewById<ImageView>(R.id.waypointPhoto)
+            Glide.with(this).load(waypoint.photoPath).centerCrop().into(photoView)
+            view.findViewById<com.google.android.material.card.MaterialCardView>(R.id.photoCard).visibility = View.VISIBLE
+        }
+
+        val dialog = com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setView(view).create()
+
+        view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnSetDestination).apply {
+            applyTouchScale()
+            setOnClickListener {
+                dialog.dismiss()
+                navigationViewModel.setTarget(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
             }
         }
+        view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnViewDetails).apply {
+            applyTouchScale()
+            setOnClickListener {
+                dialog.dismiss()
+                showSaveWaypointDialog(LatLng(waypoint.latitude, waypoint.longitude), waypoint)
+            }
+        }
+        view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnDelete).apply {
+            applyTouchScale()
+            setOnClickListener {
+                dialog.dismiss()
+                confirmDeleteWaypoint(waypoint)
+            }
+        }
+
+        dialog.show()
     }
 
     private fun confirmDeleteWaypoint(waypoint: Waypoint) {

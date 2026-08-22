@@ -72,13 +72,31 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
+        <com.google.android.material.textfield.TextInputLayout
+            android:id="@+id/floorInputLayout"
+            style="@style/Widget.Compassor.TextInputLayout"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:hint="@string/floor_hint"
+            app:layout_constraintTop_toBottomOf="@id/remarksInputLayout">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/floorEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:inputType="numberSigned"
+                android:maxLines="1" />
+
+        </com.google.android.material.textfield.TextInputLayout>
+
         <TextView
             android:id="@+id/coordinatesText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-            app:layout_constraintTop_toBottomOf="@id/remarksInputLayout" />
+            app:layout_constraintTop_toBottomOf="@id/floorInputLayout" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.core.widget.NestedScrollView>

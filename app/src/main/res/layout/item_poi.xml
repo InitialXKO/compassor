@@ -65,6 +65,18 @@
         </LinearLayout>
 
         <TextView
+            android:id="@+id/poiFloor"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:paddingHorizontal="6dp"
+            android:paddingVertical="2dp"
+            android:background="@drawable/floor_badge_background"
+            android:textAppearance="?attr/textAppearanceLabelSmall"
+            android:textColor="?attr/colorOnTertiaryContainer"
+            android:visibility="gone" />
+
+        <TextView
             android:id="@+id/poiDistance"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
