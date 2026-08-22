@@ -289,6 +289,11 @@ class MapManager @Inject constructor(
         completedPolyline = null
         remainingPolyline?.remove()
         remainingPolyline = null
+    }
+
+    fun clearAllNavigation() {
+        clearTarget()
+        clearRoute()
         guidancePolyline?.remove()
         guidancePolyline = null
     }

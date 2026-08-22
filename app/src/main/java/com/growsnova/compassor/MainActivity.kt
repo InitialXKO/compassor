@@ -289,8 +289,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                                 mapManager.updateGuidanceLine(lastLoc, target.first, getThemeColor(com.google.android.material.R.attr.colorPrimary))
                             }
                         } else {
-                            mapManager.clearTarget()
-                            mapManager.clearRoute()
+                            mapManager.clearAllNavigation()
                             navigationStatusCard.visibility = View.GONE
                             window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
