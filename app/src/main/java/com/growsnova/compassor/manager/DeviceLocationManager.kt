@@ -21,8 +21,23 @@ class DeviceLocationManager @Inject constructor(
 ) {
     private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
 
+    private fun hasLocationPermission(): Boolean {
+        val finePermission = androidx.core.content.ContextCompat.checkSelfPermission(
+            context, android.Manifest.permission.ACCESS_FINE_LOCATION
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        val coarsePermission = androidx.core.content.ContextCompat.checkSelfPermission(
+            context, android.Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        return finePermission || coarsePermission
+    }
+
     @SuppressLint("MissingPermission")
     fun getLocationFlow(): Flow<Location> = callbackFlow {
+        if (!hasLocationPermission()) {
+            close()
+            return@callbackFlow
+        }
+
         val listener = object : LocationListener {
             override fun onLocationChanged(location: Location) {
                 trySend(location)
@@ -33,56 +48,66 @@ class DeviceLocationManager @Inject constructor(
             override fun onProviderDisabled(provider: String) {}
         }
 
-        val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
-        providers.forEach { provider ->
-            if (locationManager.isProviderEnabled(provider)) {
-                locationManager.requestLocationUpdates(
-                    provider,
-                    AppConstants.LOCATION_UPDATE_INTERVAL,
-                    AppConstants.LOCATION_UPDATE_MIN_DISTANCE,
-                    listener,
-                    Looper.getMainLooper()
-                )
-                locationManager.getLastKnownLocation(provider)?.let { trySend(it) }
+        try {
+            val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
+            providers.forEach { provider ->
+                if (locationManager.isProviderEnabled(provider)) {
+                    locationManager.requestLocationUpdates(
+                        provider,
+                        AppConstants.LOCATION_UPDATE_INTERVAL,
+                        AppConstants.LOCATION_UPDATE_MIN_DISTANCE,
+                        listener,
+                        Looper.getMainLooper()
+                    )
+                    locationManager.getLastKnownLocation(provider)?.let { trySend(it) }
+                }
             }
+        } catch (e: SecurityException) {
+            // Permission revoked or not granted
         }
 
         awaitClose {
-            locationManager.removeUpdates(listener)
+            try {
+                locationManager.removeUpdates(listener)
+            } catch (e: Exception) {
+                // Ignore
+            }
         }
     }
 
     @SuppressLint("MissingPermission")
     fun requestSingleLocationUpdate(onLocationReceived: (Location) -> Unit) {
-        val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
-        for (provider in providers) {
-            if (locationManager.isProviderEnabled(provider)) {
-                val lastKnown = locationManager.getLastKnownLocation(provider)
-                if (lastKnown != null) {
-                    onLocationReceived(lastKnown)
-                    return
+        if (!hasLocationPermission()) return
+
+        try {
+            val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
+            for (provider in providers) {
+                if (locationManager.isProviderEnabled(provider)) {
+                    val lastKnown = locationManager.getLastKnownLocation(provider)
+                    if (lastKnown != null) {
+                        onLocationReceived(lastKnown)
+                        return
+                    }
                 }
             }
-        }
 
-        val singleListener = object : LocationListener {
-            override fun onLocationChanged(location: Location) {
-                onLocationReceived(location)
-                try {
-                    locationManager.removeUpdates(this)
-                } catch (e: Exception) {
-                    // Ignore
+            val singleListener = object : LocationListener {
+                override fun onLocationChanged(location: Location) {
+                    onLocationReceived(location)
+                    try {
+                        locationManager.removeUpdates(this)
+                    } catch (e: Exception) {
+                        // Ignore
+                    }
                 }
+                @Deprecated("Deprecated in Java")
+                override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+                override fun onProviderEnabled(provider: String) {}
+                override fun onProviderDisabled(provider: String) {}
             }
-            @Deprecated("Deprecated in Java")
-            override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
-            override fun onProviderEnabled(provider: String) {}
-            override fun onProviderDisabled(provider: String) {}
-        }
 
-        for (provider in providers) {
-            if (locationManager.isProviderEnabled(provider)) {
-                try {
+            for (provider in providers) {
+                if (locationManager.isProviderEnabled(provider)) {
                     locationManager.requestLocationUpdates(
                         provider,
                         0L,
@@ -90,10 +115,10 @@ class DeviceLocationManager @Inject constructor(
                         singleListener,
                         Looper.getMainLooper()
                     )
-                } catch (e: Exception) {
-                    // Ignore missing permissions or disabled provider
                 }
             }
+        } catch (e: SecurityException) {
+            // Permission revoked or not granted
         }
     }
 }

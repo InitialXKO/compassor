@@ -16,7 +16,8 @@ import androidx.room.Relation
 )
 data class RouteWaypointCrossRef(
     val routeId: Long,
-    val waypointId: Long
+    val waypointId: Long,
+    val orderIndex: Int = 0
 )
 
 data class RouteWithWaypoints(

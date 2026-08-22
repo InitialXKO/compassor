@@ -266,6 +266,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                             mapManager.setTargetLocation(target.first, target.second)
                             window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
+                            // 动态为地图设置 Padding 避免导航卡片遮挡原生地图控件
+                            val cardHeight = (120 * resources.displayMetrics.density).toInt()
+                            val radarHeight = (220 * resources.displayMetrics.density).toInt()
+                            mapManager.updatePadding(top = cardHeight, bottom = radarHeight)
+
                             // 立即使用最后已知位置绘制导向线并更新雷达/罗盘，避免等待下一个定位样本导致延迟
                             val lastLoc = locationViewModel.currentLocation.value
                             if (lastLoc != null) {
@@ -282,6 +287,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                             mapManager.clearRoute()
                             navigationStatusCard.visibility = View.GONE
                             window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+                            val radarHeight = (220 * resources.displayMetrics.density).toInt()
+                            mapManager.updatePadding(bottom = radarHeight)
                         }
                     }
                 }
@@ -393,13 +401,18 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun setupAMapLocationStyle() {
-        val primaryColor = getThemeColor(com.google.android.material.R.attr.colorPrimary)
-        aMap.myLocationStyle = com.amap.api.maps.model.MyLocationStyle().apply {
-            myLocationType(com.amap.api.maps.model.MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE_NO_CENTER)
-            strokeColor(primaryColor)
-            radiusFillColor(primaryColor and 0x30FFFFFF)
+        if (!::aMap.isInitialized) return
+        try {
+            val primaryColor = getThemeColor(com.google.android.material.R.attr.colorPrimary)
+            aMap.myLocationStyle = com.amap.api.maps.model.MyLocationStyle().apply {
+                myLocationType(com.amap.api.maps.model.MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE_NO_CENTER)
+                strokeColor(primaryColor)
+                radiusFillColor(primaryColor and 0x30FFFFFF)
+            }
+            aMap.isMyLocationEnabled = true
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Failed to setup location style", e)
         }
-        aMap.isMyLocationEnabled = true
     }
 
     private fun getThemeColor(attr: Int): Int {
@@ -675,7 +688,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val skin = when (skinName) {
             "Forest" -> DefaultSkins.forest
             "Ocean" -> DefaultSkins.ocean
-            else -> DefaultSkins.default
+            else -> RadarSkin.createFromTheme(this)
         }
         radarView.setSkin(skin)
         simpleCompassView.setSkin(skin)
@@ -704,7 +717,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 navigationRepository.saveThemeMode(selectedMode)
                 dialog.dismiss()
                 if (AppCompatDelegate.getDefaultNightMode() != selectedMode) {
-                    android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    window.decorView.post {
                         AppCompatDelegate.setDefaultNightMode(selectedMode)
                     }
                 }
@@ -791,13 +804,23 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean { menuInflater.inflate(R.menu.main_menu, menu); return true }
     override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean = when (item.itemId) {
+        R.id.action_reset_bearing -> { mapManager.resetBearing(); true }
         R.id.action_search -> { showSearchDialog(); true }; else -> super.onOptionsItemSelected(item)
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        // 动态刷新 UI 主题色与皮肤，无需销毁重启 Activity
+        applySkin(navigationRepository.getSkinName())
+        setupAMapLocationStyle()
     }
 
     override fun onResume() {
         super.onResume()
         mapView.onResume()
-        if (locationViewModel.currentLocation.value == null && !hasRetriedLocation) {
+        val hasPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (hasPermission && locationViewModel.currentLocation.value == null && !hasRetriedLocation) {
             hasRetriedLocation = true
             locationViewModel.retryLocation()
         }

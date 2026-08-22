@@ -43,7 +43,10 @@
                 android:id="@+id/navigationStatusCard"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_margin="16dp"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginEnd="64dp"
+                android:layout_marginBottom="16dp"
                 android:visibility="gone"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="@dimen/elevation_md"
@@ -116,6 +119,7 @@
                 </androidx.constraintlayout.widget.ConstraintLayout>
 
             </com.google.android.material.card.MaterialCardView>
+
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/radarCard"

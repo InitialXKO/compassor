@@ -29,4 +29,10 @@ interface RouteDao {
 
     @Query("DELETE FROM route_waypoint_cross_ref WHERE routeId = :routeId")
     suspend fun deleteCrossRefsForRoute(routeId: Long)
+
+    @Query("SELECT * FROM route_waypoint_cross_ref WHERE routeId = :routeId ORDER BY orderIndex ASC")
+    suspend fun getCrossRefsForRoute(routeId: Long): List<RouteWaypointCrossRef>
+
+    @Query("SELECT * FROM route_waypoint_cross_ref ORDER BY routeId, orderIndex ASC")
+    suspend fun getAllCrossRefs(): List<RouteWaypointCrossRef>
 }

@@ -92,6 +92,24 @@ class MapManager @Inject constructor(
         }
     }
 
+    fun updatePadding(left: Int = 0, top: Int = 0, right: Int = 0, bottom: Int = 0) {
+        val width = context.resources.displayMetrics.widthPixels
+        val height = context.resources.displayMetrics.heightPixels
+        val centerX = width / 2
+        val centerY = (height - top - bottom) / 2 + top
+        aMap?.setPointToCenter(centerX, centerY)
+    }
+
+    fun resetBearing() {
+        aMap?.let { map ->
+            val currentCamera = map.cameraPosition
+            val updatedCamera = CameraPosition.builder(currentCamera)
+                .bearing(0f)
+                .build()
+            map.animateCamera(CameraUpdateFactory.newCameraPosition(updatedCamera))
+        }
+    }
+
     fun updateWaypoints(waypoints: List<Waypoint>, onMarkerClick: (Waypoint) -> Unit) {
         val map = aMap ?: return
 
