@@ -184,7 +184,12 @@ class MapManager @Inject constructor(
         multiPointOverlay?.items = items
     }
 
-    fun setTargetLocation(latLng: LatLng, title: String, onTargetClick: (() -> Unit)? = null) {
+    fun setTargetLocation(
+        latLng: LatLng,
+        title: String,
+        startLocation: LatLng? = null,
+        onTargetClick: (() -> Unit)? = null
+    ) {
         val map = aMap ?: return
         targetMarkerClickListener = onTargetClick
         targetMarker?.remove()
@@ -194,7 +199,39 @@ class MapManager @Inject constructor(
                 .title(title)
                 .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
         )
-        map.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 15f))
+        zoomToFitStartAndTargets(startLocation ?: lastLatLng, listOf(latLng))
+    }
+
+    fun zoomToFitStartAndTargets(startLocation: LatLng?, targetLocations: List<LatLng>, paddingPx: Int = 180) {
+        val map = aMap ?: return
+        val validPoints = mutableListOf<LatLng>()
+        startLocation?.let { validPoints.add(it) }
+        validPoints.addAll(targetLocations)
+
+        if (validPoints.isEmpty()) return
+
+        if (validPoints.size == 1) {
+            map.animateCamera(CameraUpdateFactory.newLatLngZoom(validPoints[0], 15f))
+            return
+        }
+
+        val builder = LatLngBounds.Builder()
+        for (pt in validPoints) {
+            builder.include(pt)
+        }
+
+        val bounds = builder.build()
+        val dist = FloatArray(1)
+        android.location.Location.distanceBetween(
+            bounds.southwest.latitude, bounds.southwest.longitude,
+            bounds.northeast.latitude, bounds.northeast.longitude,
+            dist
+        )
+        if (dist[0] < 10) {
+            map.animateCamera(CameraUpdateFactory.newLatLngZoom(validPoints[0], 15f))
+        } else {
+            map.animateCamera(CameraUpdateFactory.newLatLngBounds(bounds, paddingPx))
+        }
     }
 
     fun clearTarget() {
@@ -205,7 +242,7 @@ class MapManager @Inject constructor(
     fun drawRoute(
         waypoints: List<Waypoint>,
         currentIndex: Int,
-        userLocation: LatLng? = null,
+        navStartLocation: LatLng? = null,
         primaryColor: Int = android.graphics.Color.BLUE,
         traveledColor: Int = android.graphics.Color.GRAY
     ) {
@@ -215,17 +252,14 @@ class MapManager @Inject constructor(
         remainingPolyline?.remove()
         remainingPolyline = null
 
-        if (waypoints.size < 2) return
+        if (waypoints.isEmpty()) return
 
         val waypointsLatLng = waypoints.map { LatLng(it.latitude, it.longitude) }
+        val startPt = navStartLocation ?: waypointsLatLng.firstOrNull() ?: return
 
-        // 灰线：已走过的航点 → 用户当前位置
+        // 灰线：导航起点 → 已走过的航点
         if (currentIndex > 0) {
-            val completed = if (userLocation != null) {
-                waypoints.take(currentIndex).map { LatLng(it.latitude, it.longitude) } + userLocation
-            } else {
-                waypointsLatLng.take(currentIndex + 1)
-            }
+            val completed = listOf(startPt) + waypointsLatLng.take(currentIndex)
             if (completed.size >= 2) {
                 completedPolyline = map.addPolyline(
                     PolylineOptions()
@@ -236,12 +270,11 @@ class MapManager @Inject constructor(
             }
         }
 
-        // 蓝线：用户当前位置 → 当前及后续航点
-        val remainingWaypoints = waypointsLatLng.drop(currentIndex.coerceAtLeast(0))
-        val remaining = if (userLocation != null) {
-            listOf(userLocation) + remainingWaypoints
+        // 蓝线：从导航起点(或前一航点) → 当前及后续航点
+        val remaining = if (currentIndex == 0) {
+            listOf(startPt) + waypointsLatLng
         } else {
-            remainingWaypoints
+            waypointsLatLng.drop(currentIndex - 1)
         }
 
         if (remaining.size >= 2) {

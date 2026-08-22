@@ -27,9 +27,13 @@ class NavigationManager @Inject constructor(
     private val _targetLocation = MutableStateFlow<Pair<LatLng, String>?>(null)
     val targetLocation: StateFlow<Pair<LatLng, String>?> = _targetLocation.asStateFlow()
 
-    fun startRouteNavigation(route: Route) {
+    private val _navStartLocation = MutableStateFlow<LatLng?>(null)
+    val navStartLocation: StateFlow<LatLng?> = _navStartLocation.asStateFlow()
+
+    fun startRouteNavigation(route: Route, startLocation: LatLng? = null) {
         _currentRoute.value = route
         _currentWaypointIndex.value = 0
+        _navStartLocation.value = startLocation
         val firstWaypoint = route.waypoints[0]
         updateTargetInternal(LatLng(firstWaypoint.latitude, firstWaypoint.longitude), firstWaypoint.name)
         saveState()
@@ -38,6 +42,7 @@ class NavigationManager @Inject constructor(
     fun setTarget(latLng: LatLng, name: String) {
         _currentRoute.value = null
         _currentWaypointIndex.value = -1
+        _navStartLocation.value = null
         updateTargetInternal(latLng, name)
         saveState()
     }
@@ -49,6 +54,7 @@ class NavigationManager @Inject constructor(
     fun stopNavigation() {
         _currentRoute.value = null
         _currentWaypointIndex.value = -1
+        _navStartLocation.value = null
         _targetLocation.value = null
         navigationRepository.clearNavigationState()
     }
@@ -141,6 +147,9 @@ class NavigationManager @Inject constructor(
     }
 
     fun handleLocationUpdate(myLocation: LatLng): NavigationUpdate? {
+        if (_currentRoute.value != null && _navStartLocation.value == null) {
+            _navStartLocation.value = myLocation
+        }
         val target = _targetLocation.value ?: return null
         val distance = calculateDistance(myLocation, target.first)
 
