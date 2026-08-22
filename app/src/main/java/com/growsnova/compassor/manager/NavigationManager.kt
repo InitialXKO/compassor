@@ -75,7 +75,12 @@ class NavigationManager @Inject constructor(
 
         val newWaypoints = activeRoute.waypoints.filter { it.id != waypointId }.toMutableList()
         if (newWaypoints.size < 2) {
-            stopNavigation()
+            if (newWaypoints.size == 1) {
+                val remainingWaypoint = newWaypoints[0]
+                setTarget(LatLng(remainingWaypoint.latitude, remainingWaypoint.longitude), remainingWaypoint.name)
+            } else {
+                stopNavigation()
+            }
             return
         }
 
