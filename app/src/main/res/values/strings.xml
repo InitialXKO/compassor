@@ -112,4 +112,7 @@
     <string name="waypoint_details">地点详情</string>
     <string name="view_details">查看详情</string>
     <string name="camera_permission_denied">相机权限被拒绝，无法拍照</string>
+    <string name="floor_hint">楼层（可选）</string>
+    <string name="floor_format">%1$d楼</string>
+    <string name="basement_floor_format">B%1$d</string>
 </resources>

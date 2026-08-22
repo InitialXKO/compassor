@@ -218,7 +218,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             onLoadMoreClicked = { navigationViewModel.expandSearchRadius() }
         ) { poiItem ->
             val latLng = LatLng(poiItem.latLonPoint.latitude, poiItem.latLonPoint.longitude)
-            navigationViewModel.setTarget(latLng, poiItem.title)
+            val floor = FloorUtils.parseFloor(poiItem.indoorData?.floor)
+            val displayName = if (floor != null) {
+                "${poiItem.title} (${FloorUtils.formatFloor(floor, this)})"
+            } else {
+                poiItem.title
+            }
+            navigationViewModel.setTarget(latLng, displayName)
             bottomSheetBehavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_HIDDEN
         }
         recyclerView.adapter = searchResultsAdapter
@@ -478,6 +484,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         
         val nameEditText = view.findViewById<EditText>(R.id.nameEditText)
         val remarksEditText = view.findViewById<EditText>(R.id.remarksEditText)
+        val floorEditText = view.findViewById<EditText>(R.id.floorEditText)
         val photoImageView = view.findViewById<ImageView>(R.id.waypointPhoto)
         val takePhotoButton = view.findViewById<MaterialButton>(R.id.takePhotoButton)
         val coordinatesText = view.findViewById<TextView>(R.id.coordinatesText)
@@ -487,6 +494,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         
         nameEditText.setText(waypointToEdit?.name ?: defaultName ?: "")
         remarksEditText.setText(waypointToEdit?.remarks ?: "")
+        floorEditText.setText(waypointToEdit?.floor?.toString() ?: "")
         val wgs84 = CoordTransform.gcj02ToWgs84(latLng.latitude, latLng.longitude)
         coordinatesText.text = "Lat: %.6f, Lon: %.6f (WGS-84)".format(wgs84.first, wgs84.second)
 
@@ -508,13 +516,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             .setPositiveButton(R.string.save) { _, _ ->
                 val name = nameEditText.text.toString().trim()
                 val remarks = remarksEditText.text.toString().trim()
+                val floor = floorEditText.text.toString().trim().toIntOrNull()
                 if (name.isNotEmpty()) {
                     if (waypointToEdit == null) {
-                        addWaypoint(latLng, name, currentPhotoPath, remarks)
+                        addWaypoint(latLng, name, currentPhotoPath, remarks, floor)
                     } else {
                         waypointToEdit.name = name
                         waypointToEdit.photoPath = currentPhotoPath
                         waypointToEdit.remarks = remarks
+                        waypointToEdit.floor = floor
                         updateWaypoint(waypointToEdit, name, latLng)
                     }
                 } else {
@@ -526,10 +536,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun addWaypoint(latLng: LatLng, name: String) {
-        addWaypoint(latLng, name, null, null)
+        addWaypoint(latLng, name, null, null, null)
     }
 
-    private fun addWaypoint(latLng: LatLng, name: String, photoPath: String?, remarks: String?) {
+    private fun addWaypoint(latLng: LatLng, name: String, photoPath: String?, remarks: String?, floor: Int?) {
         val existing = mapViewModel.waypoints.value.find {
             val dist = FloatArray(1)
             android.location.Location.distanceBetween(latLng.latitude, latLng.longitude, it.latitude, it.longitude, dist)
@@ -542,11 +552,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 onPositive = { 
                     existing.photoPath = photoPath
                     existing.remarks = remarks
+                    existing.floor = floor
                     updateWaypoint(existing, name, latLng) 
                 }
             )
         } else {
-            navigationViewModel.addWaypoint(Waypoint(name = name, latitude = latLng.latitude, longitude = latLng.longitude, photoPath = photoPath, remarks = remarks))
+            navigationViewModel.addWaypoint(Waypoint(name = name, latitude = latLng.latitude, longitude = latLng.longitude, photoPath = photoPath, remarks = remarks, floor = floor))
             DialogUtils.showSuccessToast(this, getString(R.string.waypoint_saved, name))
         }
     }

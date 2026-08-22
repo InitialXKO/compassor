@@ -68,6 +68,7 @@ class PoiListAdapter(
         private val titleView: TextView = itemView.findViewById(R.id.poiTitle)
         private val snippetView: TextView = itemView.findViewById(R.id.poiSnippet)
         private val distanceView: TextView = itemView.findViewById(R.id.poiDistance)
+        private val floorView: TextView = itemView.findViewById(R.id.poiFloor)
 
         init {
             itemView.applyTouchScale()
@@ -76,6 +77,17 @@ class PoiListAdapter(
         fun bind(poiItem: PoiItem, userLocation: LatLng?, onPoiClicked: (PoiItem) -> Unit) {
             titleView.text = poiItem.title
             snippetView.text = poiItem.snippet ?: poiItem.adName
+
+            val floorText = FloorUtils.formatFloor(
+                FloorUtils.parseFloor(poiItem.indoorData?.floor),
+                itemView.context
+            )
+            if (floorText != null) {
+                floorView.text = floorText
+                floorView.visibility = View.VISIBLE
+            } else {
+                floorView.visibility = View.GONE
+            }
 
             val poiLat = poiItem.latLonPoint?.latitude
             val poiLng = poiItem.latLonPoint?.longitude

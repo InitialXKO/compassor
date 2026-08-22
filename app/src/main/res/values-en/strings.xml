@@ -108,4 +108,7 @@
     <string name="waypoint_details">Waypoint Details</string>
     <string name="view_details">View Details</string>
     <string name="camera_permission_denied">Camera permission denied, cannot take photo</string>
+    <string name="floor_hint">Floor (optional)</string>
+    <string name="floor_format">F%1$d</string>
+    <string name="basement_floor_format">B%1$d</string>
 </resources>
