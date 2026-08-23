@@ -389,8 +389,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
             skipNavButton.isEnabled = canSkip
             prevNavButton.isEnabled = canPrev
-            skipNavButton.alpha = 1.0f
-            prevNavButton.alpha = 1.0f
+            skipNavButton.alpha = if (canSkip) 1.0f else 0.5f
+            prevNavButton.alpha = if (canPrev) 1.0f else 0.5f
         } else {
             skipNavButton.visibility = View.GONE
             prevNavButton.visibility = View.GONE

@@ -67,6 +67,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         app:barrierDirection="start"
+                        app:barrierAllowsGoneWidgets="false"
                         app:constraint_referenced_ids="prevNavButton,skipNavButton,stopNavButton" />
 
                     <TextView
