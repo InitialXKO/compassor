@@ -184,7 +184,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         prevNavButton = findViewById(R.id.prevNavButton)
         
         stopNavButton.applyTouchScale()
-        stopNavButton.setOnClickListener { navigationViewModel.stopNavigation() }
+        stopNavButton.setOnClickListener {
+            hideRouteNavButtons()
+            navigationViewModel.stopNavigation()
+        }
         skipNavButton.applyTouchScale()
         skipNavButton.setOnClickListener { navigationViewModel.skipNextWaypoint() }
         prevNavButton.applyTouchScale()
@@ -229,6 +232,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             } else {
                 poiItem.title
             }
+            hideRouteNavButtons()
             navigationViewModel.setTarget(latLng, displayName)
             bottomSheetBehavior.state = com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_HIDDEN
         }
@@ -378,6 +382,11 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
+    private fun hideRouteNavButtons() {
+        skipNavButton.visibility = View.GONE
+        prevNavButton.visibility = View.GONE
+    }
+
     private fun updateNavButtonsVisibility(route: Route?) {
         if (route != null) {
             val index = navigationViewModel.currentWaypointIndex.value
@@ -387,8 +396,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             skipNavButton.visibility = if (canSkip) View.VISIBLE else View.GONE
             prevNavButton.visibility = if (canPrev) View.VISIBLE else View.GONE
         } else {
-            skipNavButton.visibility = View.GONE
-            prevNavButton.visibility = View.GONE
+            hideRouteNavButtons()
         }
     }
 
@@ -489,7 +497,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             DialogUtils.showOptionsDialog(this, name, options) { which ->
                 when (which) {
                     0 -> showSaveWaypointDialog(latLng, defaultName = name)
-                    1 -> navigationViewModel.stopNavigation()
+                    1 -> {
+                        hideRouteNavButtons()
+                        navigationViewModel.stopNavigation()
+                    }
                 }
             }
         }
@@ -500,7 +511,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         DialogUtils.showOptionsDialog(this, getString(R.string.select_action), options) { which ->
             when (which) {
                 0 -> navigationViewModel.reverseGeocode(latLng) { name -> showSaveWaypointDialog(latLng, defaultName = name) }
-                1 -> navigationViewModel.reverseGeocode(latLng) { name -> navigationViewModel.setTarget(latLng, name) }
+                1 -> navigationViewModel.reverseGeocode(latLng) { name ->
+                    hideRouteNavButtons()
+                    navigationViewModel.setTarget(latLng, name)
+                }
             }
         }
     }
@@ -674,6 +688,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             applyTouchScale()
             setOnClickListener {
                 dialog.dismiss()
+                hideRouteNavButtons()
                 navigationViewModel.setTarget(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
             }
         }
