@@ -272,12 +272,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 }
 
                 launch {
-                    navigationViewModel.currentRoute.collectLatest { route ->
-                        updateNavButtonsVisibility(route)
-                    }
-                }
-
-                launch {
                     navigationViewModel.targetLocation.collectLatest { target ->
                         if (target != null) {
                             updateNavButtonsVisibility(navigationViewModel.currentRoute.value)
