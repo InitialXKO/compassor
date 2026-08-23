@@ -326,8 +326,16 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         val startLoc = state[2] as? LatLng
                         val userLoc = state[3] as? LatLng
 
-                        updateNavButtonsVisibility(route)
-                        if (route != null) {
+                        if (route != null && route.waypoints.size >= 2) {
+                            skipNavButton.visibility = View.VISIBLE
+                            prevNavButton.visibility = View.VISIBLE
+                            val canSkip = route.isLooping || index < route.waypoints.size - 1
+                            val canPrev = route.isLooping || index > 0
+                            skipNavButton.isEnabled = canSkip
+                            prevNavButton.isEnabled = canPrev
+                            skipNavButton.alpha = if (canSkip) 1.0f else 0.5f
+                            prevNavButton.alpha = if (canPrev) 1.0f else 0.5f
+
                             mapManager.drawRoute(
                                 waypoints = route.waypoints,
                                 currentIndex = index,
@@ -337,6 +345,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                                 traveledColor = getThemeColor(com.google.android.material.R.attr.colorOutline)
                             )
                         } else {
+                            skipNavButton.visibility = View.GONE
+                            prevNavButton.visibility = View.GONE
                             mapManager.clearRoute()
                         }
                     }
