@@ -28,6 +28,7 @@ class NavigationViewModel @Inject constructor(
     val currentRoute = navigationManager.currentRoute
     val currentWaypointIndex = navigationManager.currentWaypointIndex
     val targetLocation = navigationManager.targetLocation
+    val navStartLocation = navigationManager.navStartLocation
 
     private val _navigationUpdate = MutableStateFlow<NavigationManager.NavigationUpdate?>(null)
     val navigationUpdate: StateFlow<NavigationManager.NavigationUpdate?> = _navigationUpdate.asStateFlow()
@@ -68,8 +69,8 @@ class NavigationViewModel @Inject constructor(
         }
     }
 
-    fun startRouteNavigation(route: Route) {
-        navigationManager.startRouteNavigation(route)
+    fun startRouteNavigation(route: Route, startLocation: LatLng? = null) {
+        navigationManager.startRouteNavigation(route, startLocation)
     }
 
     fun setTarget(latLng: LatLng, name: String) {
