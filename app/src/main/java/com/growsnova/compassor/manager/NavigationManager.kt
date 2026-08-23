@@ -30,7 +30,22 @@ class NavigationManager @Inject constructor(
     private val _navStartLocation = MutableStateFlow<LatLng?>(null)
     val navStartLocation: StateFlow<LatLng?> = _navStartLocation.asStateFlow()
 
+    /**
+     * 启动路线导航。
+     * 若传入路线途经点不足 2 个，自动触发退化判断：
+     * - 1 个途经点：退化为针对该点的单目标导航 (setTarget)；
+     * - 0 个途经点：停止导航 (stopNavigation)。
+     */
     fun startRouteNavigation(route: Route, startLocation: LatLng? = null) {
+        if (route.waypoints.size < 2) {
+            if (route.waypoints.size == 1) {
+                val wp = route.waypoints[0]
+                setTarget(LatLng(wp.latitude, wp.longitude), wp.name)
+            } else {
+                stopNavigation()
+            }
+            return
+        }
         _currentRoute.value = route
         _currentWaypointIndex.value = 0
         _navStartLocation.value = startLocation
@@ -87,13 +102,7 @@ class NavigationManager @Inject constructor(
      *    - 剩余 >= 2 个途经点：更新路线途经点列表并调整当前途经点索引 (_currentWaypointIndex)，保持路线导航。
      */
     fun onWaypointDeleted(waypointId: Long) {
-        val activeRoute = _currentRoute.value ?: run {
-            if (_targetLocation.value != null) {
-                // If single-target navigation was heading to a waypoint by location, check if target was deleted
-                // Note: single target handled by ViewModel or caller if needed
-            }
-            return
-        }
+        val activeRoute = _currentRoute.value ?: return
 
         val deletedIndex = activeRoute.waypoints.indexOfFirst { it.id == waypointId }
         if (deletedIndex == -1) return
@@ -209,12 +218,17 @@ class NavigationManager @Inject constructor(
         val routeId = navigationRepository.getNavRouteId()
         if (routeId != -1L) {
             val route = routeRepository.getRouteWithWaypoints(routeId)
-            if (route != null && route.waypoints.isNotEmpty()) {
+            if (route != null && route.waypoints.size >= 2) {
                 _currentRoute.value = route
                 val index = navigationRepository.getNavIndex().coerceIn(0, route.waypoints.size - 1)
                 _currentWaypointIndex.value = index
                 val waypoint = route.waypoints[index]
                 _targetLocation.value = Pair(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
+            } else if (route != null && route.waypoints.size == 1) {
+                val wp = route.waypoints[0]
+                setTarget(LatLng(wp.latitude, wp.longitude), wp.name)
+            } else {
+                stopNavigation()
             }
         } else {
             val latLng = navigationRepository.getNavTargetLatLng()

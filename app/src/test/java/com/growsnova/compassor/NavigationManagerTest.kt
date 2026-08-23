@@ -36,6 +36,19 @@ class NavigationManagerTest {
     }
 
     @Test
+    fun testStartRouteNavigationWithOneWaypointDegradesToSingleTarget() {
+        val wp1 = Waypoint(id = 1L, name = "Point 1", latitude = 30.0, longitude = 120.0)
+        val route = Route(id = 100L, name = "One Point Route", waypoints = mutableListOf(wp1))
+
+        navigationManager.startRouteNavigation(route)
+
+        assertNull(navigationManager.currentRoute.value)
+        assertEquals(-1, navigationManager.currentWaypointIndex.value)
+        assertNotNull(navigationManager.targetLocation.value)
+        assertEquals("Point 1", navigationManager.targetLocation.value?.second)
+    }
+
+    @Test
     fun testDegradationOnWaypointDeletedFrom3To2() {
         val wp1 = Waypoint(id = 1L, name = "Point 1", latitude = 30.0, longitude = 120.0)
         val wp2 = Waypoint(id = 2L, name = "Point 2", latitude = 30.1, longitude = 120.1)
