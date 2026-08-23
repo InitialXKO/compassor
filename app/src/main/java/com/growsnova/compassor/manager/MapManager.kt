@@ -243,6 +243,7 @@ class MapManager @Inject constructor(
         waypoints: List<Waypoint>,
         currentIndex: Int,
         navStartLocation: LatLng? = null,
+        userLocation: LatLng? = null,
         primaryColor: Int = android.graphics.Color.BLUE,
         traveledColor: Int = android.graphics.Color.GRAY
     ) {
@@ -255,27 +256,38 @@ class MapManager @Inject constructor(
         if (waypoints.isEmpty()) return
 
         val waypointsLatLng = waypoints.map { LatLng(it.latitude, it.longitude) }
-        val startPt = navStartLocation ?: waypointsLatLng.firstOrNull() ?: return
+        val startPt = navStartLocation ?: userLocation ?: waypointsLatLng.firstOrNull() ?: return
 
-        // 灰线：导航起点 → 已走过的航点
+        // 灰线 (已走过的路径): 导航起点 → 已到达的航点 → 用户实时位置
+        val completed = mutableListOf<LatLng>()
+        completed.add(startPt)
         if (currentIndex > 0) {
-            val completed = listOf(startPt) + waypointsLatLng.take(currentIndex)
-            if (completed.size >= 2) {
-                completedPolyline = map.addPolyline(
-                    PolylineOptions()
-                        .addAll(completed)
-                        .color(traveledColor)
-                        .width(10f)
-                )
+            completed.addAll(waypointsLatLng.take(currentIndex.coerceAtMost(waypoints.size)))
+        }
+        userLocation?.let { completed.add(it) }
+
+        if (completed.size >= 2) {
+            completedPolyline = map.addPolyline(
+                PolylineOptions()
+                    .addAll(completed)
+                    .color(traveledColor)
+                    .width(10f)
+            )
+        }
+
+        // 蓝线 (剩余路径): 用户实时位置 → 当前及后续航点
+        val remaining = mutableListOf<LatLng>()
+        if (userLocation != null) {
+            remaining.add(userLocation)
+        } else if (currentIndex <= 0) {
+            remaining.add(startPt)
+        } else {
+            val prevIndex = (currentIndex - 1).coerceAtLeast(0)
+            if (prevIndex < waypointsLatLng.size) {
+                remaining.add(waypointsLatLng[prevIndex])
             }
         }
-
-        // 蓝线：从导航起点(或前一航点) → 当前及后续航点
-        val remaining = if (currentIndex <= 0) {
-            listOf(startPt) + waypointsLatLng
-        } else {
-            waypointsLatLng.drop((currentIndex - 1).coerceAtLeast(0))
-        }
+        remaining.addAll(waypointsLatLng.drop(currentIndex.coerceAtLeast(0)))
 
         if (remaining.size >= 2) {
             remainingPolyline = map.addPolyline(

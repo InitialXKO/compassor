@@ -316,16 +316,23 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     combine(
                         navigationViewModel.currentRoute,
                         navigationViewModel.currentWaypointIndex,
-                        navigationViewModel.navStartLocation
-                    ) { route, index, startLoc ->
-                        Triple(route, index, startLoc)
-                    }.collectLatest { (route, index, startLoc) ->
+                        navigationViewModel.navStartLocation,
+                        locationViewModel.currentLocation
+                    ) { route, index, startLoc, userLoc ->
+                        listOf(route, index, startLoc, userLoc)
+                    }.collectLatest { state ->
+                        val route = state[0] as? Route
+                        val index = (state[1] as? Int) ?: 0
+                        val startLoc = state[2] as? LatLng
+                        val userLoc = state[3] as? LatLng
+
                         updateNavButtonsVisibility(route)
                         if (route != null) {
                             mapManager.drawRoute(
                                 waypoints = route.waypoints,
                                 currentIndex = index,
                                 navStartLocation = startLoc,
+                                userLocation = userLoc,
                                 primaryColor = getThemeColor(com.google.android.material.R.attr.colorPrimary),
                                 traveledColor = getThemeColor(com.google.android.material.R.attr.colorOutline)
                             )
