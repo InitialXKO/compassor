@@ -82,6 +82,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private lateinit var navigationStatusCard: MaterialCardView
     private lateinit var navTargetText: android.widget.TextView
     private lateinit var navDistanceText: android.widget.TextView
+    private lateinit var navFloorText: android.widget.TextView
     private lateinit var stopNavButton: MaterialButton
     private lateinit var skipNavButton: MaterialButton
     private lateinit var prevNavButton: MaterialButton
@@ -179,10 +180,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         navigationStatusCard = findViewById(R.id.navigationStatusCard)
         navTargetText = findViewById(R.id.navTargetText)
         navDistanceText = findViewById(R.id.navDistanceText)
+        navFloorText = findViewById(R.id.navFloorText)
         stopNavButton = findViewById(R.id.stopNavButton)
         skipNavButton = findViewById(R.id.skipNavButton)
         prevNavButton = findViewById(R.id.prevNavButton)
         
+        navTargetText.isSelected = true
+
         stopNavButton.applyTouchScale()
         stopNavButton.setOnClickListener { navigationViewModel.stopNavigation() }
         skipNavButton.applyTouchScale()
@@ -286,9 +290,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                             window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
                             // 动态为地图设置 Padding 避免导航卡片遮挡原生地图控件
-                            val cardHeight = (120 * resources.displayMetrics.density).toInt()
                             val radarHeight = (220 * resources.displayMetrics.density).toInt()
-                            mapManager.updatePadding(top = cardHeight, bottom = radarHeight)
+                            mapManager.updatePadding(bottom = radarHeight)
 
                             // 立即使用最后已知位置绘制导向线并更新雷达/罗盘，避免等待下一个定位样本导致延迟
                             val lastLoc = locationViewModel.currentLocation.value
@@ -396,9 +399,18 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             navigationStatusCard.animate().alpha(1f).setDuration(300).start()
         }
         navTargetText.text = getString(R.string.nav_target_format, update.targetName)
+        navTargetText.isSelected = true
         
         val distanceStr = if (update.distance < 1000) "${update.distance.toInt()}m" else "%.1fkm".format(update.distance / 1000f)
-        navDistanceText.text = getString(R.string.nav_distance_format, distanceStr)
+        navDistanceText.text = distanceStr
+
+        val floorString = FloorUtils.formatFloor(update.targetFloor, this)
+        if (floorString != null) {
+            navFloorText.text = floorString
+            navFloorText.visibility = View.VISIBLE
+        } else {
+            navFloorText.visibility = View.GONE
+        }
 
         updateNavButtonsVisibility(navigationViewModel.currentRoute.value)
 
