@@ -63,7 +63,7 @@ class NavigationManagerTest {
         navigationManager.startRouteNavigation(route)
         assertEquals(route, navigationManager.currentRoute.value)
 
-        navigationManager.onRouteDeleted(1, "Route 1")
+        navigationManager.onRouteDeleted(1)
 
         assertNull(navigationManager.currentRoute.value)
         assertEquals(-1, navigationManager.currentWaypointIndex.value)
@@ -82,7 +82,7 @@ class NavigationManagerTest {
         navigationManager.startRouteNavigation(route)
         assertEquals(route, navigationManager.currentRoute.value)
 
-        navigationManager.onWaypointDeleted(Waypoint(id = 2, name = "W2", latitude = 10.1, longitude = 20.1))
+        navigationManager.onWaypointDeleted(2)
 
         assertNull(navigationManager.currentRoute.value)
         assertEquals(-1, navigationManager.currentWaypointIndex.value)
