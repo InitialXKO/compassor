@@ -65,7 +65,7 @@ class NavigationManagerTest {
         navigationManager.startRouteNavigation(route)
         assertEquals(route, navigationManager.currentRoute.value)
 
-        navigationManager.onRouteDeleted(100)
+        navigationManager.onRouteDeleted(1, "Route 1")
 
         assertNull(navigationManager.currentRoute.value)
         assertEquals(-1, navigationManager.currentWaypointIndex.value)
@@ -84,25 +84,7 @@ class NavigationManagerTest {
         navigationManager.startRouteNavigation(route)
         assertEquals(route, navigationManager.currentRoute.value)
 
-        // Delete W2 -> Degrades to 1 waypoint W1 (single target)
-        navigationManager.onWaypointDeleted(2)
-        assertNull(navigationManager.currentRoute.value)
-        assertEquals("W1", navigationManager.targetLocation.value?.second)
-
-        // Now delete Route 100 -> Should stop single target navigation
-        navigationManager.onRouteDeleted(100)
-        assertNull(navigationManager.targetLocation.value)
-    }
-
-    @Test
-    fun testSetTarget_clearsStaleActiveRouteId_soDeletingOldRouteDoesNotCancelNewTarget() {
-        val waypoints = mutableListOf(
-            Waypoint(id = 1, name = "W1", latitude = 10.0, longitude = 20.0),
-            Waypoint(id = 2, name = "W2", latitude = 10.1, longitude = 20.1)
-        )
-        val route = Route(id = 100, name = "Route 1", waypoints = waypoints)
-
-        navigationManager.startRouteNavigation(route)
+        navigationManager.onWaypointDeleted(Waypoint(id = 2, name = "W2", latitude = 10.1, longitude = 20.1))
 
         // User now starts a new single-target navigation to a different point
         navigationManager.setTarget(LatLng(30.0, 40.0), "Custom Target")

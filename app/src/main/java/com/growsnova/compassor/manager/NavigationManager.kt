@@ -79,39 +79,40 @@ class NavigationManager @Inject constructor(
         navigationRepository.clearNavigationState()
     }
 
-    fun onRouteDeleted(routeId: Long) {
-        if (_currentRoute.value?.id == routeId || activeRouteId == routeId) {
-            stopNavigation()
+    fun onRouteDeleted(routeId: Long, routeName: String? = null) {
+        val current = _currentRoute.value
+        if (current != null && (current.id == routeId || (routeName != null && current.name == routeName))) {
+            _currentRoute.value = null
+            _currentWaypointIndex.value = -1
+            _navStartLocation.value = null
+            saveState()
         }
     }
 
-    fun onWaypointDeleted(waypointId: Long) {
-        val activeRoute = _currentRoute.value
-        if (activeRoute != null) {
-            val deletedIndex = activeRoute.waypoints.indexOfFirst { it.id == waypointId }
-            if (deletedIndex == -1) return
-
-            val newWaypoints = activeRoute.waypoints.filter { it.id != waypointId }.toMutableList()
-            if (newWaypoints.size < 2) {
-                if (newWaypoints.size == 1) {
-                    val remainingWaypoint = newWaypoints[0]
-                    val routeId = activeRoute.id
-                    setTarget(LatLng(remainingWaypoint.latitude, remainingWaypoint.longitude), remainingWaypoint.name)
-                    activeRouteId = routeId
-                    activeTargetWaypointId = remainingWaypoint.id
-                } else {
+    fun onWaypointDeleted(waypoint: Waypoint) {
+        val activeRoute = _currentRoute.value ?: run {
+            _targetLocation.value?.let { target ->
+                val dist = FloatArray(1)
+                Location.distanceBetween(target.first.latitude, target.first.longitude, waypoint.latitude, waypoint.longitude, dist)
+                if (dist[0] < 5f || target.second == waypoint.name) {
                     stopNavigation()
                 }
-                return
             }
 
-            val currentIndex = _currentWaypointIndex.value
-            val updatedRoute = activeRoute.copy(waypoints = newWaypoints)
+        val deletedIndex = activeRoute.waypoints.indexOfFirst {
+            (it.id != 0L && it.id == waypoint.id) ||
+            (it.latitude == waypoint.latitude && it.longitude == waypoint.longitude) ||
+            it.name == waypoint.name
+        }
+        if (deletedIndex == -1) return
 
-            val newIndex = when {
-                currentIndex > deletedIndex -> currentIndex - 1
-                currentIndex == deletedIndex -> currentIndex.coerceAtMost(newWaypoints.size - 1)
-                else -> currentIndex
+        val newWaypoints = activeRoute.waypoints.filterIndexed { i, _ -> i != deletedIndex }.toMutableList()
+        if (newWaypoints.size < 2) {
+            if (newWaypoints.size == 1) {
+                val remainingWaypoint = newWaypoints[0]
+                setTarget(LatLng(remainingWaypoint.latitude, remainingWaypoint.longitude), remainingWaypoint.name)
+            } else {
+                stopNavigation()
             }
 
             _currentRoute.value = updatedRoute

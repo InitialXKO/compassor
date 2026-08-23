@@ -152,7 +152,7 @@ class NavigationViewModel @Inject constructor(
             routeRepository.deleteRoute(route)
             routeRepository.deleteCrossRefsForRoute(route.id)
             loadRoutes()
-            navigationManager.onRouteDeleted(route.id)
+            navigationManager.onRouteDeleted(route.id, route.name)
         }
     }
 
@@ -193,7 +193,7 @@ class NavigationViewModel @Inject constructor(
             waypointRepository.deleteWaypoint(waypoint)
             loadRoutes()
 
-            navigationManager.onWaypointDeleted(waypoint.id)
+            navigationManager.onWaypointDeleted(waypoint)
         }
     }
 
