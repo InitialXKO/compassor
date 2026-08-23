@@ -39,6 +39,12 @@ class NavigationManager @Inject constructor(
         saveState()
     }
 
+    /**
+     * 设置单目标导航（单点/单一目的地导航）。
+     * 当由路线导航退化为单目标导航，或用户手动选择单一目的地时调用：
+     * 重置当前路线上下文（_currentRoute = null, _currentWaypointIndex = -1, _navStartLocation = null），
+     * 仅保留目标位置 (_targetLocation)，完成向单目标导航的退化/切换。
+     */
     fun setTarget(latLng: LatLng, name: String) {
         _currentRoute.value = null
         _currentWaypointIndex.value = -1
@@ -59,6 +65,10 @@ class NavigationManager @Inject constructor(
         navigationRepository.clearNavigationState()
     }
 
+    /**
+     * 当路线被删除时的回调。
+     * 如果被删除的路线是当前正在导航的路线，退化为针对当前目标点的单目标导航（清除路线上下文）。
+     */
     fun onRouteDeleted(routeId: Long) {
         if (_currentRoute.value?.id == routeId) {
             _currentRoute.value = null
@@ -67,6 +77,15 @@ class NavigationManager @Inject constructor(
         }
     }
 
+    /**
+     * 当途经点被删除时的回调与退化逻辑：
+     * 1. 若当前活跃路线不包含被删途经点，不作处理；
+     * 2. 移除途经点后检查剩余途经点数量：
+     *    - 剩余 1 个途经点：路线导航无法继续（路线导航至少需要 2 个途经点），退化为针对该唯一途经点的单目标导航。
+     *      调用 setTarget(...) 将 _currentRoute 设为 null，仅保留 single-target 状态。
+     *    - 剩余 0 个途经点：停止导航 (stopNavigation())。
+     *    - 剩余 >= 2 个途经点：更新路线途经点列表并调整当前途经点索引 (_currentWaypointIndex)，保持路线导航。
+     */
     fun onWaypointDeleted(waypointId: Long) {
         val activeRoute = _currentRoute.value ?: run {
             if (_targetLocation.value != null) {
@@ -80,11 +99,14 @@ class NavigationManager @Inject constructor(
         if (deletedIndex == -1) return
 
         val newWaypoints = activeRoute.waypoints.filter { it.id != waypointId }.toMutableList()
+        // 退化判断：路线导航至少需要 2 个途经点
         if (newWaypoints.size < 2) {
             if (newWaypoints.size == 1) {
+                // 仅剩 1 个途经点：退化为单目标导航
                 val remainingWaypoint = newWaypoints[0]
                 setTarget(LatLng(remainingWaypoint.latitude, remainingWaypoint.longitude), remainingWaypoint.name)
             } else {
+                // 0 个途经点：停止导航
                 stopNavigation()
             }
             return
