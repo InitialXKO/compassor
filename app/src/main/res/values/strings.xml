@@ -86,6 +86,7 @@
     <string name="nav_distance_format">距离：%s</string>
     <string name="stop_navigation_bracket">〔停止导航〕</string>
     <string name="stop_navigation">停止导航</string>
+    <string name="confirm_stop_navigation">确定要停止导航吗？</string>
     <string name="prev_waypoint">上一个</string>
     <string name="skip_waypoint">跳过</string>
     <string name="arrival_notification">已到达地点: %s</string>

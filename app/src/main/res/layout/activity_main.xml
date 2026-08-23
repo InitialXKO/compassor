@@ -72,10 +72,12 @@
                         android:layout_height="wrap_content"
                         android:minWidth="0dp"
                         android:minHeight="0dp"
+                        app:iconPadding="0dp"
                         android:paddingHorizontal="4dp"
                         android:paddingVertical="2dp"
                         android:textSize="12sp"
                         android:text="&lt;"
+                        android:layout_marginEnd="2dp"
                         android:visibility="gone" />
 
                     <TextView
@@ -92,6 +94,21 @@
                         android:marqueeRepeatLimit="marquee_forever"
                         android:focusable="true"
                         android:focusableInTouchMode="true"
+                        android:layout_marginEnd="6dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/stopNavButton"
+                        style="@style/Widget.Compassor.Button.Text"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:minWidth="0dp"
+                        android:minHeight="0dp"
+                        app:iconPadding="0dp"
+                        android:paddingHorizontal="4dp"
+                        android:paddingVertical="2dp"
+                        android:textSize="12sp"
+                        android:textColor="?attr/colorError"
+                        android:text="@string/stop_navigation_bracket"
                         android:layout_marginEnd="6dp" />
 
                     <TextView
@@ -115,25 +132,13 @@
                         android:layout_marginEnd="6dp" />
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/stopNavButton"
-                        style="@style/Widget.Compassor.Button.Text"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:minWidth="0dp"
-                        android:minHeight="0dp"
-                        android:paddingHorizontal="4dp"
-                        android:paddingVertical="2dp"
-                        android:textSize="12sp"
-                        android:textColor="?attr/colorError"
-                        android:text="@string/stop_navigation_bracket" />
-
-                    <com.google.android.material.button.MaterialButton
                         android:id="@+id/skipNavButton"
                         style="@style/Widget.Compassor.Button.Text"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:minWidth="0dp"
                         android:minHeight="0dp"
+                        app:iconPadding="0dp"
                         android:paddingHorizontal="4dp"
                         android:paddingVertical="2dp"
                         android:textSize="12sp"
