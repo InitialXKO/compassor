@@ -31,15 +31,6 @@ class NavigationManager @Inject constructor(
     val navStartLocation: StateFlow<LatLng?> = _navStartLocation.asStateFlow()
 
     fun startRouteNavigation(route: Route, startLocation: LatLng? = null) {
-        if (route.waypoints.size < 2) {
-            if (route.waypoints.size == 1) {
-                val wp = route.waypoints[0]
-                setTarget(LatLng(wp.latitude, wp.longitude), wp.name)
-            } else {
-                stopNavigation()
-            }
-            return
-        }
         _currentRoute.value = route
         _currentWaypointIndex.value = 0
         _navStartLocation.value = startLocation
@@ -197,18 +188,11 @@ class NavigationManager @Inject constructor(
         if (routeId != -1L) {
             val route = routeRepository.getRouteWithWaypoints(routeId)
             if (route != null && route.waypoints.isNotEmpty()) {
-                if (route.waypoints.size < 2) {
-                    val wp = route.waypoints[0]
-                    setTarget(LatLng(wp.latitude, wp.longitude), wp.name)
-                } else {
-                    _currentRoute.value = route
-                    val index = navigationRepository.getNavIndex().coerceIn(0, route.waypoints.size - 1)
-                    _currentWaypointIndex.value = index
-                    val waypoint = route.waypoints[index]
-                    _targetLocation.value = Pair(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
-                }
-            } else {
-                stopNavigation()
+                _currentRoute.value = route
+                val index = navigationRepository.getNavIndex().coerceIn(0, route.waypoints.size - 1)
+                _currentWaypointIndex.value = index
+                val waypoint = route.waypoints[index]
+                _targetLocation.value = Pair(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
             }
         } else {
             val latLng = navigationRepository.getNavTargetLatLng()

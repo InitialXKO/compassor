@@ -373,16 +373,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun updateNavButtonsVisibility(route: Route?) {
-        if (route != null && route.waypoints.size >= 2) {
-            skipNavButton.visibility = View.VISIBLE
-            prevNavButton.visibility = View.VISIBLE
+        if (route != null) {
             val index = navigationViewModel.currentWaypointIndex.value
             val canSkip = route.isLooping || index < route.waypoints.size - 1
             val canPrev = route.isLooping || index > 0
-            skipNavButton.isEnabled = canSkip
-            prevNavButton.isEnabled = canPrev
-            skipNavButton.alpha = if (canSkip) 1.0f else 0.5f
-            prevNavButton.alpha = if (canPrev) 1.0f else 0.5f
+
+            skipNavButton.visibility = if (canSkip) View.VISIBLE else View.GONE
+            prevNavButton.visibility = if (canPrev) View.VISIBLE else View.GONE
         } else {
             skipNavButton.visibility = View.GONE
             prevNavButton.visibility = View.GONE
