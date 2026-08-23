@@ -315,6 +315,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 launch {
                     combine(
                         navigationViewModel.currentRoute,
+                        navigationViewModel.currentWaypointIndex
+                    ) { route, _ -> route }.collectLatest { route ->
+                        updateNavButtonsVisibility(route)
+                    }
+                }
+
+                launch {
+                    combine(
+                        navigationViewModel.currentRoute,
                         navigationViewModel.currentWaypointIndex,
                         navigationViewModel.navStartLocation,
                         locationViewModel.currentLocation
