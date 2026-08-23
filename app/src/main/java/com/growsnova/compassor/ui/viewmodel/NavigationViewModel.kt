@@ -226,9 +226,7 @@ class NavigationViewModel @Inject constructor(
             // If it's the current route, restart or update it
             if (currentRoute.value?.id == route.id) {
                 val updated = routeRepository.getRouteWithWaypoints(route.id)
-                if (updated != null) {
-                    startRouteNavigation(updated)
-                }
+                updated?.let { startRouteNavigation(it) }
             }
         }
     }
