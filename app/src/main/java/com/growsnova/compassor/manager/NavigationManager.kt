@@ -31,6 +31,15 @@ class NavigationManager @Inject constructor(
     val navStartLocation: StateFlow<LatLng?> = _navStartLocation.asStateFlow()
 
     fun startRouteNavigation(route: Route, startLocation: LatLng? = null) {
+        if (route.waypoints.size < 2) {
+            if (route.waypoints.size == 1) {
+                val singleWaypoint = route.waypoints[0]
+                setTarget(LatLng(singleWaypoint.latitude, singleWaypoint.longitude), singleWaypoint.name)
+            } else {
+                stopNavigation()
+            }
+            return
+        }
         _currentRoute.value = route
         _currentWaypointIndex.value = 0
         _navStartLocation.value = startLocation
@@ -63,6 +72,7 @@ class NavigationManager @Inject constructor(
         if (_currentRoute.value?.id == routeId) {
             _currentRoute.value = null
             _currentWaypointIndex.value = -1
+            _navStartLocation.value = null
             saveState()
         }
     }
@@ -187,12 +197,17 @@ class NavigationManager @Inject constructor(
         val routeId = navigationRepository.getNavRouteId()
         if (routeId != -1L) {
             val route = routeRepository.getRouteWithWaypoints(routeId)
-            if (route != null && route.waypoints.isNotEmpty()) {
+            if (route != null && route.waypoints.size >= 2) {
                 _currentRoute.value = route
                 val index = navigationRepository.getNavIndex().coerceIn(0, route.waypoints.size - 1)
                 _currentWaypointIndex.value = index
                 val waypoint = route.waypoints[index]
                 _targetLocation.value = Pair(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
+            } else if (route != null && route.waypoints.size == 1) {
+                val waypoint = route.waypoints[0]
+                setTarget(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
+            } else {
+                stopNavigation()
             }
         } else {
             val latLng = navigationRepository.getNavTargetLatLng()
