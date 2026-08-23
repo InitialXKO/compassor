@@ -68,8 +68,9 @@ class NavigationManager @Inject constructor(
         navigationRepository.clearNavigationState()
     }
 
-    fun onRouteDeleted(routeId: Long) {
-        if (_currentRoute.value?.id == routeId) {
+    fun onRouteDeleted(routeId: Long, routeName: String? = null) {
+        val current = _currentRoute.value
+        if (current != null && (current.id == routeId || (routeName != null && current.name == routeName))) {
             _currentRoute.value = null
             _currentWaypointIndex.value = -1
             _navStartLocation.value = null
@@ -77,19 +78,26 @@ class NavigationManager @Inject constructor(
         }
     }
 
-    fun onWaypointDeleted(waypointId: Long) {
+    fun onWaypointDeleted(waypoint: Waypoint) {
         val activeRoute = _currentRoute.value ?: run {
-            if (_targetLocation.value != null) {
-                // If single-target navigation was heading to a waypoint by location, check if target was deleted
-                // Note: single target handled by ViewModel or caller if needed
+            _targetLocation.value?.let { target ->
+                val dist = FloatArray(1)
+                Location.distanceBetween(target.first.latitude, target.first.longitude, waypoint.latitude, waypoint.longitude, dist)
+                if (dist[0] < 5f || target.second == waypoint.name) {
+                    stopNavigation()
+                }
             }
             return
         }
 
-        val deletedIndex = activeRoute.waypoints.indexOfFirst { it.id == waypointId }
+        val deletedIndex = activeRoute.waypoints.indexOfFirst {
+            (it.id != 0L && it.id == waypoint.id) ||
+            (it.latitude == waypoint.latitude && it.longitude == waypoint.longitude) ||
+            it.name == waypoint.name
+        }
         if (deletedIndex == -1) return
 
-        val newWaypoints = activeRoute.waypoints.filter { it.id != waypointId }.toMutableList()
+        val newWaypoints = activeRoute.waypoints.filterIndexed { i, _ -> i != deletedIndex }.toMutableList()
         if (newWaypoints.size < 2) {
             if (newWaypoints.size == 1) {
                 val remainingWaypoint = newWaypoints[0]
