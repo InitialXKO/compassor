@@ -30,11 +30,16 @@ class NavigationManager @Inject constructor(
     private val _navStartLocation = MutableStateFlow<LatLng?>(null)
     val navStartLocation: StateFlow<LatLng?> = _navStartLocation.asStateFlow()
 
+    private var activeRouteId: Long? = null
+    private var activeTargetWaypointId: Long? = null
+
     fun startRouteNavigation(route: Route, startLocation: LatLng? = null) {
         if (route.waypoints.size < 2) {
             if (route.waypoints.size == 1) {
                 val singleWaypoint = route.waypoints[0]
                 setTarget(LatLng(singleWaypoint.latitude, singleWaypoint.longitude), singleWaypoint.name)
+                activeRouteId = route.id
+                activeTargetWaypointId = singleWaypoint.id
             } else {
                 stopNavigation()
             }
@@ -43,7 +48,9 @@ class NavigationManager @Inject constructor(
         _currentRoute.value = route
         _currentWaypointIndex.value = 0
         _navStartLocation.value = startLocation
+        activeRouteId = route.id
         val firstWaypoint = route.waypoints[0]
+        activeTargetWaypointId = firstWaypoint.id
         updateTargetInternal(LatLng(firstWaypoint.latitude, firstWaypoint.longitude), firstWaypoint.name)
         saveState()
     }
@@ -52,6 +59,8 @@ class NavigationManager @Inject constructor(
         _currentRoute.value = null
         _currentWaypointIndex.value = -1
         _navStartLocation.value = null
+        activeRouteId = null
+        activeTargetWaypointId = null
         updateTargetInternal(latLng, name)
         saveState()
     }
@@ -65,63 +74,57 @@ class NavigationManager @Inject constructor(
         _currentWaypointIndex.value = -1
         _navStartLocation.value = null
         _targetLocation.value = null
+        activeRouteId = null
+        activeTargetWaypointId = null
         navigationRepository.clearNavigationState()
     }
 
-    fun onRouteDeleted(routeId: Long, routeName: String? = null) {
-        val current = _currentRoute.value
-        if (current != null && (current.id == routeId || (routeName != null && current.name == routeName))) {
-            _currentRoute.value = null
-            _currentWaypointIndex.value = -1
-            _navStartLocation.value = null
-            saveState()
+    fun onRouteDeleted(routeId: Long) {
+        if (_currentRoute.value?.id == routeId || activeRouteId == routeId) {
+            stopNavigation()
         }
     }
 
-    fun onWaypointDeleted(waypoint: Waypoint) {
-        val activeRoute = _currentRoute.value ?: run {
-            _targetLocation.value?.let { target ->
-                val dist = FloatArray(1)
-                Location.distanceBetween(target.first.latitude, target.first.longitude, waypoint.latitude, waypoint.longitude, dist)
-                if (dist[0] < 5f || target.second == waypoint.name) {
+    fun onWaypointDeleted(waypointId: Long) {
+        val activeRoute = _currentRoute.value
+        if (activeRoute != null) {
+            val deletedIndex = activeRoute.waypoints.indexOfFirst { it.id == waypointId }
+            if (deletedIndex == -1) return
+
+            val newWaypoints = activeRoute.waypoints.filter { it.id != waypointId }.toMutableList()
+            if (newWaypoints.size < 2) {
+                if (newWaypoints.size == 1) {
+                    val remainingWaypoint = newWaypoints[0]
+                    val routeId = activeRoute.id
+                    setTarget(LatLng(remainingWaypoint.latitude, remainingWaypoint.longitude), remainingWaypoint.name)
+                    activeRouteId = routeId
+                    activeTargetWaypointId = remainingWaypoint.id
+                } else {
                     stopNavigation()
                 }
+                return
             }
-            return
-        }
 
-        val deletedIndex = activeRoute.waypoints.indexOfFirst {
-            (it.id != 0L && it.id == waypoint.id) ||
-            (it.latitude == waypoint.latitude && it.longitude == waypoint.longitude) ||
-            it.name == waypoint.name
-        }
-        if (deletedIndex == -1) return
+            val currentIndex = _currentWaypointIndex.value
+            val updatedRoute = activeRoute.copy(waypoints = newWaypoints)
 
-        val newWaypoints = activeRoute.waypoints.filterIndexed { i, _ -> i != deletedIndex }.toMutableList()
-        if (newWaypoints.size < 2) {
-            if (newWaypoints.size == 1) {
-                val remainingWaypoint = newWaypoints[0]
-                setTarget(LatLng(remainingWaypoint.latitude, remainingWaypoint.longitude), remainingWaypoint.name)
-            } else {
+            val newIndex = when {
+                currentIndex > deletedIndex -> currentIndex - 1
+                currentIndex == deletedIndex -> currentIndex.coerceAtMost(newWaypoints.size - 1)
+                else -> currentIndex
+            }
+
+            _currentRoute.value = updatedRoute
+            _currentWaypointIndex.value = newIndex
+            val targetWaypoint = newWaypoints[newIndex]
+            activeTargetWaypointId = targetWaypoint.id
+            updateTargetInternal(LatLng(targetWaypoint.latitude, targetWaypoint.longitude), targetWaypoint.name)
+            saveState()
+        } else if (_targetLocation.value != null) {
+            if (activeTargetWaypointId == waypointId && waypointId != 0L) {
                 stopNavigation()
             }
-            return
         }
-
-        val currentIndex = _currentWaypointIndex.value
-        val updatedRoute = activeRoute.copy(waypoints = newWaypoints)
-
-        val newIndex = when {
-            currentIndex > deletedIndex -> currentIndex - 1
-            currentIndex == deletedIndex -> currentIndex.coerceAtMost(newWaypoints.size - 1)
-            else -> currentIndex
-        }
-
-        _currentRoute.value = updatedRoute
-        _currentWaypointIndex.value = newIndex
-        val targetWaypoint = newWaypoints[newIndex]
-        updateTargetInternal(LatLng(targetWaypoint.latitude, targetWaypoint.longitude), targetWaypoint.name)
-        saveState()
     }
 
     fun skipNextWaypoint(): String? {
@@ -130,12 +133,14 @@ class NavigationManager @Inject constructor(
         if (index < route.waypoints.size - 1) {
             _currentWaypointIndex.value = index + 1
             val nextWaypoint = route.waypoints[index + 1]
+            activeTargetWaypointId = nextWaypoint.id
             updateTargetInternal(LatLng(nextWaypoint.latitude, nextWaypoint.longitude), nextWaypoint.name)
             saveState()
             return nextWaypoint.name
         } else if (route.isLooping) {
             _currentWaypointIndex.value = 0
             val firstWaypoint = route.waypoints[0]
+            activeTargetWaypointId = firstWaypoint.id
             updateTargetInternal(LatLng(firstWaypoint.latitude, firstWaypoint.longitude), firstWaypoint.name)
             saveState()
             return firstWaypoint.name
@@ -150,6 +155,7 @@ class NavigationManager @Inject constructor(
         if (index > 0) {
             _currentWaypointIndex.value = index - 1
             val prevWaypoint = route.waypoints[index - 1]
+            activeTargetWaypointId = prevWaypoint.id
             updateTargetInternal(LatLng(prevWaypoint.latitude, prevWaypoint.longitude), prevWaypoint.name)
             saveState()
             return prevWaypoint.name
@@ -157,6 +163,7 @@ class NavigationManager @Inject constructor(
             val lastIndex = route.waypoints.size - 1
             _currentWaypointIndex.value = lastIndex
             val lastWaypoint = route.waypoints[lastIndex]
+            activeTargetWaypointId = lastWaypoint.id
             updateTargetInternal(LatLng(lastWaypoint.latitude, lastWaypoint.longitude), lastWaypoint.name)
             saveState()
             return lastWaypoint.name
@@ -210,10 +217,14 @@ class NavigationManager @Inject constructor(
                 val index = navigationRepository.getNavIndex().coerceIn(0, route.waypoints.size - 1)
                 _currentWaypointIndex.value = index
                 val waypoint = route.waypoints[index]
+                activeRouteId = route.id
+                activeTargetWaypointId = waypoint.id
                 _targetLocation.value = Pair(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
             } else if (route != null && route.waypoints.size == 1) {
                 val waypoint = route.waypoints[0]
                 setTarget(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
+                activeRouteId = route.id
+                activeTargetWaypointId = waypoint.id
             } else {
                 stopNavigation()
             }
