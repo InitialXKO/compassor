@@ -220,7 +220,7 @@ object DefaultSkins {
     val skins = themes.map { it.skin }
 
     fun getSkinByName(name: String, context: Context? = null): RadarSkin {
-        return when (name) {
+        val baseSkin = when (name) {
             "Morandi" -> morandi
             "Mondrian" -> mondrian
             "Cyberpunk" -> cyberpunk
@@ -237,5 +237,16 @@ object DefaultSkins {
             "Default" -> context?.let { RadarSkin.createFromTheme(it) } ?: default
             else -> context?.let { RadarSkin.createFromTheme(it) } ?: default
         }
+
+        return if (context != null && isDarkMode(context)) {
+            baseSkin.toDarkMode()
+        } else {
+            baseSkin
+        }
+    }
+
+    private fun isDarkMode(context: Context): Boolean {
+        val uiMode = context.resources.configuration.uiMode
+        return (uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
     }
 }
