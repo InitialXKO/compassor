@@ -8,13 +8,14 @@
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/photoCard"
+        style="@style/Widget.Compassor.ModernCard"
         android:layout_width="match_parent"
         android:layout_height="160dp"
         android:layout_marginBottom="@dimen/spacing_sm"
         android:visibility="gone"
-        app:cardCornerRadius="@dimen/corner_radius_sm"
+        app:cardCornerRadius="8dp"
         app:cardElevation="0dp"
-        app:strokeWidth="@dimen/stroke_width_thin"
+        app:strokeWidth="1dp"
         app:strokeColor="?attr/colorOutlineVariant">
         <ImageView
             android:id="@+id/waypointPhoto"

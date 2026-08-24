@@ -199,21 +199,15 @@ class RadarCompassView @JvmOverloads constructor(
     }
 
     private fun drawScanGlow(canvas: Canvas, centerX: Float, centerY: Float, radius: Float) {
-        val sweepGradient = SweepGradient(centerX, centerY, 
-            intArrayOf(Color.TRANSPARENT, Color.TRANSPARENT, Color.parseColor("#2058A6FF"), Color.parseColor("#4058A6FF")),
-            floatArrayOf(0f, (scanAngle - 45f) / 360f, (scanAngle - 10f) / 360f, scanAngle / 360f)
-        )
-        
-        // Handle wrap around for SweepGradient if necessary, or just rotate the canvas
         canvas.save()
         canvas.rotate(scanAngle, centerX, centerY)
         val colors = intArrayOf(
             Color.TRANSPARENT, 
             Color.TRANSPARENT, 
-            skin.compassRingColor and 0x00FFFFFF or 0x10000000, 
-            skin.compassRingColor and 0x00FFFFFF or 0x30000000
+            skin.compassRingColor and 0x00FFFFFF or 0x15000000,
+            skin.compassRingColor and 0x00FFFFFF or 0x40000000
         )
-        val positions = floatArrayOf(0f, 0.7f, 0.9f, 1f)
+        val positions = floatArrayOf(0f, 0.65f, 0.88f, 1f)
         scanPaint.shader = SweepGradient(centerX, centerY, colors, positions)
         canvas.drawCircle(centerX, centerY, radius, scanPaint)
         canvas.restore()

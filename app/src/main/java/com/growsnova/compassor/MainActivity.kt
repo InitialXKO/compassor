@@ -787,36 +787,92 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun showSkinSelectionDialog() {
-        val skinNames = arrayOf(getString(R.string.skin_default), getString(R.string.skin_forest), getString(R.string.skin_ocean), getString(R.string.import_skin))
-        val skinKeys = arrayOf("Default", "Forest", "Ocean", "Import")
-        val options = skinNames.mapIndexed { i, name -> if (i < 3) "$name - ${getSkinDesc(i)}" else name }.toTypedArray()
-        
-        DialogUtils.showOptionsDialog(this, getString(R.string.select_skin), options) { which ->
-            if (which < 3) {
-                val key = skinKeys[which]
-                navigationRepository.saveSkinName(key)
-                applySkin(key)
-            } else {
-                skinPickerLauncher.launch(arrayOf("application/json"))
-            }
-        }
-    }
+        val dialogView = layoutInflater.inflate(R.layout.dialog_skin_selection, null)
+        val recyclerView = dialogView.findViewById<RecyclerView>(R.id.skinRecyclerView)
+        val btnImport = dialogView.findViewById<MaterialButton>(R.id.btnImportSkin)
 
-    private fun getSkinDesc(i: Int) = when(i) {
-        0 -> getString(R.string.skin_default_desc)
-        1 -> getString(R.string.skin_forest_desc)
-        2 -> getString(R.string.skin_ocean_desc)
-        else -> ""
+        recyclerView.layoutManager = LinearLayoutManager(this)
+
+        val currentKey = navigationRepository.getSkinName()
+        var selectedTheme: SkinTheme? = null
+
+        val alertDialog = MaterialAlertDialogBuilder(this)
+            .setView(dialogView)
+            .setPositiveButton(R.string.confirm) { _, _ ->
+                selectedTheme?.let {
+                    navigationRepository.saveSkinName(it.key)
+                    applySkin(it.key)
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .create()
+
+        val adapter = SkinAdapter(DefaultSkins.themes, currentKey) { theme ->
+            selectedTheme = theme
+            navigationRepository.saveSkinName(theme.key)
+            applySkin(theme.key)
+        }
+        recyclerView.adapter = adapter
+
+        btnImport.setOnClickListener {
+            alertDialog.dismiss()
+            skinPickerLauncher.launch(arrayOf("application/json"))
+        }
+
+        alertDialog.show()
     }
 
     private fun applySkin(skinName: String) {
-        val skin = when (skinName) {
-            "Forest" -> DefaultSkins.forest
-            "Ocean" -> DefaultSkins.ocean
-            else -> RadarSkin.createFromTheme(this)
-        }
+        val skin = DefaultSkins.getSkinByName(skinName, this)
         radarView.setSkin(skin)
         simpleCompassView.setSkin(skin)
+
+        // 1. Toolbar Frame
+        toolbar.setBackgroundColor(skin.backgroundColor)
+        toolbar.setTitleTextColor(skin.distanceTextColor)
+
+        // 2. Navigation Status Card
+        navigationStatusCard.setCardBackgroundColor(skin.backgroundColor)
+        navigationStatusCard.strokeColor = skin.compassRingColor
+        navTargetText.setTextColor(skin.distanceTextColor)
+        navDistanceText.setTextColor(skin.infoTextColor)
+
+        // 3. Navigation Drawer Layout, Menu & Selection Highlight Colors
+        navigationView.setBackgroundColor(skin.backgroundColor)
+
+        val states = arrayOf(
+            intArrayOf(android.R.attr.state_checked),
+            intArrayOf(android.R.attr.state_pressed),
+            intArrayOf()
+        )
+
+        val itemShapeDrawable = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+            cornerRadius = 4f * resources.displayMetrics.density
+            setColor((skin.compassRingColor and 0x00FFFFFF) or 0x30000000)
+        }
+        navigationView.itemBackground = itemShapeDrawable
+
+        val textColors = intArrayOf(skin.compassRingColor, skin.compassRingColor, skin.distanceTextColor)
+        val iconColors = intArrayOf(skin.compassRingColor, skin.compassRingColor, skin.infoTextColor)
+
+        navigationView.itemTextColor = android.content.res.ColorStateList(states, textColors)
+        navigationView.itemIconTintList = android.content.res.ColorStateList(states, iconColors)
+
+        // 4. Navigation Drawer Header
+        if (navigationView.headerCount > 0) {
+            val headerView = navigationView.getHeaderView(0)
+            headerView.setBackgroundColor(skin.backgroundColor)
+            headerView.findViewById<TextView>(R.id.appName)?.setTextColor(skin.distanceTextColor)
+            headerView.findViewById<TextView>(R.id.appSubtitle)?.setTextColor(skin.infoTextColor)
+        }
+
+        // 5. Map Guidance Line
+        val currentTarget = navigationViewModel.targetLocation.value
+        val lastLoc = locationViewModel.currentLocation.value
+        if (currentTarget != null && lastLoc != null) {
+            mapManager.updateGuidanceLine(lastLoc, currentTarget.first, skin.targetColor)
+        }
     }
 
     private fun showSettingsDialog() {

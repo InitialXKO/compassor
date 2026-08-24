@@ -22,11 +22,16 @@
     <dimen name="padding_lg">24dp</dimen>
     <dimen name="padding_xl">32dp</dimen>
 
-    <!-- Corner Radius -->
-    <dimen name="corner_radius_sm">8dp</dimen>
-    <dimen name="corner_radius_md">12dp</dimen>
-    <dimen name="corner_radius_lg">16dp</dimen>
-    <dimen name="corner_radius_xl">24dp</dimen>
+    <!-- Corner Radius - Microsoft Fluent Design System Specifications -->
+    <dimen name="corner_radius_sm">4dp</dimen>
+    <dimen name="corner_radius_md">6dp</dimen>
+    <dimen name="corner_radius_lg">8dp</dimen>
+    <dimen name="corner_radius_xl">12dp</dimen>
+
+    <!-- Microsoft Fluent Card & List Geometry Tokens -->
+    <dimen name="fluent_card_spacing">12dp</dimen>
+    <dimen name="fluent_list_item_spacing">6dp</dimen>
+    <dimen name="fluent_content_padding_safe">16dp</dimen>
 
     <!-- Elevation -->
     <dimen name="elevation_sm">2dp</dimen>
@@ -46,7 +51,7 @@
 
     <!-- Card dimensions -->
     <dimen name="card_elevation">2dp</dimen>
-    <dimen name="card_corner_radius">12dp</dimen>
+    <dimen name="card_corner_radius">8dp</dimen>
 
     <!-- Touch targets -->
     <dimen name="touch_target_min">48dp</dimen>

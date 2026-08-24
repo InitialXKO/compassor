@@ -8,8 +8,9 @@
     app:behavior_hideable="true"
     app:behavior_peekHeight="0dp"
     app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior"
-    app:shapeAppearanceOverlay="@style/ShapeAppearance.Compassor.MediumComponent"
-    android:elevation="8dp">
+    style="@style/Widget.Compassor.ModernCard"
+    app:cardCornerRadius="8dp"
+    android:elevation="4dp">
 
     <LinearLayout
         android:layout_width="match_parent"
