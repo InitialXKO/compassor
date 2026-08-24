@@ -44,13 +44,14 @@
         <!-- Selected Waypoints Card -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/selectedWaypointsCard"
+            style="@style/Widget.Compassor.ModernCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginStart="@dimen/margin_md"
             android:layout_marginEnd="@dimen/margin_md"
             android:layout_marginBottom="@dimen/margin_md"
-            app:cardCornerRadius="@dimen/corner_radius_lg"
-            app:cardElevation="@dimen/card_elevation"
+            app:cardCornerRadius="8dp"
+            app:cardElevation="2dp"
             app:layout_constraintBottom_toTopOf="@id/saveRouteButton"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintEnd_toEndOf="parent">
