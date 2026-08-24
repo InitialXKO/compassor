@@ -6,18 +6,33 @@ import android.util.TypedValue
 import androidx.annotation.AttrRes
 import androidx.core.content.ContextCompat
 
+fun parseHexColor(colorString: String): Int {
+    return try {
+        val cleanHex = colorString.removePrefix("#")
+        if (cleanHex.length == 6) {
+            (0xFF000000.toLong() or cleanHex.toLong(16)).toInt()
+        } else if (cleanHex.length == 8) {
+            cleanHex.toLong(16).toInt()
+        } else {
+            0
+        }
+    } catch (e: Exception) {
+        0
+    }
+}
+
 data class RadarSkin(
-    val backgroundColor: Int = Color.parseColor("#0D1117"),
-    val compassRingColor: Int = Color.parseColor("#58A6FF"),
-    val innerRingColor: Int = Color.parseColor("#21262D"),
-    val crosshairColor: Int = Color.parseColor("#F0F6FC"),
-    val targetColor: Int = Color.parseColor("#FF9500"),
-    val targetRingColor: Int = Color.parseColor("#FF9500"),
-    val targetLineColor: Int = Color.parseColor("#FF9500"),
-    val distanceTextColor: Int = Color.parseColor("#F0F6FC"),
-    val infoTextColor: Int = Color.parseColor("#8B949E"),
-    val directionTextColor: Int = Color.parseColor("#58A6FF"),
-    val tickColor: Int = Color.parseColor("#30363D")
+    val backgroundColor: Int = parseHexColor("#0D1117"),
+    val compassRingColor: Int = parseHexColor("#58A6FF"),
+    val innerRingColor: Int = parseHexColor("#21262D"),
+    val crosshairColor: Int = parseHexColor("#F0F6FC"),
+    val targetColor: Int = parseHexColor("#FF9500"),
+    val targetRingColor: Int = parseHexColor("#FF9500"),
+    val targetLineColor: Int = parseHexColor("#FF9500"),
+    val distanceTextColor: Int = parseHexColor("#F0F6FC"),
+    val infoTextColor: Int = parseHexColor("#8B949E"),
+    val directionTextColor: Int = parseHexColor("#58A6FF"),
+    val tickColor: Int = parseHexColor("#30363D")
 ) {
     companion object {
         fun createFromTheme(context: Context): RadarSkin {
