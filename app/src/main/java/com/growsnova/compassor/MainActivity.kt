@@ -837,10 +837,27 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         navTargetText.setTextColor(skin.distanceTextColor)
         navDistanceText.setTextColor(skin.infoTextColor)
 
-        // 3. Navigation Drawer Layout & Menu
+        // 3. Navigation Drawer Layout, Menu & Selection Highlight Colors
         navigationView.setBackgroundColor(skin.backgroundColor)
-        navigationView.itemTextColor = android.content.res.ColorStateList.valueOf(skin.distanceTextColor)
-        navigationView.itemIconTintList = android.content.res.ColorStateList.valueOf(skin.compassRingColor)
+
+        val states = arrayOf(
+            intArrayOf(android.R.attr.state_checked),
+            intArrayOf(android.R.attr.state_pressed),
+            intArrayOf()
+        )
+
+        val itemShapeDrawable = android.graphics.drawable.GradientDrawable().apply {
+            shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+            cornerRadius = 4f * resources.displayMetrics.density
+            setColor((skin.compassRingColor and 0x00FFFFFF) or 0x30000000)
+        }
+        navigationView.itemBackground = itemShapeDrawable
+
+        val textColors = intArrayOf(skin.compassRingColor, skin.compassRingColor, skin.distanceTextColor)
+        val iconColors = intArrayOf(skin.compassRingColor, skin.compassRingColor, skin.infoTextColor)
+
+        navigationView.itemTextColor = android.content.res.ColorStateList(states, textColors)
+        navigationView.itemIconTintList = android.content.res.ColorStateList(states, iconColors)
 
         // 4. Navigation Drawer Header
         if (navigationView.headerCount > 0) {
