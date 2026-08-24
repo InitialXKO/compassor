@@ -44,22 +44,25 @@ data class RadarSkin(
             return this
         }
 
-        val ringR = (compassRingColor shr 16) and 0xFF
-        val ringG = (compassRingColor shr 8) and 0xFF
-        val ringB = compassRingColor and 0xFF
-        val darkBgR = (14 + ringR * 0.08).toInt().coerceIn(10, 30)
-        val darkBgG = (16 + ringG * 0.08).toInt().coerceIn(10, 30)
-        val darkBgB = (22 + ringB * 0.08).toInt().coerceIn(10, 35)
-        val darkBg = (0xFF000000.toLong() or (darkBgR.toLong() shl 16) or (darkBgG.toLong() shl 8) or darkBgB.toLong()).toInt()
+        val swappedBg = invertColor(backgroundColor)
+        val swappedFg = backgroundColor
 
         return this.copy(
-            backgroundColor = darkBg,
-            crosshairColor = parseHexColor("#F0F6FC"),
-            distanceTextColor = parseHexColor("#F0F6FC"),
-            infoTextColor = parseHexColor("#8B949E"),
-            innerRingColor = parseHexColor("#21262D"),
-            tickColor = parseHexColor("#30363D")
+            backgroundColor = swappedBg,
+            crosshairColor = swappedFg,
+            distanceTextColor = swappedFg,
+            infoTextColor = invertColor(infoTextColor),
+            innerRingColor = invertColor(innerRingColor),
+            tickColor = invertColor(tickColor)
         )
+    }
+
+    private fun invertColor(color: Int): Int {
+        val a = (color shr 24) and 0xFF
+        val invertedR = 255 - ((color shr 16) and 0xFF)
+        val invertedG = 255 - ((color shr 8) and 0xFF)
+        val invertedB = 255 - (color and 0xFF)
+        return (a shl 24) or (invertedR shl 16) or (invertedG shl 8) or invertedB
     }
 
     companion object {

@@ -827,8 +827,30 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         radarView.setSkin(skin)
         simpleCompassView.setSkin(skin)
 
-        navigationStatusCard.strokeColor = skin.compassRingColor
+        // 1. Toolbar Frame
+        toolbar.setBackgroundColor(skin.backgroundColor)
+        toolbar.setTitleTextColor(skin.distanceTextColor)
 
+        // 2. Navigation Status Card
+        navigationStatusCard.setCardBackgroundColor(skin.backgroundColor)
+        navigationStatusCard.strokeColor = skin.compassRingColor
+        navTargetText.setTextColor(skin.distanceTextColor)
+        navDistanceText.setTextColor(skin.infoTextColor)
+
+        // 3. Navigation Drawer Layout & Menu
+        navigationView.setBackgroundColor(skin.backgroundColor)
+        navigationView.itemTextColor = android.content.res.ColorStateList.valueOf(skin.distanceTextColor)
+        navigationView.itemIconTintList = android.content.res.ColorStateList.valueOf(skin.compassRingColor)
+
+        // 4. Navigation Drawer Header
+        if (navigationView.headerCount > 0) {
+            val headerView = navigationView.getHeaderView(0)
+            headerView.setBackgroundColor(skin.backgroundColor)
+            headerView.findViewById<TextView>(R.id.appName)?.setTextColor(skin.distanceTextColor)
+            headerView.findViewById<TextView>(R.id.appSubtitle)?.setTextColor(skin.infoTextColor)
+        }
+
+        // 5. Map Guidance Line
         val currentTarget = navigationViewModel.targetLocation.value
         val lastLoc = locationViewModel.currentLocation.value
         if (currentTarget != null && lastLoc != null) {
