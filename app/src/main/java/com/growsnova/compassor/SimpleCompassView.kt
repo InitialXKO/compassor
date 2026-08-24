@@ -23,6 +23,10 @@ class SimpleCompassView @JvmOverloads constructor(
 
     private var skin: RadarSkin = RadarSkin()
 
+    private val backgroundPaint = Paint().apply {
+        style = Paint.Style.FILL
+    }
+
     private val arrowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
     }
@@ -34,6 +38,11 @@ class SimpleCompassView @JvmOverloads constructor(
 
     private val secondaryTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
+    }
+
+    private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 2f
     }
 
     private val arrowPath = Path()
@@ -54,9 +63,11 @@ class SimpleCompassView @JvmOverloads constructor(
 
     fun setSkin(skin: RadarSkin) {
         this.skin = skin
+        backgroundPaint.color = skin.backgroundColor
         arrowPaint.color = skin.targetColor
         textPaint.color = skin.distanceTextColor
         secondaryTextPaint.color = skin.infoTextColor
+        ringPaint.color = skin.compassRingColor
         invalidate()
     }
 
@@ -73,29 +84,34 @@ class SimpleCompassView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), backgroundPaint)
+
         val centerX = width / 2f
         val centerY = height / 2f
-        val radius = minOf(centerX, centerY) * 0.8f
+        val radius = minOf(centerX, centerY) * 0.7f
+
+        // Outer Fluent Accent Ring
+        canvas.drawCircle(centerX, centerY - height * 0.05f, radius * 0.85f, ringPaint)
 
         // Draw distance
-        textPaint.textSize = height * 0.15f
+        textPaint.textSize = height * 0.12f
         val distStr = if (distance < 1000) "${distance.toInt()}m" else "%.1fkm".format(distance / 1000)
-        canvas.drawText(distStr, centerX, centerY + height * 0.35f, textPaint)
+        canvas.drawText(distStr, centerX, centerY + height * 0.32f, textPaint)
 
         // Draw arrow
         var relativeBearing = bearing - deviceAzimuth
         canvas.save()
-        canvas.translate(centerX, centerY - height * 0.1f)
+        canvas.translate(centerX, centerY - height * 0.05f)
         canvas.rotate(relativeBearing)
-        val scale = height * 0.004f
+        val scale = height * 0.0035f
         canvas.scale(scale, scale)
         canvas.drawPath(arrowPath, arrowPaint)
         canvas.restore()
         
         // Draw relative direction hint
-        secondaryTextPaint.textSize = height * 0.08f
+        secondaryTextPaint.textSize = height * 0.065f
         val hint = getRelativeDirection(relativeBearing)
-        canvas.drawText(hint, centerX, centerY + height * 0.45f, secondaryTextPaint)
+        canvas.drawText(hint, centerX, centerY + height * 0.42f, secondaryTextPaint)
     }
 
     private fun getRelativeDirection(angle: Float): String {
