@@ -102,16 +102,20 @@
         <item name="cornerSize">16dp</item>
     </style>
 
-    <!-- Text Styles -->
+    <!-- Microsoft Fluent Typography Styles (Segoe UI Style) -->
     <style name="TextAppearance.Compassor.Headline" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textStyle">bold</item>
         <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
 
     <style name="TextAppearance.Compassor.Body" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:fontFamily">sans-serif</item>
         <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
 
     <style name="TextAppearance.Compassor.Caption" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:fontFamily">sans-serif</item>
         <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
     </style>
 

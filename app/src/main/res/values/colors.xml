@@ -76,6 +76,14 @@
     <color name="surface_2">#F5F3F0</color>
     <color name="surface_3">#EBE8E4</color>
 
+    <!-- Microsoft Fluent Design System Color Tokens -->
+    <color name="fluent_accent">#0078D4</color>
+    <color name="fluent_red">#E51400</color>
+    <color name="fluent_success">#107C10</color>
+    <color name="fluent_surface">#FFFFFF</color>
+    <color name="fluent_surface_variant">#F3F2F1</color>
+    <color name="fluent_border">#E1DFDD</color>
+
     <!-- General UI Colors -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>

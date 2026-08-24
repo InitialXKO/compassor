@@ -33,23 +33,23 @@
                 android:id="@+id/swatchBg"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:background="@drawable/status_dot"
+                android:background="@drawable/fluent_swatch_tile"
                 android:elevation="1dp" />
 
             <View
                 android:id="@+id/swatchRing"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:layout_marginStart="-8dp"
-                android:background="@drawable/status_dot"
+                android:layout_marginStart="-6dp"
+                android:background="@drawable/fluent_swatch_tile"
                 android:elevation="2dp" />
 
             <View
                 android:id="@+id/swatchTarget"
                 android:layout_width="24dp"
                 android:layout_height="24dp"
-                android:layout_marginStart="-8dp"
-                android:background="@drawable/status_dot"
+                android:layout_marginStart="-6dp"
+                android:background="@drawable/fluent_swatch_tile"
                 android:elevation="3dp" />
 
         </LinearLayout>
