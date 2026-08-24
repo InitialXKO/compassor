@@ -22,11 +22,11 @@
     <dimen name="padding_lg">24dp</dimen>
     <dimen name="padding_xl">32dp</dimen>
 
-    <!-- Corner Radius -->
-    <dimen name="corner_radius_sm">8dp</dimen>
-    <dimen name="corner_radius_md">12dp</dimen>
-    <dimen name="corner_radius_lg">16dp</dimen>
-    <dimen name="corner_radius_xl">24dp</dimen>
+    <!-- Corner Radius - Modern Design Language -->
+    <dimen name="corner_radius_sm">10dp</dimen>
+    <dimen name="corner_radius_md">16dp</dimen>
+    <dimen name="corner_radius_lg">20dp</dimen>
+    <dimen name="corner_radius_xl">28dp</dimen>
 
     <!-- Elevation -->
     <dimen name="elevation_sm">2dp</dimen>
@@ -45,8 +45,8 @@
     <dimen name="radar_height_default">280dp</dimen>
 
     <!-- Card dimensions -->
-    <dimen name="card_elevation">2dp</dimen>
-    <dimen name="card_corner_radius">12dp</dimen>
+    <dimen name="card_elevation">4dp</dimen>
+    <dimen name="card_corner_radius">24dp</dimen>
 
     <!-- Touch targets -->
     <dimen name="touch_target_min">48dp</dimen>

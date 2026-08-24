@@ -38,20 +38,17 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintVertical_weight="1" />
 
-            <!-- Navigation Status Overlay Bar -->
+            <!-- Navigation Status Overlay Bar - Modern Floating Style -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/navigationStatusCard"
+                style="@style/Widget.Compassor.ModernFloatingStatusCard"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
-                android:layout_marginTop="6dp"
+                android:layout_marginTop="8dp"
                 android:layout_marginEnd="16dp"
-                android:layout_marginBottom="6dp"
+                android:layout_marginBottom="8dp"
                 android:visibility="gone"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="3dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="?attr/colorOutlineVariant"
                 app:layout_constraintTop_toBottomOf="@id/mapView"
                 app:layout_constraintBottom_toTopOf="@id/radarCard"
                 app:layout_constraintStart_toStartOf="parent"
@@ -152,13 +149,14 @@
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/radarCard"
+                style="@style/Widget.Compassor.ModernCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="16dp"
                 android:layout_marginBottom="16dp"
-                app:cardCornerRadius="24dp"
-                app:cardElevation="@dimen/card_elevation"
+                app:cardCornerRadius="28dp"
+                app:cardElevation="6dp"
                 app:layout_constraintTop_toBottomOf="@id/navigationStatusCard"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
