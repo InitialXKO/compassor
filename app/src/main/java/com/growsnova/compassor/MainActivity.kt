@@ -82,6 +82,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private lateinit var navigationStatusCard: MaterialCardView
     private lateinit var navTargetText: android.widget.TextView
     private lateinit var navDistanceText: android.widget.TextView
+    private lateinit var navFloorText: android.widget.TextView
     private lateinit var stopNavButton: MaterialButton
     private lateinit var skipNavButton: MaterialButton
     private lateinit var prevNavButton: MaterialButton
@@ -179,12 +180,22 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         navigationStatusCard = findViewById(R.id.navigationStatusCard)
         navTargetText = findViewById(R.id.navTargetText)
         navDistanceText = findViewById(R.id.navDistanceText)
+        navFloorText = findViewById(R.id.navFloorText)
         stopNavButton = findViewById(R.id.stopNavButton)
         skipNavButton = findViewById(R.id.skipNavButton)
         prevNavButton = findViewById(R.id.prevNavButton)
         
+        navTargetText.isSelected = true
+
         stopNavButton.applyTouchScale()
-        stopNavButton.setOnClickListener { navigationViewModel.stopNavigation() }
+        stopNavButton.setOnClickListener {
+            DialogUtils.showConfirmationDialog(
+                this,
+                getString(R.string.stop_navigation),
+                getString(R.string.confirm_stop_navigation),
+                onPositive = { navigationViewModel.stopNavigation() }
+            )
+        }
         skipNavButton.applyTouchScale()
         skipNavButton.setOnClickListener { navigationViewModel.skipNextWaypoint() }
         prevNavButton.applyTouchScale()
@@ -286,17 +297,30 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                             window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
                             // 动态为地图设置 Padding 避免导航卡片遮挡原生地图控件
-                            val cardHeight = (120 * resources.displayMetrics.density).toInt()
                             val radarHeight = (220 * resources.displayMetrics.density).toInt()
-                            mapManager.updatePadding(top = cardHeight, bottom = radarHeight)
+                            mapManager.updatePadding(bottom = radarHeight)
+
+                            // 确保导航卡片立即显示并设置初始目标与楼层
+                            if (navigationStatusCard.visibility != View.VISIBLE) {
+                                navigationStatusCard.alpha = 0f
+                                navigationStatusCard.visibility = View.VISIBLE
+                                navigationStatusCard.animate().alpha(1f).setDuration(300).start()
+                            }
+                            navTargetText.text = getString(R.string.nav_target_format, target.second)
+                            navTargetText.isSelected = true
+                            val currentFloor = navigationViewModel.currentRoute.value?.waypoints?.getOrNull(navigationViewModel.currentWaypointIndex.value)?.floor
+                            val floorString = FloorUtils.formatFloor(currentFloor, this@MainActivity)
+                            if (floorString != null) {
+                                navFloorText.text = floorString
+                                navFloorText.visibility = View.VISIBLE
+                            } else {
+                                navFloorText.visibility = View.GONE
+                            }
 
                             // 立即使用最后已知位置绘制导向线并更新雷达/罗盘，避免等待下一个定位样本导致延迟
                             val lastLoc = locationViewModel.currentLocation.value
                             if (lastLoc != null) {
-                                // 更新导航逻辑（可选）以确保状态一致
                                 navigationViewModel.updateLocation(lastLoc)
-
-                                // 立刻刷新 UI 组件
                                 radarView.updateTarget(lastLoc, target.first)
                                 simpleCompassView.updateTarget(lastLoc, target.first)
                                 mapManager.updateGuidanceLine(lastLoc, target.first, getThemeColor(com.google.android.material.R.attr.colorPrimary))
@@ -396,9 +420,18 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             navigationStatusCard.animate().alpha(1f).setDuration(300).start()
         }
         navTargetText.text = getString(R.string.nav_target_format, update.targetName)
+        navTargetText.isSelected = true
         
         val distanceStr = if (update.distance < 1000) "${update.distance.toInt()}m" else "%.1fkm".format(update.distance / 1000f)
-        navDistanceText.text = getString(R.string.nav_distance_format, distanceStr)
+        navDistanceText.text = distanceStr
+
+        val floorString = FloorUtils.formatFloor(update.targetFloor, this)
+        if (floorString != null) {
+            navFloorText.text = floorString
+            navFloorText.visibility = View.VISIBLE
+        } else {
+            navFloorText.visibility = View.GONE
+        }
 
         updateNavButtonsVisibility(navigationViewModel.currentRoute.value)
 

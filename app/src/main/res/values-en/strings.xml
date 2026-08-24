@@ -83,7 +83,9 @@
     <string name="navigation_data_error">Navigation data error, invalid data cleared</string>
     <string name="nav_target_format">Target: %s</string>
     <string name="nav_distance_format">Distance: %s</string>
+    <string name="stop_navigation_bracket">[Stop Nav]</string>
     <string name="stop_navigation">Stop Navigation</string>
+    <string name="confirm_stop_navigation">Are you sure you want to stop navigation?</string>
     <string name="arrival_notification">Arrived at: %s</string>
     <string name="next_waypoint_notification">Next: %s</string>
     <string name="off_route_warning">Off route! Check direction</string>

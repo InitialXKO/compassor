@@ -152,20 +152,22 @@ class NavigationManager @Inject constructor(
         }
         val target = _targetLocation.value ?: return null
         val distance = calculateDistance(myLocation, target.first)
-
-        var result: NavigationUpdate? = NavigationUpdate(target.second, distance)
-
         val route = _currentRoute.value
+        val floor = route?.waypoints?.getOrNull(_currentWaypointIndex.value)?.floor
+
+        var result: NavigationUpdate? = NavigationUpdate(target.second, distance, floor)
+
         if (route != null) {
             if (distance < AppConstants.NAVIGATION_PROXIMITY_THRESHOLD) {
                 val nextName = skipNextWaypoint()
                 if (nextName != null) {
                     val nextTarget = _targetLocation.value
                     if (nextTarget != null) {
-                        result = NavigationUpdate(nextName, calculateDistance(myLocation, nextTarget.first), true)
+                        val nextFloor = route.waypoints.getOrNull(_currentWaypointIndex.value)?.floor
+                        result = NavigationUpdate(nextName, calculateDistance(myLocation, nextTarget.first), nextFloor, nextWaypointReached = true)
                     }
                 } else {
-                    result = NavigationUpdate(target.second, distance, false, true)
+                    result = NavigationUpdate(target.second, distance, floor, nextWaypointReached = false, routeCompleted = true)
                 }
             }
         }
@@ -212,6 +214,7 @@ class NavigationManager @Inject constructor(
     data class NavigationUpdate(
         val targetName: String,
         val distance: Float,
+        val targetFloor: Int? = null,
         val nextWaypointReached: Boolean = false,
         val routeCompleted: Boolean = false
     )
