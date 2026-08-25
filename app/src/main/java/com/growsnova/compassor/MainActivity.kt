@@ -867,12 +867,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             headerView.findViewById<TextView>(R.id.appSubtitle)?.setTextColor(skin.infoTextColor)
         }
 
-        // 5. Map Guidance Line
+        // 5. Map Guidance Line & Night Mode Style
         val currentTarget = navigationViewModel.targetLocation.value
         val lastLoc = locationViewModel.currentLocation.value
         if (currentTarget != null && lastLoc != null) {
             mapManager.updateGuidanceLine(lastLoc, currentTarget.first, skin.targetColor)
         }
+
+        val isNightMode = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        mapManager.applyMapStyle(isNightMode)
     }
 
     private fun showSettingsDialog() {

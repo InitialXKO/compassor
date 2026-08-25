@@ -35,6 +35,10 @@ class MapManager @Inject constructor(
         setupLocationSource()
     }
 
+    fun applyMapStyle(isNightMode: Boolean) {
+        aMap?.mapType = if (isNightMode) AMap.MAP_TYPE_NIGHT else AMap.MAP_TYPE_NORMAL
+    }
+
     private fun setupLocationSource() {
         aMap?.setLocationSource(object : com.amap.api.maps.LocationSource {
             override fun activate(listener: com.amap.api.maps.LocationSource.OnLocationChangedListener?) {
@@ -89,8 +93,9 @@ class MapManager @Inject constructor(
             uiSettings.isZoomControlsEnabled = true
             uiSettings.isCompassEnabled = true
             uiSettings.isMyLocationButtonEnabled = true
-            mapType = AMap.MAP_TYPE_NORMAL
         }
+        val isNight = (context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        applyMapStyle(isNight)
     }
 
     fun updatePadding(left: Int = 0, top: Int = 0, right: Int = 0, bottom: Int = 0) {
