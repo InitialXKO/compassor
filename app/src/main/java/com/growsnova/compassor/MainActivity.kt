@@ -95,7 +95,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private val mapViewModel: MapViewModel by viewModels()
     private val navigationViewModel: NavigationViewModel by viewModels()
 
-    private var hasRetriedLocation = false
+    private var locationDisabledSnackbar: com.google.android.material.snackbar.Snackbar? = null
 
     @Inject
     lateinit var mapManager: MapManager
@@ -250,9 +250,22 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch {
+                    locationViewModel.isLocationAvailable.collectLatest { available ->
+                        if (!available) {
+                            showLocationDisabledSnackbar()
+                        } else {
+                            hideLocationDisabledSnackbar()
+                            if (locationViewModel.currentLocation.value == null) {
+                                locationViewModel.retryLocation()
+                            }
+                        }
+                    }
+                }
+
+                launch {
                     locationViewModel.currentLocation.collectLatest { location ->
                         location?.let {
-                            hasRetriedLocation = false
+                            hideLocationDisabledSnackbar()
                             mapManager.updateMyLocation(it, locationViewModel.azimuth.value)
                             if (mapViewModel.isFollowMode.value) {
                                 mapManager.animateToLocation(it)
@@ -450,6 +463,31 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
+    private fun showLocationDisabledSnackbar() {
+        if (locationDisabledSnackbar == null) {
+            val rootView = findViewById<View>(android.R.id.content)
+            locationDisabledSnackbar = com.google.android.material.snackbar.Snackbar.make(
+                rootView,
+                R.string.location_disabled_hint,
+                com.google.android.material.snackbar.Snackbar.LENGTH_INDEFINITE
+            ).setAction(R.string.open_settings) {
+                try {
+                    startActivity(android.content.Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+                } catch (e: Exception) {
+                    // Ignore
+                }
+            }
+        }
+        if (locationDisabledSnackbar?.isShown != true) {
+            locationDisabledSnackbar?.show()
+        }
+    }
+
+    private fun hideLocationDisabledSnackbar() {
+        locationDisabledSnackbar?.dismiss()
+        locationDisabledSnackbar = null
+    }
+
     private fun checkAndRequestPermissions() {
         val required = arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
         val needed = required.filter { ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED }
@@ -457,8 +495,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             ActivityCompat.requestPermissions(this, needed.toTypedArray(), AppConstants.LOCATION_PERMISSION_REQUEST_CODE)
         } else {
             setupAMapLocationStyle()
-            if (locationViewModel.currentLocation.value == null && !hasRetriedLocation) {
-                hasRetriedLocation = true
+            if (locationViewModel.currentLocation.value == null) {
                 locationViewModel.retryLocation()
             }
         }
@@ -496,8 +533,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (requestCode == AppConstants.LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
                 setupAMapLocationStyle()
-                if (locationViewModel.currentLocation.value == null && !hasRetriedLocation) {
-                    hasRetriedLocation = true
+                if (locationViewModel.currentLocation.value == null) {
                     locationViewModel.retryLocation()
                 }
             } else {
@@ -1004,8 +1040,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         mapView.onResume()
         val hasPermission = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
                 ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        if (hasPermission && locationViewModel.currentLocation.value == null && !hasRetriedLocation) {
-            hasRetriedLocation = true
+        if (hasPermission && locationViewModel.currentLocation.value == null) {
             locationViewModel.retryLocation()
         }
     }
