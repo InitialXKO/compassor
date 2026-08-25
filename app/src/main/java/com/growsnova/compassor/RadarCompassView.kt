@@ -23,6 +23,7 @@ class RadarCompassView @JvmOverloads constructor(
     private var deviceAzimuth: Float = 0.0f // 设备朝向角
     private var scanAngle: Float = 0.0f // 扫描线当前角度
     private var lastDrawTime: Long = 0
+    private var hasTarget: Boolean = false
 
     private var skin: RadarSkin = RadarSkin()
 
@@ -150,7 +151,15 @@ class RadarCompassView @JvmOverloads constructor(
         this.targetLocation = targetLoc
         this.distance = calculateDistance(myLoc, targetLoc)
         this.bearing = calculateBearing(myLoc, targetLoc)
+        this.hasTarget = true
         invalidate() // 触发重绘
+    }
+
+    fun clearTarget() {
+        this.hasTarget = false
+        this.distance = 0.0f
+        this.bearing = 0.0f
+        invalidate()
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -182,18 +191,21 @@ class RadarCompassView @JvmOverloads constructor(
         // 4. 绘制方向标识（N, S, E, W）
         drawDirectionMarkers(canvas, centerX, centerY, radius)
 
-        // 5. 计算相对方位角（目标方位 - 设备朝向）
-        var relativeBearing = bearing - deviceAzimuth
-        if (relativeBearing < 0) relativeBearing += 360f
-        if (relativeBearing >= 360) relativeBearing -= 360f
+        if (hasTarget && distance > 0) {
+            // 5. 计算相对方位角（目标方位 - 设备朝向）
+            var relativeBearing = bearing - deviceAzimuth
+            if (relativeBearing < 0) relativeBearing += 360f
+            if (relativeBearing >= 360) relativeBearing -= 360f
 
-        // 6. 绘制目标路点指示器
-        if (distance > 0) {
+            // 6. 绘制目标路点指示器
             drawTargetWaypoint(canvas, centerX, centerY, radius, relativeBearing)
-        }
 
-        // 7. 显示距离和方位信息
-        drawInfoPanel(canvas, centerX, centerY, radius, relativeBearing)
+            // 7. 显示距离和方位信息
+            drawInfoPanel(canvas, centerX, centerY, radius, relativeBearing)
+        } else {
+            // 无目标模式：展示当前设备朝向角
+            drawIdleInfoPanel(canvas, centerX, centerY, radius)
+        }
 
         postInvalidateOnAnimation()
     }
@@ -315,6 +327,31 @@ class RadarCompassView @JvmOverloads constructor(
         // 相对方位信息（小字）
         val relativeText = getRelativeDirection(relativeBearing)
         canvas.drawText(relativeText, centerX, infoY + 85, infoTextPaint)
+    }
+
+    private fun drawIdleInfoPanel(canvas: Canvas, centerX: Float, centerY: Float, radius: Float) {
+        val infoY = centerY + radius + 80
+        val azimuthInt = ((deviceAzimuth % 360f + 360f) % 360f).toInt()
+        val headingText = "${azimuthInt}°"
+        canvas.drawText(headingText, centerX, infoY, distanceTextPaint)
+
+        val cardinalDirection = getCardinalDirection(deviceAzimuth)
+        canvas.drawText(cardinalDirection, centerX, infoY + 50, infoTextPaint)
+    }
+
+    private fun getCardinalDirection(azimuth: Float): String {
+        var a = (azimuth % 360f + 360f) % 360f
+        return when {
+            a < 22.5f || a >= 337.5f -> "正北"
+            a < 67.5f -> "东北"
+            a < 112.5f -> "正东"
+            a < 157.5f -> "东南"
+            a < 202.5f -> "正南"
+            a < 247.5f -> "西南"
+            a < 292.5f -> "正西"
+            a < 337.5f -> "西北"
+            else -> "正北"
+        }
     }
 
     private fun getRelativeDirection(angle: Float): String {

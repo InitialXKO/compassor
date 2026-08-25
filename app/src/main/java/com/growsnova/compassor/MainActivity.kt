@@ -340,6 +340,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                             }
                         } else {
                             mapManager.clearAllNavigation()
+                            radarView.clearTarget()
+                            simpleCompassView.clearTarget()
                             navigationStatusCard.visibility = View.GONE
                             window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
