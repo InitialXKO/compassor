@@ -21,6 +21,8 @@ class LocationViewModel @Inject constructor(
     private val exceptionHandler: CoroutineExceptionHandler
 ) : ViewModel() {
 
+    val isLocationAvailable: StateFlow<Boolean> = deviceLocationManager.isLocationAvailable
+
     private val _currentLocation = MutableStateFlow<LatLng?>(null)
     val currentLocation: StateFlow<LatLng?> = _currentLocation.asStateFlow()
 

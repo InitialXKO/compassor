@@ -1,7 +1,10 @@
 package com.growsnova.compassor.manager
 
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -11,6 +14,9 @@ import com.growsnova.compassor.base.AppConstants
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -20,6 +26,18 @@ class DeviceLocationManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+
+    private val _isLocationAvailable = MutableStateFlow(checkLocationEnabled())
+    val isLocationAvailable: StateFlow<Boolean> = _isLocationAvailable.asStateFlow()
+
+    fun checkLocationEnabled(): Boolean {
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) ||
+               locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+    }
+
+    private fun updateLocationAvailability() {
+        _isLocationAvailable.value = checkLocationEnabled()
+    }
 
     private fun hasLocationPermission(): Boolean {
         val finePermission = androidx.core.content.ContextCompat.checkSelfPermission(
@@ -34,18 +52,76 @@ class DeviceLocationManager @Inject constructor(
     @SuppressLint("MissingPermission")
     fun getLocationFlow(): Flow<Location> = callbackFlow {
         if (!hasLocationPermission()) {
+            updateLocationAvailability()
             close()
             return@callbackFlow
         }
 
+        updateLocationAvailability()
+
         val listener = object : LocationListener {
             override fun onLocationChanged(location: Location) {
+                _isLocationAvailable.value = true
                 trySend(location)
             }
             @Deprecated("Deprecated in Java")
             override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
-            override fun onProviderEnabled(provider: String) {}
-            override fun onProviderDisabled(provider: String) {}
+            override fun onProviderEnabled(provider: String) {
+                updateLocationAvailability()
+                if (hasLocationPermission() && locationManager.isProviderEnabled(provider)) {
+                    try {
+                        locationManager.requestLocationUpdates(
+                            provider,
+                            AppConstants.LOCATION_UPDATE_INTERVAL,
+                            AppConstants.LOCATION_UPDATE_MIN_DISTANCE,
+                            this,
+                            Looper.getMainLooper()
+                        )
+                        locationManager.getLastKnownLocation(provider)?.let { trySend(it) }
+                    } catch (e: SecurityException) {
+                        // Ignore
+                    }
+                }
+            }
+            override fun onProviderDisabled(provider: String) {
+                updateLocationAvailability()
+            }
+        }
+
+        val locationReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                if (intent?.action == LocationManager.PROVIDERS_CHANGED_ACTION) {
+                    val wasEnabled = _isLocationAvailable.value
+                    val nowEnabled = checkLocationEnabled()
+                    _isLocationAvailable.value = nowEnabled
+
+                    if (!wasEnabled && nowEnabled && hasLocationPermission()) {
+                        try {
+                            val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)
+                            providers.forEach { provider ->
+                                if (locationManager.isProviderEnabled(provider)) {
+                                    locationManager.requestLocationUpdates(
+                                        provider,
+                                        AppConstants.LOCATION_UPDATE_INTERVAL,
+                                        AppConstants.LOCATION_UPDATE_MIN_DISTANCE,
+                                        listener,
+                                        Looper.getMainLooper()
+                                    )
+                                    locationManager.getLastKnownLocation(provider)?.let { trySend(it) }
+                                }
+                            }
+                        } catch (e: SecurityException) {
+                            // Ignore
+                        }
+                    }
+                }
+            }
+        }
+
+        try {
+            context.registerReceiver(locationReceiver, IntentFilter(LocationManager.PROVIDERS_CHANGED_ACTION))
+        } catch (e: Exception) {
+            // Ignore
         }
 
         try {
@@ -67,6 +143,11 @@ class DeviceLocationManager @Inject constructor(
         }
 
         awaitClose {
+            try {
+                context.unregisterReceiver(locationReceiver)
+            } catch (e: Exception) {
+                // Ignore
+            }
             try {
                 locationManager.removeUpdates(listener)
             } catch (e: Exception) {

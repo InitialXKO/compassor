@@ -143,4 +143,6 @@
     <string name="floor_hint">楼层（可选）</string>
     <string name="floor_format">%1$d楼</string>
     <string name="basement_floor_format">B%1$d</string>
+    <string name="location_disabled_hint">定位服务已关闭，请在设置中开启</string>
+    <string name="open_settings">去开启</string>
 </resources>
