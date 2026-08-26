@@ -91,6 +91,9 @@ dependencies {
     // JSON序列化
     implementation(libs.gson)
 
+    // Wear OS Play Services Wearable (DataLayer)
+    implementation(libs.play.services.wearable)
+
     // RecyclerView
     implementation(libs.androidx.recyclerview)
 

@@ -140,6 +140,15 @@
     <string name="share_location">위치 공유</string>
     <string name="export_route">경로 내보내기</string>
     <string name="import_route">경로 가져오기</string>
+    <string name="export_waypoints">장소 내보내기</string>
+    <string name="import_waypoints">장소 가져오기</string>
+    <string name="export_geojson">GeoJSON 내보내기</string>
+    <string name="export_kml">KML 내보내기</string>
+    <string name="export_json">JSON 내보내기</string>
+    <string name="import_file">파일 가져오기 (JSON/GeoJSON/KML)</string>
+    <string name="waypoints_exported">장소 데이터를 내보냈습니다</string>
+    <string name="waypoints_imported">%d개의 장소를 가져왔습니다</string>
+    <string name="import_failed">파일 가져오기 실패</string>
     <string name="route_exported">경로를 내보냈습니다</string>
     <string name="route_imported">경로를 가져왔습니다: %s</string>
     <string name="route_import_failed">경로 가져오기 실패</string>

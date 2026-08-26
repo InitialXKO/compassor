@@ -106,6 +106,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     @Inject
     lateinit var soundManager: com.growsnova.compassor.manager.SoundManager
 
+    @Inject
+    lateinit var wearDataSender: com.growsnova.compassor.wear.WearDataSender
+
     private val createRouteLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             result.data?.let { handleCreateRouteResult(it) }
@@ -481,9 +484,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         updateNavButtonsVisibility(navigationViewModel.currentRoute.value)
 
-        // Update foreground navigation notification
-        val bearing = locationViewModel.azimuth.value
-        com.growsnova.compassor.service.NavigationService.startOrUpdate(this, update.targetName, update.distance, bearing)
+        // Update foreground navigation notification & Wear OS DataLayer
+        val azimuth = locationViewModel.azimuth.value
+        com.growsnova.compassor.service.NavigationService.startOrUpdate(this, update.targetName, update.distance, azimuth)
+        wearDataSender.sendNavigationData(update.targetName, update.distance, 0f, azimuth)
 
         if (update.nextWaypointReached) {
             soundManager.playArrivalTone()
@@ -759,10 +763,82 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val displayInfo = waypoints.map { waypoint ->
             val routes = navigationViewModel.routes.value.filter { it.waypoints.any { w -> w.id == waypoint.id } }
             waypoint.name + if (routes.isNotEmpty()) getString(R.string.in_routes, routes.joinToString { it.name }) else ""
-        }.toTypedArray()
+        }
+        val combinedOptions = displayInfo + listOf(getString(R.string.export_waypoints), getString(R.string.import_waypoints))
 
-        DialogUtils.showOptionsDialog(this, getString(R.string.manage_waypoints_title), displayInfo) { which ->
-            showWaypointOptionsDialog(waypoints[which])
+        DialogUtils.showOptionsDialog(this, getString(R.string.manage_waypoints_title), combinedOptions.toTypedArray()) { which ->
+            if (which < waypoints.size) {
+                showWaypointOptionsDialog(waypoints[which])
+            } else if (which == waypoints.size) {
+                // Export waypoints option
+                showExportWaypointsFormatDialog()
+            } else {
+                // Import waypoints option
+                importWaypointsLauncher.launch(arrayOf("application/json", "application/xml", "text/xml", "*/*"))
+            }
+        }
+    }
+
+    private var exportWaypointsType: String? = null
+    private val exportWaypointsLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("*/*")) { uri ->
+        uri?.let { exportWaypointsToFile(it) }
+    }
+
+    private val importWaypointsLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let { importWaypointsFromFile(it) }
+    }
+
+    private fun showExportWaypointsFormatDialog() {
+        val formats = arrayOf(getString(R.string.export_geojson), getString(R.string.export_kml))
+        DialogUtils.showOptionsDialog(this, getString(R.string.export_waypoints), formats) { which ->
+            when (which) {
+                0 -> {
+                    exportWaypointsType = "geojson"
+                    exportWaypointsLauncher.launch("compassor_waypoints.geojson")
+                }
+                1 -> {
+                    exportWaypointsType = "kml"
+                    exportWaypointsLauncher.launch("compassor_waypoints.kml")
+                }
+            }
+        }
+    }
+
+    private fun exportWaypointsToFile(uri: android.net.Uri) {
+        try {
+            contentResolver.openOutputStream(uri)?.use { outputStream ->
+                val waypoints = mapViewModel.waypoints.value
+                val content = if (exportWaypointsType == "kml") {
+                    KmlUtils.exportWaypointsToKml(waypoints)
+                } else {
+                    GeoJsonUtils.exportWaypointsToGeoJson(waypoints)
+                }
+                outputStream.write(content.toByteArray(Charsets.UTF_8))
+                DialogUtils.showSuccessToast(this, getString(R.string.waypoints_exported))
+            }
+        } catch (e: Exception) {
+            DialogUtils.showErrorToast(this, getString(R.string.import_failed))
+        }
+    }
+
+    private fun importWaypointsFromFile(uri: android.net.Uri) {
+        try {
+            contentResolver.openInputStream(uri)?.use { inputStream ->
+                val content = inputStream.reader().readText()
+                val imported = if (content.trim().startsWith("<?xml") || content.trim().startsWith("<kml")) {
+                    KmlUtils.importKmlToWaypoints(content)
+                } else {
+                    GeoJsonUtils.importGeoJsonToWaypoints(content)
+                }
+                if (imported.isNotEmpty()) {
+                    imported.forEach { navigationViewModel.addWaypoint(it) }
+                    DialogUtils.showSuccessToast(this, getString(R.string.waypoints_imported, imported.size))
+                } else {
+                    DialogUtils.showErrorToast(this, getString(R.string.import_failed))
+                }
+            }
+        } catch (e: Exception) {
+            DialogUtils.showErrorToast(this, getString(R.string.import_failed))
         }
     }
 

@@ -140,6 +140,15 @@
     <string name="share_location">位置を共有</string>
     <string name="export_route">ルートをエクスポート</string>
     <string name="import_route">ルートをインポート</string>
+    <string name="export_waypoints">地点をエクスポート</string>
+    <string name="import_waypoints">地点をインポート</string>
+    <string name="export_geojson">GeoJSON をエクスポート</string>
+    <string name="export_kml">KML をエクスポート</string>
+    <string name="export_json">JSON をエクスポート</string>
+    <string name="import_file">ファイルをインポート (JSON/GeoJSON/KML)</string>
+    <string name="waypoints_exported">地点データをエクスポートしました</string>
+    <string name="waypoints_imported">%d 件の地点をインポートしました</string>
+    <string name="import_failed">ファイルのインポートに失敗しました</string>
     <string name="route_exported">ルートをエクスポートしました</string>
     <string name="route_imported">ルートをインポートしました: %s</string>
     <string name="route_import_failed">ルートのインポートに失敗しました</string>

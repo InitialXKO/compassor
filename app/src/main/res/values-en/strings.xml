@@ -138,6 +138,15 @@
     <string name="share_location">Share Location</string>
     <string name="export_route">Export Route</string>
     <string name="import_route">Import Route</string>
+    <string name="export_waypoints">Export Locations</string>
+    <string name="import_waypoints">Import Locations</string>
+    <string name="export_geojson">Export GeoJSON</string>
+    <string name="export_kml">Export KML</string>
+    <string name="export_json">Export JSON</string>
+    <string name="import_file">Import File (JSON/GeoJSON/KML)</string>
+    <string name="waypoints_exported">Locations data exported</string>
+    <string name="waypoints_imported">%d locations imported</string>
+    <string name="import_failed">Failed to import file</string>
     <string name="route_exported">Route exported</string>
     <string name="route_imported">Route imported: %s</string>
     <string name="route_import_failed">Failed to import route</string>
