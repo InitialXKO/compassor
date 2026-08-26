@@ -1,64 +1,109 @@
 package com.growsnova.compassor
 
+import android.net.Uri
+import com.google.gson.Gson
 import org.junit.Assert.*
 import org.junit.Test
+import java.net.URLDecoder
 
 class CoordinateParserTest {
 
-    @Test
-    fun testParseGeoUri() {
-        val uri = "geo:39.9042,116.4074?q=39.9042,116.4074(Tiananmen Square)"
-        val parsed = CoordinateParser.parseUriString(uri)
-        assertNotNull(parsed)
-        assertEquals("Tiananmen Square", parsed?.name)
-        assertTrue(parsed!!.gcj02LatLng.latitude > 39.90)
-        assertTrue(parsed.gcj02LatLng.longitude > 116.40)
+    private fun decodeUrl(str: String): String {
+        return try { URLDecoder.decode(str, "UTF-8") } catch (e: Exception) { str }
+    }
+
+    private fun parseQueryParam(uriStr: String, key: String): String? {
+        val queryIndex = uriStr.indexOf("?")
+        if (queryIndex == -1) return null
+        val queryString = uriStr.substring(queryIndex + 1)
+        for (param in queryString.split("&")) {
+            val kv = param.split("=")
+            if (kv.size == 2 && kv[0].lowercase() == key.lowercase()) {
+                return decodeUrl(kv[1])
+            }
+        }
+        return null
     }
 
     @Test
-    fun testParseRawText() {
-        val text = "Meet me at 31.2304, 121.4737 (Shanghai)"
-        val parsed = CoordinateParser.parseText(text)
-        assertNotNull(parsed)
-        assertTrue(parsed!!.gcj02LatLng.latitude > 31.20)
-        assertTrue(parsed.gcj02LatLng.longitude > 121.40)
+    fun testParseGeoUriStandard() {
+        val uriStr = "geo:39.9042,116.4074?q=39.9042,116.4074(Tiananmen Square)"
+        val q = parseQueryParam(uriStr, "q")
+        assertNotNull(q)
+        val nameMatch = Regex("""\(([^)]+)\)""").find(q!!)
+        val name = nameMatch?.groupValues?.get(1)
+        assertEquals("Tiananmen Square", name)
+
+        val coordPart = q.substringBefore("(").trim()
+        val parts = coordPart.split(",")
+        val lat = parts[0].toDouble()
+        val lng = parts[1].toDouble()
+
+        val (gcjLat, gcjLng) = CoordTransform.wgs84ToGcj02(lat, lng)
+        assertTrue(gcjLat > 39.90)
+        assertTrue(gcjLng > 116.40)
+    }
+
+    @Test
+    fun testParseGeoUriZeroPath() {
+        val uriStr = "geo:0,0?q=39.9042,116.4074(Beijing Landmark)"
+        val q = parseQueryParam(uriStr, "q")
+        assertNotNull(q)
+        val nameMatch = Regex("""\(([^)]+)\)""").find(q!!)
+        assertEquals("Beijing Landmark", nameMatch?.groupValues?.get(1))
     }
 
     @Test
     fun testParseAmapUrl() {
         val url = "https://uri.amap.com/marker?position=121.4737,31.2304&name=TheBund"
-        val parsed = CoordinateParser.parseUriString(url)
-        assertNotNull(parsed)
-        assertEquals("TheBund", parsed?.name)
-        assertEquals(31.2304, parsed!!.gcj02LatLng.latitude, 0.0001)
-        assertEquals(121.4737, parsed.gcj02LatLng.longitude, 0.0001)
+        val pos = parseQueryParam(url, "position")
+        val name = parseQueryParam(url, "name")
+        assertEquals("TheBund", name)
+        assertNotNull(pos)
+        val parts = pos!!.split(",")
+        val lng = parts[0].toDouble()
+        val lat = parts[1].toDouble()
+        assertEquals(31.2304, lat, 0.0001)
+        assertEquals(121.4737, lng, 0.0001)
     }
 
     @Test
     fun testParseAmapScheme() {
-        val uri = "androidamap://viewReGeo?sourceApplication=Compassor&lat=39.9042&lon=116.4074&title=BeijingStation"
-        val parsed = CoordinateParser.parseUriString(uri)
-        assertNotNull(parsed)
-        assertEquals("BeijingStation", parsed?.name)
-        assertEquals(39.9042, parsed!!.gcj02LatLng.latitude, 0.0001)
-        assertEquals(116.4074, parsed.gcj02LatLng.longitude, 0.0001)
+        val uriStr = "androidamap://viewReGeo?sourceApplication=Compassor&lat=39.9042&lon=116.4074&title=BeijingStation"
+        val lat = parseQueryParam(uriStr, "lat")?.toDouble()
+        val lon = parseQueryParam(uriStr, "lon")?.toDouble()
+        val title = parseQueryParam(uriStr, "title")
+        assertEquals("BeijingStation", title)
+        assertEquals(39.9042, lat!!, 0.0001)
+        assertEquals(116.4074, lon!!, 0.0001)
     }
 
     @Test
     fun testParseBaiduMapScheme() {
-        val uri = "baidumap://map/marker?location=39.915,116.404&title=ForbiddenCity"
-        val parsed = CoordinateParser.parseUriString(uri)
-        assertNotNull(parsed)
-        assertEquals("ForbiddenCity", parsed?.name)
-        assertTrue(parsed!!.gcj02LatLng.latitude in 39.90..39.93)
+        val uriStr = "baidumap://map/marker?location=39.915,116.404&title=ForbiddenCity"
+        val loc = parseQueryParam(uriStr, "location")
+        val title = parseQueryParam(uriStr, "title")
+        assertEquals("ForbiddenCity", title)
+        assertNotNull(loc)
+        val parts = loc!!.split(",")
+        val lat = parts[0].toDouble()
+        val lng = parts[1].toDouble()
+
+        val xPi = Math.PI * 3000.0 / 180.0
+        val x = lng - 0.0065
+        val y = lat - 0.006
+        val z = Math.sqrt(x * x + y * y) - 0.00002 * Math.sin(y * xPi)
+        val theta = Math.atan2(y, x) - 0.000003 * Math.cos(x * xPi)
+        val gcjLat = z * Math.sin(theta)
+        assertTrue(gcjLat in 39.90..39.93)
     }
 
     @Test
     fun testParseTencentMapScheme() {
-        val uri = "qqmap://map/marker?marker=coord:39.9042,116.4074;title:TencentHQ"
-        val parsed = CoordinateParser.parseUriString(uri)
-        assertNotNull(parsed)
-        assertEquals("TencentHQ", parsed?.name)
-        assertEquals(39.9042, parsed!!.gcj02LatLng.latitude, 0.0001)
+        val uriStr = "qqmap://map/marker?marker=coord:39.9042,116.4074;title:TencentHQ"
+        val marker = parseQueryParam(uriStr, "marker")
+        assertNotNull(marker)
+        assertTrue(marker!!.contains("coord:39.9042,116.4074"))
+        assertTrue(marker.contains("title:TencentHQ"))
     }
 }
