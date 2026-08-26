@@ -4,11 +4,8 @@ import java.io.FileInputStream
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.kapt)
-    alias(libs.plugins.hilt)
 }
 
-// 加载签名配置（如果存在）
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
@@ -16,20 +13,17 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.growsnova.compassor"
+    namespace = "com.growsnova.compassor.wear"
     compileSdk = 34
 
     defaultConfig {
         applicationId = "com.growsnova.compassor"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 34
         versionCode = 10
         versionName = "1.6.8"
-
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    // 签名配置
     signingConfigs {
         if (keystorePropertiesFile.exists()) {
             create("release") {
@@ -49,7 +43,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // 如果签名配置存在，则使用
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
             }
@@ -68,56 +61,12 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
-
-    viewBinding {
-        enable = true
-    }
 }
 
 dependencies {
     implementation(project(":common"))
-
-    // Android核心库
     implementation(libs.androidx.core.ktx)
+    implementation(libs.play.services.wearable)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
-    implementation(libs.androidx.constraintlayout)
-
-    // 高德地图SDK
-    implementation(libs.amap.map3d)
-    implementation(libs.amap.search)
-
-    // 协程支持
-    implementation(libs.kotlinx.coroutines.android)
-
-    // JSON序列化
-    implementation(libs.gson)
-
-    // Wear OS Play Services Wearable (DataLayer)
-    implementation(libs.play.services.wearable)
-
-    // RecyclerView
-    implementation(libs.androidx.recyclerview)
-
-    // ViewModel and LiveData KTX
-    implementation(libs.androidx.activity.ktx)
-    implementation(libs.androidx.fragment.ktx)
-
-    // Room
-    implementation(libs.androidx.room.runtime)
-    kapt(libs.androidx.room.compiler)
-    implementation(libs.androidx.room.ktx)
-
-    // Hilt
-    implementation(libs.hilt.android)
-    kapt(libs.hilt.compiler)
-
-    // Glide
-    implementation(libs.glide)
-    kapt(libs.glideCompiler)
-
-    // 测试库
-    testImplementation(libs.junit)
-    androidTestImplementation(libs.androidx.test.ext.junit)
-    androidTestImplementation(libs.androidx.espresso.core)
 }
