@@ -103,9 +103,10 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener, Inputtips.I
                 if (query.isNotEmpty()) {
                     searchJob = lifecycleScope.launch {
                         kotlinx.coroutines.delay(300)
+                        val ctx = context ?: return@launch
                         val inputQuery = InputtipsQuery(query, "")
                         inputQuery.setCityLimit(false)
-                        val inputtips = Inputtips(requireContext(), inputQuery)
+                        val inputtips = Inputtips(ctx, inputQuery)
                         inputtips.setInputtipsListener(this@SearchTabFragment)
                         inputtips.requestInputtipsAsyn()
                     }
