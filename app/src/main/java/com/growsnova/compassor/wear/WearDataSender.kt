@@ -20,13 +20,14 @@ class WearDataSender @Inject constructor(
 
     private val dataClient by lazy { Wearable.getDataClient(context) }
 
-    fun sendNavigationData(targetName: String, distance: Float, bearing: Float, azimuth: Float) {
+    fun sendNavigationData(targetName: String, distance: Float, bearing: Float, azimuth: Float, skinKey: String? = null) {
         try {
             val putDataMapReq = PutDataMapRequest.create(WearConstants.PATH_NAVIGATION)
             putDataMapReq.dataMap.putString(WearConstants.KEY_TARGET_NAME, targetName)
             putDataMapReq.dataMap.putFloat(WearConstants.KEY_DISTANCE, distance)
             putDataMapReq.dataMap.putFloat(WearConstants.KEY_BEARING, bearing)
             putDataMapReq.dataMap.putFloat(WearConstants.KEY_AZIMUTH, azimuth)
+            skinKey?.let { putDataMapReq.dataMap.putString(WearConstants.KEY_SKIN_KEY, it) }
             putDataMapReq.dataMap.putLong(WearConstants.KEY_TIMESTAMP, System.currentTimeMillis())
 
             val putDataReq = putDataMapReq.asPutDataRequest().setUrgent()
@@ -35,6 +36,21 @@ class WearDataSender @Inject constructor(
                 .addOnFailureListener { e -> Log.e(TAG, "Failed to update Wear DataLayer", e) }
         } catch (e: Exception) {
             Log.e(TAG, "Error sending navigation data to Wear OS", e)
+        }
+    }
+
+    fun sendSkinKey(skinKey: String) {
+        try {
+            val putDataMapReq = PutDataMapRequest.create(WearConstants.PATH_NAVIGATION)
+            putDataMapReq.dataMap.putString(WearConstants.KEY_SKIN_KEY, skinKey)
+            putDataMapReq.dataMap.putLong(WearConstants.KEY_TIMESTAMP, System.currentTimeMillis())
+
+            val putDataReq = putDataMapReq.asPutDataRequest().setUrgent()
+            dataClient.putDataItem(putDataReq)
+                .addOnSuccessListener { Log.d(TAG, "Wear DataLayer skin updated to $skinKey") }
+                .addOnFailureListener { e -> Log.e(TAG, "Failed to update Wear DataLayer skin", e) }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sending skin key to Wear OS", e)
         }
     }
 }

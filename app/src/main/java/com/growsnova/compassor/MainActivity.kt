@@ -486,8 +486,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         // Update foreground navigation notification & Wear OS DataLayer
         val azimuth = locationViewModel.azimuth.value
+        val skinKey = navigationRepository.getSkinName()
         com.growsnova.compassor.service.NavigationService.startOrUpdate(this, update.targetName, update.distance, azimuth)
-        wearDataSender.sendNavigationData(update.targetName, update.distance, 0f, azimuth)
+        wearDataSender.sendNavigationData(update.targetName, update.distance, 0f, azimuth, skinKey)
 
         if (update.nextWaypointReached) {
             soundManager.playArrivalTone()
@@ -1065,6 +1066,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         val isNightMode = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
         mapManager.applyMapStyle(isNightMode)
+
+        // 6. Sync theme skin to Wear OS watch
+        wearDataSender.sendSkinKey(skinName)
     }
 
     private fun showSettingsDialog() {

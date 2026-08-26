@@ -7,5 +7,6 @@ object WearConstants {
     const val KEY_DISTANCE = "distance"
     const val KEY_BEARING = "bearing"
     const val KEY_AZIMUTH = "azimuth"
+    const val KEY_SKIN_KEY = "skin_key"
     const val KEY_TIMESTAMP = "timestamp"
 }

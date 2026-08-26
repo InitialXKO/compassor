@@ -1,6 +1,7 @@
 package com.growsnova.compassor.wear
 
 import android.content.Context
+import com.growsnova.compassor.RadarSkin
 import android.graphics.*
 import android.util.AttributeSet
 import android.view.View
@@ -20,18 +21,10 @@ class WearRadarCompassView @JvmOverloads constructor(
     private var lastDrawTime: Long = 0
     private var hasTarget: Boolean = false
 
-    // Color definitions
-    private val bgColor = Color.parseColor("#0F172A")
-    private val ringColor = Color.parseColor("#3B82F6")
-    private val innerRingColor = Color.parseColor("#1D4ED8")
-    private val crossColor = Color.parseColor("#60A5FA")
-    private val targetColor = Color.parseColor("#F59E0B")
-    private val textColor = Color.parseColor("#FFFFFF")
-    private val infoTextColor = Color.parseColor("#94A3B8")
+    private var skin: RadarSkin = WearSkins.default
 
     private val backgroundPaint = Paint().apply {
         style = Paint.Style.FILL
-        color = bgColor
     }
 
     private val scanPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -45,46 +38,39 @@ class WearRadarCompassView @JvmOverloads constructor(
     private val compassRingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 3f
-        color = ringColor
         alpha = 180
     }
 
     private val innerRingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 1.5f
-        color = innerRingColor
         alpha = 120
     }
 
     private val crosshairPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 2f
-        color = crossColor
     }
 
     private val targetPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = targetColor
     }
 
     private val targetRingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 2f
-        color = targetColor
         alpha = 150
     }
 
     private val targetLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 2f
-        color = targetColor
         alpha = 200
         pathEffect = DashPathEffect(floatArrayOf(8f, 4f), 0f)
     }
 
     private val distanceTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textSize = 28f
-        color = textColor
         textAlign = Paint.Align.CENTER
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
     }
@@ -93,6 +79,24 @@ class WearRadarCompassView @JvmOverloads constructor(
         textSize = 24f
         textAlign = Paint.Align.CENTER
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+    }
+
+    init {
+        setSkin(skin)
+    }
+
+    fun setSkin(skin: RadarSkin) {
+        this.skin = skin
+        backgroundPaint.color = skin.backgroundColor
+        compassRingPaint.color = skin.compassRingColor
+        innerRingPaint.color = skin.innerRingColor
+        crosshairPaint.color = skin.crosshairColor
+        targetPaint.color = skin.targetColor
+        targetRingPaint.color = skin.targetRingColor
+        targetLinePaint.color = skin.targetLineColor
+        distanceTextPaint.color = skin.distanceTextColor
+        directionTextPaint.color = skin.directionTextColor
+        invalidate()
     }
 
     fun setAzimuth(azimuth: Float) {
@@ -136,8 +140,8 @@ class WearRadarCompassView @JvmOverloads constructor(
         val colors = intArrayOf(
             Color.TRANSPARENT,
             Color.TRANSPARENT,
-            ringColor and 0x00FFFFFF or 0x15000000,
-            ringColor and 0x00FFFFFF or 0x40000000
+            skin.compassRingColor and 0x00FFFFFF or 0x15000000,
+            skin.compassRingColor and 0x00FFFFFF or 0x40000000
         )
         val positions = floatArrayOf(0f, 0.65f, 0.88f, 1f)
         scanPaint.shader = SweepGradient(centerX, centerY, colors, positions)
@@ -165,7 +169,7 @@ class WearRadarCompassView @JvmOverloads constructor(
             val x = centerX + textRadius * sin(radian).toFloat()
             val y = centerY - textRadius * cos(radian).toFloat() + 8f
 
-            directionTextPaint.color = if (direction == "N") ringColor else infoTextColor
+            directionTextPaint.color = if (direction == "N") skin.directionTextColor else skin.infoTextColor
             canvas.drawText(direction, x, y, directionTextPaint)
         }
 
@@ -183,7 +187,7 @@ class WearRadarCompassView @JvmOverloads constructor(
 
             val pulse = (sin(System.currentTimeMillis() / 200.0) * 0.5 + 0.5).toFloat()
             val glowSize = 25f + 12f * pulse
-            val gColors = intArrayOf(targetColor and 0x00FFFFFF or 0x60000000, Color.TRANSPARENT)
+            val gColors = intArrayOf(skin.targetColor and 0x00FFFFFF or 0x60000000, Color.TRANSPARENT)
             glowPaint.shader = RadialGradient(targetX, targetY, glowSize, gColors, null, Shader.TileMode.CLAMP)
             canvas.drawCircle(targetX, targetY, glowSize, glowPaint)
 

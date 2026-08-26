@@ -1,6 +1,7 @@
 package com.growsnova.compassor.wear
 
 import android.content.Context
+import com.growsnova.compassor.RadarSkin
 import android.graphics.*
 import android.util.AttributeSet
 import android.view.View
@@ -15,38 +16,28 @@ class WearArrowCompassView @JvmOverloads constructor(
     private var bearing: Float = 0.0f
     private var deviceAzimuth: Float = 0.0f
     private var hasTarget: Boolean = false
-
-    private val bgColor = Color.parseColor("#0F172A")
-    private val arrowColor = Color.parseColor("#F59E0B")
-    private val textColor = Color.parseColor("#FFFFFF")
-    private val secondaryTextColor = Color.parseColor("#94A3B8")
-    private val ringColor = Color.parseColor("#3B82F6")
+    private var skin: RadarSkin = WearSkins.default
 
     private val backgroundPaint = Paint().apply {
         style = Paint.Style.FILL
-        color = bgColor
     }
 
     private val arrowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.FILL
-        color = arrowColor
     }
 
     private val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = textColor
         textAlign = Paint.Align.CENTER
         typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
     }
 
     private val secondaryTextPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = secondaryTextColor
         textAlign = Paint.Align.CENTER
     }
 
     private val ringPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeWidth = 2f
-        color = ringColor
     }
 
     private val arrowPath = Path()
@@ -57,6 +48,17 @@ class WearArrowCompassView @JvmOverloads constructor(
         arrowPath.lineTo(0f, 0f)
         arrowPath.lineTo(-25f, 15f)
         arrowPath.close()
+        setSkin(skin)
+    }
+
+    fun setSkin(skin: RadarSkin) {
+        this.skin = skin
+        backgroundPaint.color = skin.backgroundColor
+        arrowPaint.color = skin.targetColor
+        textPaint.color = skin.distanceTextColor
+        secondaryTextPaint.color = skin.infoTextColor
+        ringPaint.color = skin.compassRingColor
+        invalidate()
     }
 
     fun setAzimuth(azimuth: Float) {

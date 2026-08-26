@@ -32,6 +32,20 @@ class WearMainActivity : AppCompatActivity(), DataClient.OnDataChangedListener {
         targetText = findViewById(R.id.wearTargetText)
 
         radarContent.setOnClickListener { flipCard() }
+
+        // Restore saved skin
+        val savedSkinKey = getSharedPreferences("wear_prefs", MODE_PRIVATE).getString("skin_key", "Default") ?: "Default"
+        applySkinKey(savedSkinKey)
+    }
+
+    private fun applySkinKey(skinKey: String) {
+        val skin = WearSkins.getSkinByName(skinKey)
+        radarCompassView.setSkin(skin)
+        arrowCompassView.setSkin(skin)
+        radarContent.setBackgroundColor(skin.backgroundColor)
+        targetText.setTextColor(skin.distanceTextColor)
+
+        getSharedPreferences("wear_prefs", MODE_PRIVATE).edit().putString("skin_key", skinKey).apply()
     }
 
     override fun onResume() {
@@ -54,8 +68,10 @@ class WearMainActivity : AppCompatActivity(), DataClient.OnDataChangedListener {
                     val distance = dataMap.getFloat(WearConstants.KEY_DISTANCE, -1f)
                     val bearing = dataMap.getFloat(WearConstants.KEY_BEARING, 0f)
                     val azimuth = dataMap.getFloat(WearConstants.KEY_AZIMUTH, 0f)
+                    val skinKey = dataMap.getString(WearConstants.KEY_SKIN_KEY)
 
                     runOnUiThread {
+                        skinKey?.let { applySkinKey(it) }
                         updateNavigationData(targetName, distance, bearing, azimuth)
                     }
                 }
