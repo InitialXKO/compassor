@@ -46,15 +46,16 @@ object CoordinateParser {
     }
 
     fun parseUriString(uriString: String): ParsedLocation? {
+        val uri = try { Uri.parse(uriString) } catch (e: Exception) { null }
         val lowerUri = uriString.lowercase()
 
+        // 1. Handle geo: scheme (WGS-84)
         if (lowerUri.startsWith("geo:")) {
             val schemeSpecific = uriString.substring(4)
             var lat: Double? = null
             var lng: Double? = null
             var label: String? = null
 
-            // First check q parameter if present
             val queryIndex = uriString.indexOf("?")
             if (queryIndex != -1) {
                 val queryString = uriString.substring(queryIndex + 1)
@@ -73,6 +74,8 @@ object CoordinateParser {
                         if (parts.size >= 2) {
                             lat = parts[0].trim().toDoubleOrNull()
                             lng = parts[1].trim().toDoubleOrNull()
+                        } else if (lat == null && lng == null) {
+                            label = qVal
                         }
                     }
                 }
@@ -88,15 +91,14 @@ object CoordinateParser {
             }
 
             if (lat != null && lng != null && lat in -90.0..90.0 && lng in -180.0..180.0) {
-                // geo: coordinates are WGS-84 standard, convert to GCJ-02
                 val (gcjLat, gcjLng) = CoordTransform.wgs84ToGcj02(lat, lng)
                 val finalName = if (!label.isNullOrEmpty()) label else "共享位置"
                 return ParsedLocation(LatLng(gcjLat, gcjLng), finalName)
             }
         }
 
-        // Check AMap or Google URLs via query params / regex
-        if (uriString.contains("position=") || uriString.contains("name=")) {
+        // 2. Handle AMap scheme (androidamap://) or AMap web URLs (GCJ-02)
+        if (lowerUri.contains("androidamap://") || lowerUri.contains("amapuri://") || uriString.contains("uri.amap.com") || uriString.contains("ditu.amap.com")) {
             var lat: Double? = null
             var lng: Double? = null
             var name: String? = null
@@ -105,20 +107,99 @@ object CoordinateParser {
             for (p in params) {
                 val kv = p.split("=")
                 if (kv.size == 2) {
-                    if (kv[0] == "position") {
-                        val pos = decodeUrl(kv[1]).split(",")
+                    val key = kv[0].lowercase()
+                    val value = decodeUrl(kv[1])
+                    if (key == "lat") lat = value.toDoubleOrNull()
+                    if (key == "lon" || key == "lng") lng = value.toDoubleOrNull()
+                    if (key == "name" || key == "title" || key == "poiname") name = value
+                    if (key == "position") {
+                        val pos = value.split(",")
                         if (pos.size >= 2) {
                             lng = pos[0].toDoubleOrNull()
                             lat = pos[1].toDoubleOrNull()
                         }
-                    } else if (kv[0] == "name") {
-                        name = decodeUrl(kv[1])
                     }
                 }
             }
             if (lat != null && lng != null) {
-                // AMap position is already GCJ-02
-                return ParsedLocation(LatLng(lat, lng), name ?: "共享位置")
+                return ParsedLocation(LatLng(lat, lng), name ?: "高德地图位置")
+            }
+        }
+
+        // 3. Handle Baidu Map scheme (baidumap:// or bdapp://) or Baidu web URLs
+        if (lowerUri.contains("baidumap://") || lowerUri.contains("bdapp://") || uriString.contains("map.baidu.com")) {
+            var lat: Double? = null
+            var lng: Double? = null
+            var name: String? = null
+
+            val params = uriString.substringAfter("?", "").split("&")
+            for (p in params) {
+                val kv = p.split("=")
+                if (kv.size == 2) {
+                    val key = kv[0].lowercase()
+                    val value = decodeUrl(kv[1])
+                    if (key == "title" || key == "name") name = value
+                    if (key == "location" || key == "center") {
+                        val pos = value.split(",")
+                        if (pos.size >= 2) {
+                            lat = pos[0].toDoubleOrNull()
+                            lng = pos[1].toDoubleOrNull()
+                        }
+                    }
+                }
+            }
+            if (lat != null && lng != null) {
+                // Baidu coordinates standard conversion to GCJ-02 if needed, or fallback
+                val (gcjLat, gcjLng) = bd09ToGcj02(lat, lng)
+                return ParsedLocation(LatLng(gcjLat, gcjLng), name ?: "百度地图位置")
+            }
+        }
+
+        // 4. Handle Tencent Map scheme (qqmap://) or Tencent web URLs (GCJ-02)
+        if (lowerUri.contains("qqmap://") || uriString.contains("map.qq.com") || uriString.contains("apis.map.qq.com")) {
+            var lat: Double? = null
+            var lng: Double? = null
+            var name: String? = null
+
+            val params = uriString.substringAfter("?", "").split("&")
+            for (p in params) {
+                val kv = p.split("=")
+                if (kv.size == 2) {
+                    val key = kv[0].lowercase()
+                    val value = decodeUrl(kv[1])
+                    if (key == "title") name = value
+                    if (key == "marker") {
+                        // marker=coord:lat,lng;title:Name
+                        val markerParts = value.split(";")
+                        for (mp in markerParts) {
+                            if (mp.startsWith("coord:")) {
+                                val coords = mp.substring(6).split(",")
+                                if (coords.size >= 2) {
+                                    lat = coords[0].toDoubleOrNull()
+                                    lng = coords[1].toDoubleOrNull()
+                                }
+                            } else if (mp.startsWith("title:")) {
+                                name = mp.substring(6)
+                            }
+                        }
+                    }
+                }
+            }
+            if (lat != null && lng != null) {
+                return ParsedLocation(LatLng(lat, lng), name ?: "腾讯地图位置")
+            }
+        }
+
+        // 5. Handle Google Maps scheme (google.navigation:) or Google web URLs (WGS-84)
+        if (lowerUri.contains("google.navigation:") || uriString.contains("maps.google.com") || uriString.contains("google.com/maps") || uriString.contains("maps.app.goo.gl")) {
+            val matcher = LAT_LNG_REGEX.matcher(uriString)
+            if (matcher.find()) {
+                val lat = matcher.group(1)?.toDoubleOrNull()
+                val lng = matcher.group(2)?.toDoubleOrNull()
+                if (lat != null && lng != null && lat in -90.0..90.0 && lng in -180.0..180.0) {
+                    val (gcjLat, gcjLng) = CoordTransform.wgs84ToGcj02(lat, lng)
+                    return ParsedLocation(LatLng(gcjLat, gcjLng), "谷歌地图位置")
+                }
             }
         }
 
@@ -131,9 +212,8 @@ object CoordinateParser {
             val lat = matcher.group(1)?.toDoubleOrNull()
             val lng = matcher.group(2)?.toDoubleOrNull()
             if (lat != null && lng != null && lat in -90.0..90.0 && lng in -180.0..180.0) {
-                // Extract possible name before or after coordinates
                 var name = text.replace(matcher.group(0) ?: "", "").trim()
-                    .replace(Regex("""^[,\s\(\)\:：]+|[,\s\(\)\:：]+$"""), "")
+                    .replace(Regex("""^[,\s\(\)\:：\-\|\n\r]+|[,\s\(\)\:：\-\|\n\r]+$"""), "")
                 if (name.length > 30 || name.isEmpty()) {
                     name = "共享位置"
                 }
@@ -148,18 +228,39 @@ object CoordinateParser {
         val (wgsLat, wgsLng) = CoordTransform.gcj02ToWgs84(gcj02LatLng.latitude, gcj02LatLng.longitude)
         val encodedName = try { URLEncoder.encode(name, "UTF-8") } catch (e: Exception) { name }
 
+        // Standard Android geo: URI (compatible with all map apps natively)
         val geoUriString = "geo:$wgsLat,$wgsLng?q=$wgsLat,$wgsLng($encodedName)"
+
+        // Web map links for AMap and Google Maps
         val amapWebUrl = "https://uri.amap.com/marker?position=${gcj02LatLng.longitude},${gcj02LatLng.latitude}&name=$encodedName"
+        val googleWebUrl = "https://www.google.com/maps/search/?api=1&query=$wgsLat,$wgsLng"
 
-        val shareText = "$name\n${String.format("%.6f, %.6f", wgsLat, wgsLng)}\n$geoUriString\n$amapWebUrl"
+        val shareText = "$name\n${String.format("%.6f, %.6f", wgsLat, wgsLng)}\n$geoUriString\n$amapWebUrl\n$googleWebUrl"
 
+        // 1. Try launching standard geo: view intent chooser so user can open in map apps directly
+        val viewGeoIntent = Intent(Intent.ACTION_VIEW, Uri.parse(geoUriString))
+
+        // 2. Also prepare text sharing intent
         val sendIntent = Intent(Intent.ACTION_SEND).apply {
             type = "text/plain"
             putExtra(Intent.EXTRA_SUBJECT, name)
             putExtra(Intent.EXTRA_TEXT, shareText)
         }
 
-        val chooser = Intent.createChooser(sendIntent, context.getString(R.string.share_location))
+        val chooser = Intent.createChooser(sendIntent, context.getString(R.string.share_location)).apply {
+            putExtra(Intent.EXTRA_INITIAL_INTENTS, arrayOf(viewGeoIntent))
+        }
         context.startActivity(chooser)
+    }
+
+    private fun bd09ToGcj02(bdLat: Double, bdLng: Double): Pair<Double, Double> {
+        val xPi = Math.PI * 3000.0 / 180.0
+        val x = bdLng - 0.0065
+        val y = bdLat - 0.006
+        val z = Math.sqrt(x * x + y * y) - 0.00002 * Math.sin(y * xPi)
+        val theta = Math.atan2(y, x) - 0.000003 * Math.cos(x * xPi)
+        val gcjLng = z * Math.cos(theta)
+        val gcjLat = z * Math.sin(theta)
+        return Pair(gcjLat, gcjLng)
     }
 }

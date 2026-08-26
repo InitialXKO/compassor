@@ -51,12 +51,18 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- 接收 geo: 方案 -->
+            <!-- 接收地图/定位 scheme URI (geo, androidamap, baidumap, qqmap, google.navigation) -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="geo" />
+                <data android:scheme="androidamap" />
+                <data android:scheme="amapuri" />
+                <data android:scheme="baidumap" />
+                <data android:scheme="bdapp" />
+                <data android:scheme="qqmap" />
+                <data android:scheme="google.navigation" />
             </intent-filter>
             <!-- 接收地图 http/https 链接 -->
             <intent-filter>
@@ -66,7 +72,12 @@
                 <data android:scheme="http" />
                 <data android:scheme="https" />
                 <data android:host="maps.google.com" />
+                <data android:host="maps.app.goo.gl" />
                 <data android:host="uri.amap.com" />
+                <data android:host="ditu.amap.com" />
+                <data android:host="map.baidu.com" />
+                <data android:host="apis.map.qq.com" />
+                <data android:host="map.qq.com" />
             </intent-filter>
             <!-- 接收分享的文本 (坐标/地址) -->
             <intent-filter>
