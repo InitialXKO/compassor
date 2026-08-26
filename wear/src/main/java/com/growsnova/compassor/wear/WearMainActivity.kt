@@ -1,6 +1,10 @@
 package com.growsnova.compassor.wear
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
+import android.animation.ObjectAnimator
 import android.os.Bundle
+import android.view.View
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.gms.wearable.DataClient
@@ -12,17 +16,22 @@ import com.growsnova.compassor.common.WearConstants
 
 class WearMainActivity : AppCompatActivity(), DataClient.OnDataChangedListener {
 
+    private lateinit var radarContent: View
+    private lateinit var radarCompassView: WearRadarCompassView
+    private lateinit var arrowCompassView: WearArrowCompassView
     private lateinit var targetText: TextView
-    private lateinit var distanceText: TextView
-    private lateinit var bearingText: TextView
+    private var isFlipped = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_wear_main)
 
+        radarContent = findViewById(R.id.wearRadarContent)
+        radarCompassView = findViewById(R.id.wearRadarCompassView)
+        arrowCompassView = findViewById(R.id.wearArrowCompassView)
         targetText = findViewById(R.id.wearTargetText)
-        distanceText = findViewById(R.id.wearDistanceText)
-        bearingText = findViewById(R.id.wearBearingText)
+
+        radarContent.setOnClickListener { flipCard() }
     }
 
     override fun onResume() {
@@ -47,23 +56,57 @@ class WearMainActivity : AppCompatActivity(), DataClient.OnDataChangedListener {
                     val azimuth = dataMap.getFloat(WearConstants.KEY_AZIMUTH, 0f)
 
                     runOnUiThread {
-                        updateUI(targetName, distance, bearing, azimuth)
+                        updateNavigationData(targetName, distance, bearing, azimuth)
                     }
                 }
             }
         }
     }
 
-    private fun updateUI(targetName: String, distance: Float, bearing: Float, azimuth: Float) {
+    private fun updateNavigationData(targetName: String, distance: Float, bearing: Float, azimuth: Float) {
         targetText.text = targetName
-        val distanceStr = if (distance < 0) {
-            "距离: --"
-        } else if (distance < 1000) {
-            "距离: ${distance.toInt()}m"
+
+        if (distance >= 0) {
+            radarCompassView.updateTarget(distance, bearing)
+            arrowCompassView.updateTarget(distance, bearing)
         } else {
-            "距离: %.1fkm".format(distance / 1000f)
+            radarCompassView.clearTarget()
+            arrowCompassView.clearTarget()
         }
-        distanceText.text = distanceStr
-        bearingText.text = "方位角: %.0f°".format(azimuth)
+
+        radarCompassView.setAzimuth(azimuth)
+        arrowCompassView.setAzimuth(azimuth)
+    }
+
+    private fun flipCard() {
+        val root = radarContent
+        val front = radarCompassView
+        val back = arrowCompassView
+        root.cameraDistance = 8000 * resources.displayMetrics.density
+
+        val outAnim = ObjectAnimator.ofFloat(root, "rotationY", if (isFlipped) 180f else 0f, 90f)
+        val inAnim = ObjectAnimator.ofFloat(root, "rotationY", if (isFlipped) -90f else 270f, if (isFlipped) 0f else 180f)
+
+        outAnim.duration = 150
+        inAnim.duration = 150
+
+        outAnim.addListener(object : AnimatorListenerAdapter() {
+            override fun onAnimationEnd(animation: Animator) {
+                if (isFlipped) {
+                    back.visibility = View.GONE
+                    front.visibility = View.VISIBLE
+                    root.rotationY = 0f
+                    front.scaleX = 1f
+                } else {
+                    front.visibility = View.GONE
+                    back.visibility = View.VISIBLE
+                    root.rotationY = 180f
+                    back.scaleX = -1f
+                }
+                isFlipped = !isFlipped
+                inAnim.start()
+            }
+        })
+        outAnim.start()
     }
 }
