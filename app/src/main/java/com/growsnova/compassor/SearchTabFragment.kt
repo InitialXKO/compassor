@@ -27,11 +27,14 @@ import com.amap.api.services.core.LatLonPoint
 import com.amap.api.services.core.PoiItem
 import com.amap.api.services.poisearch.PoiResult
 import com.amap.api.services.poisearch.PoiSearch
+import com.amap.api.services.help.Inputtips
+import com.amap.api.services.help.InputtipsQuery
+import com.amap.api.services.help.Tip
 import kotlinx.coroutines.launch
 
 @Suppress("DEPRECATION")
 @AndroidEntryPoint
-class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
+class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener, Inputtips.InputtipsListener {
 
     private var currentLatLng: LatLng? = null
     private val viewModel: CreateRouteViewModel by activityViewModels()
@@ -97,10 +100,14 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 searchJob?.cancel()
                 val query = s?.toString()?.trim() ?: ""
-                if (query.length >= 2) {
+                if (query.isNotEmpty()) {
                     searchJob = lifecycleScope.launch {
-                        kotlinx.coroutines.delay(500) // Debounce 500ms
-                        performSearch(hideKeyboard = false)
+                        kotlinx.coroutines.delay(300)
+                        val inputQuery = InputtipsQuery(query, "")
+                        inputQuery.setCityLimit(false)
+                        val inputtips = Inputtips(requireContext(), inputQuery)
+                        inputtips.setInputtipsListener(this@SearchTabFragment)
+                        inputtips.requestInputtipsAsyn()
                     }
                 }
             }
@@ -228,6 +235,23 @@ class SearchTabFragment : Fragment(), PoiSearch.OnPoiSearchListener {
     }
 
     override fun onPoiItemSearched(p0: PoiItem?, p1: Int) {}
+
+    override fun onGetInputtips(tipList: MutableList<Tip>?, rCode: Int) {
+        if (rCode == 1000 && tipList != null) {
+            val suggestions = tipList.filter { it.point != null && !it.name.isNullOrEmpty() }.map { tip ->
+                val point = tip.point
+                PoiItem(tip.poiID ?: "", LatLonPoint(point.latitude, point.longitude), tip.name, tip.address)
+            }
+            if (suggestions.isNotEmpty() && searchEditText.text.isNotEmpty()) {
+                poiItems.clear()
+                poiItems.addAll(suggestions)
+                adapter.updateData(poiItems, currentLatLng, hasMore = false)
+                view?.findViewById<TextView>(R.id.resultsLabel)?.visibility = View.VISIBLE
+                view?.findViewById<RecyclerView>(R.id.searchResultsRecyclerView)?.visibility = View.VISIBLE
+                view?.findViewById<View>(R.id.emptyState)?.visibility = View.GONE
+            }
+        }
+    }
 
     private fun saveSearchHistory(query: String) {
         lifecycleScope.launch {

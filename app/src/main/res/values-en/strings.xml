@@ -135,4 +135,10 @@
     <string name="floor_hint">Floor (optional)</string>
     <string name="floor_format">F%1$d</string>
     <string name="basement_floor_format">B%1$d</string>
+    <string name="share_location">Share Location</string>
+    <string name="export_route">Export Route</string>
+    <string name="import_route">Import Route</string>
+    <string name="route_exported">Route exported</string>
+    <string name="route_imported">Route imported: %s</string>
+    <string name="route_import_failed">Failed to import route</string>
 </resources>
