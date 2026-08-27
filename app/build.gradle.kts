@@ -15,6 +15,13 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+val storeFilePath = keystoreProperties.getProperty("storeFile")
+val storeFileObj = if (storeFilePath != null) {
+    val moduleFile = file(storeFilePath)
+    if (moduleFile.exists()) moduleFile else rootProject.file(storeFilePath)
+} else null
+val hasValidKeystore = keystorePropertiesFile.exists() && storeFileObj != null && storeFileObj.exists()
+
 android {
     namespace = "com.growsnova.compassor"
     compileSdk = 34
@@ -31,11 +38,11 @@ android {
 
     // 签名配置
     signingConfigs {
-        if (keystorePropertiesFile.exists()) {
+        if (hasValidKeystore) {
             create("release") {
                 keyAlias = keystoreProperties["keyAlias"] as String
                 keyPassword = keystoreProperties["keyPassword"] as String
-                storeFile = file(keystoreProperties["storeFile"] as String)
+                storeFile = storeFileObj
                 storePassword = keystoreProperties["storePassword"] as String
             }
         }
@@ -49,8 +56,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // 如果签名配置存在，则使用
-            if (keystorePropertiesFile.exists()) {
+            // 如果签名配置存在且密钥库文件有效，则使用
+            if (hasValidKeystore) {
                 signingConfig = signingConfigs.getByName("release")
             }
         }
