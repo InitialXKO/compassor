@@ -40,17 +40,40 @@ class MapManager @Inject constructor(
     fun setOnMyLocationClickListener(listener: () -> Unit) {
         this.myLocationClickListener = listener
         aMap?.addOnMapClickListener { clickLatLng ->
-            val userLoc = lastLatLng
-            if (userLoc != null) {
+            val userLoc = lastLatLng ?: return@addOnMapClickListener
+            val map = aMap ?: return@addOnMapClickListener
+
+            var isClicked = false
+            try {
+                val projection = map.projection
+                val userPoint = projection.toScreenLocation(userLoc)
+                val clickPoint = projection.toScreenLocation(clickLatLng)
+
+                val dx = (userPoint.x - clickPoint.x).toDouble()
+                val dy = (userPoint.y - clickPoint.y).toDouble()
+                val pixelDistance = Math.hypot(dx, dy)
+                val maxThresholdPx = 60f * context.resources.displayMetrics.density
+                if (pixelDistance <= maxThresholdPx) {
+                    isClicked = true
+                }
+            } catch (e: Exception) {
+                // Fallback to geographic distance check
+            }
+
+            if (!isClicked) {
                 val dist = FloatArray(1)
                 android.location.Location.distanceBetween(
                     userLoc.latitude, userLoc.longitude,
                     clickLatLng.latitude, clickLatLng.longitude,
                     dist
                 )
-                if (dist[0] < 35f) {
-                    myLocationClickListener?.invoke()
+                if (dist[0] < 50f) {
+                    isClicked = true
                 }
+            }
+
+            if (isClicked) {
+                myLocationClickListener?.invoke()
             }
         }
     }
