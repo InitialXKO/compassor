@@ -8,6 +8,9 @@
             android:id="@+id/nav_share_location"
             android:title="@string/share_location" />
         <item
+            android:id="@+id/nav_open_current_location_in_maps"
+            android:title="@string/open_current_location_in_maps" />
+        <item
             android:id="@+id/nav_manage_waypoints"
             android:title="@string/manage_waypoints" />
         <item

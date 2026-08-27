@@ -160,4 +160,14 @@ class CoordinateParserTest {
         assertNotNull(parsed)
         assertEquals("Forbidden City", parsed?.name)
     }
+
+    @Test
+    fun testIncomingLocationDialogActionParsing() {
+        val uriStr = "geo:31.2304,121.4737?q=31.2304,121.4737(The%20Bund)"
+        val parsed = CoordinateParser.parseUriString(uriStr)
+        assertNotNull(parsed)
+        assertEquals("The Bund", parsed?.name)
+        assertTrue(parsed!!.gcj02LatLng.latitude > 0.0)
+        assertTrue(parsed.gcj02LatLng.longitude > 0.0)
+    }
 }

@@ -182,8 +182,22 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 // Incoming text address without coordinates: trigger POI search automatically
                 navigationViewModel.searchPOI(parsed.name, locationViewModel.currentLocation.value)
             } else {
-                navigationViewModel.setTarget(parsed.gcj02LatLng, parsed.name)
-                DialogUtils.showSuccessToast(this, getString(R.string.nav_target_format, parsed.name))
+                val options = arrayOf(getString(R.string.start_navigation), getString(R.string.save_location))
+                DialogUtils.showOptionsDialog(
+                    this,
+                    getString(R.string.incoming_location_dialog_title, parsed.name),
+                    options
+                ) { which ->
+                    when (which) {
+                        0 -> {
+                            navigationViewModel.setTarget(parsed.gcj02LatLng, parsed.name)
+                            DialogUtils.showSuccessToast(this, getString(R.string.nav_target_format, parsed.name))
+                        }
+                        1 -> {
+                            showSaveWaypointDialog(parsed.gcj02LatLng, defaultName = parsed.name)
+                        }
+                    }
+                }
             }
         }
     }
@@ -600,7 +614,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (savedWaypoint != null) {
             showWaypointOptionsDialog(savedWaypoint)
         } else {
-            val options = arrayOf(getString(R.string.save_location), getString(R.string.share_location), "在地图中打开", getString(R.string.stop_navigation))
+            val options = arrayOf(getString(R.string.save_location), getString(R.string.share_location), getString(R.string.open_in_external_maps), getString(R.string.stop_navigation))
             DialogUtils.showOptionsDialog(this, name, options) { which ->
                 when (which) {
                     0 -> showSaveWaypointDialog(latLng, defaultName = name)
@@ -613,11 +627,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun showMapLongClickOptionsDialog(latLng: LatLng) {
-        val options = arrayOf(getString(R.string.save_location), getString(R.string.set_destination))
+        val options = arrayOf(getString(R.string.save_location), getString(R.string.set_destination), getString(R.string.open_in_external_maps))
         DialogUtils.showOptionsDialog(this, getString(R.string.select_action), options) { which ->
             when (which) {
                 0 -> navigationViewModel.reverseGeocode(latLng) { name -> showSaveWaypointDialog(latLng, defaultName = name) }
                 1 -> navigationViewModel.reverseGeocode(latLng) { name -> navigationViewModel.setTarget(latLng, name) }
+                2 -> navigationViewModel.reverseGeocode(latLng) { name -> ShareUtils.openInMaps(this, name, latLng.latitude, latLng.longitude) }
             }
         }
     }
@@ -751,6 +766,16 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 } else if (userLoc != null) {
                     navigationViewModel.reverseGeocode(userLoc) { name ->
                         ShareUtils.shareWaypointText(this, name, userLoc.latitude, userLoc.longitude)
+                    }
+                } else {
+                    DialogUtils.showErrorToast(this, getString(R.string.location_unavailable))
+                }
+            }
+            R.id.nav_open_current_location_in_maps -> {
+                val userLoc = locationViewModel.currentLocation.value
+                if (userLoc != null) {
+                    navigationViewModel.reverseGeocode(userLoc) { name ->
+                        ShareUtils.openInMaps(this, name, userLoc.latitude, userLoc.longitude)
                     }
                 } else {
                     DialogUtils.showErrorToast(this, getString(R.string.location_unavailable))
@@ -891,6 +916,17 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             setOnClickListener {
                 dialog.dismiss()
                 confirmDeleteWaypoint(waypoint)
+            }
+        }
+
+        // Add options button for opening in external maps from waypoint card
+        view.findViewById<View>(R.id.waypointName).setOnClickListener {
+            val options = arrayOf(getString(R.string.open_in_external_maps), getString(R.string.share_location))
+            DialogUtils.showOptionsDialog(this, waypoint.name, options) { which ->
+                when (which) {
+                    0 -> ShareUtils.openInMaps(this, waypoint.name, waypoint.latitude, waypoint.longitude)
+                    1 -> ShareUtils.shareWaypointText(this, waypoint.name, waypoint.latitude, waypoint.longitude)
+                }
             }
         }
 
