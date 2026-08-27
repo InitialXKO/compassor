@@ -12,6 +12,13 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
+val storeFilePath = keystoreProperties.getProperty("storeFile")
+val storeFileObj = if (storeFilePath != null) {
+    val rootFile = rootProject.file(storeFilePath)
+    if (rootFile.exists()) rootFile else file(storeFilePath)
+} else null
+val hasValidKeystore = keystorePropertiesFile.exists() && storeFileObj != null && storeFileObj.exists()
+
 android {
     namespace = "com.growsnova.compassor.wear"
     compileSdk = 34
@@ -25,11 +32,11 @@ android {
     }
 
     signingConfigs {
-        if (keystorePropertiesFile.exists()) {
+        if (hasValidKeystore) {
             create("release") {
                 keyAlias = keystoreProperties["keyAlias"] as String
                 keyPassword = keystoreProperties["keyPassword"] as String
-                storeFile = file(keystoreProperties["storeFile"] as String)
+                storeFile = storeFileObj
                 storePassword = keystoreProperties["storePassword"] as String
             }
         }
@@ -43,7 +50,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            if (keystorePropertiesFile.exists()) {
+            if (hasValidKeystore) {
                 signingConfig = signingConfigs.getByName("release")
             }
         }
