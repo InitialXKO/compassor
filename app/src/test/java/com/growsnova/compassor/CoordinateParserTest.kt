@@ -143,4 +143,21 @@ class CoordinateParserTest {
         assertEquals(originalGcjLat, parsed!!.gcj02LatLng.latitude, 0.001)
         assertEquals(originalGcjLng, parsed.gcj02LatLng.longitude, 0.001)
     }
+
+    @Test
+    fun testParseGeoUriWithElevationAndLabel() {
+        val uriStr = "geo:39.9042,116.4074,120.5?label=Custom%20Beacon"
+        val parsed = CoordinateParser.parseUriString(uriStr)
+        assertNotNull(parsed)
+        assertEquals("Custom Beacon", parsed?.name)
+        assertTrue(parsed!!.gcj02LatLng.latitude > 39.90)
+    }
+
+    @Test
+    fun testParseGeoUriQueryAddressFallback() {
+        val uriStr = "geo:0,0?q=Forbidden%20City"
+        val parsed = CoordinateParser.parseUriString(uriStr)
+        assertNotNull(parsed)
+        assertEquals("Forbidden City", parsed?.name)
+    }
 }

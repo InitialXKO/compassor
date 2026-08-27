@@ -10,9 +10,12 @@ object ShareUtils {
 
     fun shareWaypointText(context: Context, name: String, gcjLat: Double, gcjLng: Double) {
         val (wgsLat, wgsLng) = CoordTransform.gcj02ToWgs84(gcjLat, gcjLng)
+        val encodedName = try { URLEncoder.encode(name, "UTF-8") } catch (e: Exception) { name }
+        val geoUriStr = "geo:$wgsLat,$wgsLng?q=$wgsLat,$wgsLng($encodedName)"
         val shareText = buildString {
             appendLine(name)
             appendLine("${String.format("%.6f, %.6f", wgsLat, wgsLng)} (WGS-84)")
+            appendLine(geoUriStr)
             appendLine("https://www.amap.com/place/$gcjLat,$gcjLng")
         }
 

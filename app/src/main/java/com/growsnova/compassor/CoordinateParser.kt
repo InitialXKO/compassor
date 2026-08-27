@@ -73,12 +73,16 @@ object CoordinateParser {
             val coords = extractGeoCoordinates(geoSubStr)
             if (coords != null) {
                 val (gcjLat, gcjLng) = CoordTransform.wgs84ToGcj02(coords.first, coords.second)
+                val labelParam = getQueryParam(geoSubStr, "label")
                 val qParam = getQueryParam(geoSubStr, "q")
-                val label = if (!qParam.isNullOrEmpty()) {
-                    val match = Regex("""\(([^)]+)\)""").find(qParam)
-                    match?.groupValues?.get(1)?.trim() ?: "共享位置"
-                } else {
-                    "共享位置"
+                val label = when {
+                    !labelParam.isNullOrEmpty() -> labelParam.trim()
+                    !qParam.isNullOrEmpty() -> {
+                        val match = Regex("""\(([^)]+)\)""").find(qParam)
+                        val extracted = match?.groupValues?.get(1)?.trim()
+                        if (!extracted.isNullOrEmpty()) extracted else if (!qParam.contains(",")) qParam.trim() else "共享位置"
+                    }
+                    else -> "共享位置"
                 }
                 return ParsedLocation(LatLng(gcjLat, gcjLng), label)
             }
@@ -143,7 +147,7 @@ object CoordinateParser {
             }
         }
 
-        // Second try path scheme specific part geo:lat,lng
+        // Second try path scheme specific part geo:lat,lng,ele or geo:lat,lng
         val geoPath = uriString.substringAfter("geo:").substringBefore("?")
         val parts = geoPath.split(",")
         if (parts.size >= 2) {
