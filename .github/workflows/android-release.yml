@@ -45,15 +45,11 @@ jobs:
             echo "Some required secrets are missing." >&2
           fi
       shell: bash
-    - name: Decode and Save Keystore
-      if: steps.check_secrets.outputs.has_secrets == 'true'
-      run: |
-          echo "${{ secrets.KEYSTORE_FILE }}" | base64 --decode > app/compassor-release.jks
     # 方案1：使用GitHub Secrets配置签名（推荐）
     - name: 配置签名密钥
       if: steps.check_secrets.outputs.has_secrets == 'true'
       run: |
-        # 解码base64编码的密钥文件
+        # 解码base64编码的密钥文件到根目录
         echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > compassor-release.jks
 
         # 创建keystore.properties

@@ -17,8 +17,8 @@ if (keystorePropertiesFile.exists()) {
 
 val storeFilePath = keystoreProperties.getProperty("storeFile")
 val storeFileObj = if (storeFilePath != null) {
-    val moduleFile = file(storeFilePath)
-    if (moduleFile.exists()) moduleFile else rootProject.file(storeFilePath)
+    val rootFile = rootProject.file(storeFilePath)
+    if (rootFile.exists()) rootFile else file(storeFilePath)
 } else null
 val hasValidKeystore = keystorePropertiesFile.exists() && storeFileObj != null && storeFileObj.exists()
 
