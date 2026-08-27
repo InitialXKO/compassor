@@ -42,24 +42,30 @@ object CoordinateParser {
     }
 
     fun parseUriString(uriString: String): ParsedLocation? {
-        val uri = try { Uri.parse(uriString) } catch (e: Exception) { return null }
         val lower = uriString.lowercase()
 
-        // 1. geo: scheme (WGS-84 standard)
-        if (lower.startsWith("geo:")) {
-            val coords = extractGeoCoordinates(uri, uriString)
-            if (coords != null) {
-                val (gcjLat, gcjLng) = CoordTransform.wgs84ToGcj02(coords.first, coords.second)
-                val qParam = uri.getQueryParameter("q")
-                val label = if (!qParam.isNullOrEmpty()) {
-                    val match = Regex("""\(([^)]+)\)""").find(qParam)
-                    match?.groupValues?.get(1)?.trim() ?: "共享位置"
-                } else {
-                    "共享位置"
+        // 1. geo: scheme (WGS-84 standard) - check if geo: is anywhere in the string
+        val geoIndex = lower.indexOf("geo:")
+        if (geoIndex != -1) {
+            val geoSubStr = uriString.substring(geoIndex)
+            val geoUri = try { Uri.parse(geoSubStr) } catch (e: Exception) { null }
+            if (geoUri != null) {
+                val coords = extractGeoCoordinates(geoUri, geoSubStr)
+                if (coords != null) {
+                    val (gcjLat, gcjLng) = CoordTransform.wgs84ToGcj02(coords.first, coords.second)
+                    val qParam = geoUri.getQueryParameter("q")
+                    val label = if (!qParam.isNullOrEmpty()) {
+                        val match = Regex("""\(([^)]+)\)""").find(qParam)
+                        match?.groupValues?.get(1)?.trim() ?: "共享位置"
+                    } else {
+                        "共享位置"
+                    }
+                    return ParsedLocation(LatLng(gcjLat, gcjLng), label)
                 }
-                return ParsedLocation(LatLng(gcjLat, gcjLng), label)
             }
         }
+
+        val uri = try { Uri.parse(uriString) } catch (e: Exception) { return null }
 
         // 2. AMap (GCJ-02)
         if (lower.contains("androidamap://") || lower.contains("amapuri://") ||

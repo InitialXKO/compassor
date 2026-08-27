@@ -178,8 +178,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private fun handleIncomingLocationIntent(intent: android.content.Intent?) {
         val parsed = CoordinateParser.parseIntent(intent)
         if (parsed != null) {
-            navigationViewModel.setTarget(parsed.gcj02LatLng, parsed.name)
-            DialogUtils.showSuccessToast(this, getString(R.string.nav_target_format, parsed.name))
+            if (parsed.gcj02LatLng.latitude == 0.0 && parsed.gcj02LatLng.longitude == 0.0) {
+                // Incoming text address without coordinates: trigger POI search automatically
+                navigationViewModel.searchPOI(parsed.name, locationViewModel.currentLocation.value)
+            } else {
+                navigationViewModel.setTarget(parsed.gcj02LatLng, parsed.name)
+                DialogUtils.showSuccessToast(this, getString(R.string.nav_target_format, parsed.name))
+            }
         }
     }
 
