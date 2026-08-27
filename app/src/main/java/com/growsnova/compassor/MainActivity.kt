@@ -507,8 +507,20 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         // Update foreground navigation notification & Wear OS DataLayer
         val azimuth = locationViewModel.azimuth.value
         val skinKey = navigationRepository.getSkinName()
-        com.growsnova.compassor.service.NavigationService.startOrUpdate(this, update.targetName, update.distance, azimuth)
-        wearDataSender.sendNavigationData(update.targetName, update.distance, 0f, azimuth, skinKey)
+        val target = navigationViewModel.targetLocation.value
+        val myLoc = locationViewModel.currentLocation.value
+        val bearing = if (target != null && myLoc != null) {
+            val results = FloatArray(2)
+            android.location.Location.distanceBetween(myLoc.latitude, myLoc.longitude, target.first.latitude, target.first.longitude, results)
+            (results[1] + 360f) % 360f
+        } else {
+            0f
+        }
+
+        if (navigationViewModel.targetLocation.value != null) {
+            com.growsnova.compassor.service.NavigationService.startOrUpdate(this, update.targetName, update.distance, azimuth)
+        }
+        wearDataSender.sendNavigationData(update.targetName, update.distance, bearing, skinKey)
 
         if (update.nextWaypointReached) {
             soundManager.playArrivalTone()

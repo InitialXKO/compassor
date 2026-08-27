@@ -3,6 +3,10 @@ package com.growsnova.compassor.wear
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ObjectAnimator
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
 import android.os.Bundle
 import android.view.View
 import android.widget.TextView
@@ -14,13 +18,18 @@ import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.Wearable
 import com.growsnova.compassor.common.WearConstants
 
-class WearMainActivity : AppCompatActivity(), DataClient.OnDataChangedListener {
+class WearMainActivity : AppCompatActivity(), DataClient.OnDataChangedListener, SensorEventListener {
 
     private lateinit var radarContent: View
     private lateinit var radarCompassView: WearRadarCompassView
     private lateinit var arrowCompassView: WearArrowCompassView
     private lateinit var targetText: TextView
     private var isFlipped = false
+
+    private lateinit var sensorManager: SensorManager
+    private var rotationSensor: Sensor? = null
+    private var watchAzimuth = 0f
+    private var targetBearing = 0f
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,6 +41,9 @@ class WearMainActivity : AppCompatActivity(), DataClient.OnDataChangedListener {
         targetText = findViewById(R.id.wearTargetText)
 
         radarContent.setOnClickListener { flipCard() }
+
+        sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
+        rotationSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
 
         // Restore saved skin
         val savedSkinKey = getSharedPreferences("wear_prefs", MODE_PRIVATE).getString("skin_key", "Default") ?: "Default"
@@ -51,12 +63,33 @@ class WearMainActivity : AppCompatActivity(), DataClient.OnDataChangedListener {
     override fun onResume() {
         super.onResume()
         Wearable.getDataClient(this).addListener(this)
+        rotationSensor?.let {
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
+        }
     }
 
     override fun onPause() {
         super.onPause()
         Wearable.getDataClient(this).removeListener(this)
+        sensorManager.unregisterListener(this)
     }
+
+    override fun onSensorChanged(event: SensorEvent?) {
+        if (event == null || event.sensor.type != Sensor.TYPE_ROTATION_VECTOR) return
+
+        val rotationMatrix = FloatArray(9)
+        SensorManager.getRotationMatrixFromVector(rotationMatrix, event.values)
+        val orientation = FloatArray(3)
+        SensorManager.getOrientation(rotationMatrix, orientation)
+
+        // Azimuth in degrees [0, 360)
+        watchAzimuth = (Math.toDegrees(orientation[0].toDouble()).toFloat() + 360f) % 360f
+
+        radarCompassView.setAzimuth(watchAzimuth)
+        arrowCompassView.setAzimuth(watchAzimuth)
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
     override fun onDataChanged(dataEvents: DataEventBuffer) {
         for (event in dataEvents) {
@@ -67,20 +100,20 @@ class WearMainActivity : AppCompatActivity(), DataClient.OnDataChangedListener {
                     val targetName = dataMap.getString(WearConstants.KEY_TARGET_NAME) ?: "目的地"
                     val distance = dataMap.getFloat(WearConstants.KEY_DISTANCE, -1f)
                     val bearing = dataMap.getFloat(WearConstants.KEY_BEARING, 0f)
-                    val azimuth = dataMap.getFloat(WearConstants.KEY_AZIMUTH, 0f)
                     val skinKey = dataMap.getString(WearConstants.KEY_SKIN_KEY)
 
                     runOnUiThread {
                         skinKey?.let { applySkinKey(it) }
-                        updateNavigationData(targetName, distance, bearing, azimuth)
+                        updateNavigationData(targetName, distance, bearing)
                     }
                 }
             }
         }
     }
 
-    private fun updateNavigationData(targetName: String, distance: Float, bearing: Float, azimuth: Float) {
+    private fun updateNavigationData(targetName: String, distance: Float, bearing: Float) {
         targetText.text = targetName
+        this.targetBearing = bearing
 
         if (distance >= 0) {
             radarCompassView.updateTarget(distance, bearing)
@@ -89,9 +122,6 @@ class WearMainActivity : AppCompatActivity(), DataClient.OnDataChangedListener {
             radarCompassView.clearTarget()
             arrowCompassView.clearTarget()
         }
-
-        radarCompassView.setAzimuth(azimuth)
-        arrowCompassView.setAzimuth(azimuth)
     }
 
     private fun flipCard() {

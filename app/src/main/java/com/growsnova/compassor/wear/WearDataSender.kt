@@ -20,13 +20,12 @@ class WearDataSender @Inject constructor(
 
     private val dataClient by lazy { Wearable.getDataClient(context) }
 
-    fun sendNavigationData(targetName: String, distance: Float, bearing: Float, azimuth: Float, skinKey: String? = null) {
+    fun sendNavigationData(targetName: String, distance: Float, bearing: Float, skinKey: String? = null) {
         try {
             val putDataMapReq = PutDataMapRequest.create(WearConstants.PATH_NAVIGATION)
             putDataMapReq.dataMap.putString(WearConstants.KEY_TARGET_NAME, targetName)
             putDataMapReq.dataMap.putFloat(WearConstants.KEY_DISTANCE, distance)
             putDataMapReq.dataMap.putFloat(WearConstants.KEY_BEARING, bearing)
-            putDataMapReq.dataMap.putFloat(WearConstants.KEY_AZIMUTH, azimuth)
             skinKey?.let { putDataMapReq.dataMap.putString(WearConstants.KEY_SKIN_KEY, it) }
             putDataMapReq.dataMap.putLong(WearConstants.KEY_TIMESTAMP, System.currentTimeMillis())
 
