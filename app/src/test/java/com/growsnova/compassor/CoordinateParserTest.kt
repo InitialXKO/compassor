@@ -106,4 +106,41 @@ class CoordinateParserTest {
         assertTrue(marker!!.contains("coord:39.9042,116.4074"))
         assertTrue(marker.contains("title:TencentHQ"))
     }
+
+    @Test
+    fun testSelfShareAndParseGeoUri() {
+        val targetName = "Shanghai Tower"
+        val originalGcjLat = 31.2335
+        val originalGcjLng = 121.5056
+
+        val (wgsLat, wgsLng) = CoordTransform.gcj02ToWgs84(originalGcjLat, originalGcjLng)
+        val encodedName = java.net.URLEncoder.encode(targetName, "UTF-8")
+        val generatedGeoUri = "geo:$wgsLat,$wgsLng?q=$wgsLat,$wgsLng($encodedName)"
+
+        val parsed = CoordinateParser.parseUriString(generatedGeoUri)
+        assertNotNull(parsed)
+        println("DEBUG parsed.name = '${parsed?.name}'")
+        assertEquals(targetName, parsed?.name)
+        assertEquals(originalGcjLat, parsed!!.gcj02LatLng.latitude, 0.001)
+        assertEquals(originalGcjLng, parsed.gcj02LatLng.longitude, 0.001)
+    }
+
+    @Test
+    fun testSelfShareAndParseShareText() {
+        val targetName = "West Lake"
+        val originalGcjLat = 30.2435
+        val originalGcjLng = 120.1421
+
+        val (wgsLat, wgsLng) = CoordTransform.gcj02ToWgs84(originalGcjLat, originalGcjLng)
+        val shareText = """
+            $targetName
+            ${String.format("%.6f, %.6f", wgsLat, wgsLng)} (WGS-84)
+            https://www.amap.com/place/$originalGcjLat,$originalGcjLng
+        """.trimIndent()
+
+        val parsed = CoordinateParser.parseText(shareText)
+        assertNotNull(parsed)
+        assertEquals(originalGcjLat, parsed!!.gcj02LatLng.latitude, 0.001)
+        assertEquals(originalGcjLng, parsed.gcj02LatLng.longitude, 0.001)
+    }
 }
