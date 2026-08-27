@@ -20,19 +20,24 @@ object CoordinateParser {
 
     fun parseIntent(intent: Intent?): ParsedLocation? {
         if (intent == null) return null
-        val action = intent.action
         val dataStr = intent.dataString
         val textExtra = intent.getStringExtra(Intent.EXTRA_TEXT)
 
-        if (Intent.ACTION_VIEW == action && !dataStr.isNullOrEmpty()) {
-            return parseUriString(dataStr)
-        } else if (Intent.ACTION_SEND == action && !textExtra.isNullOrEmpty()) {
-            return parseText(textExtra)
-        } else if (!dataStr.isNullOrEmpty()) {
-            return parseUriString(dataStr)
-        } else if (!textExtra.isNullOrEmpty()) {
+        // 1. Check intent data URI
+        if (!dataStr.isNullOrEmpty()) {
+            val parsed = parseUriString(dataStr)
+            if (parsed != null) return parsed
+        }
+
+        // 2. Check EXTRA_TEXT - if it contains a URL/geo URI, parseUriString first
+        if (!textExtra.isNullOrEmpty()) {
+            if (textExtra.contains("://") || textExtra.lowercase().startsWith("geo:")) {
+                val parsed = parseUriString(textExtra)
+                if (parsed != null) return parsed
+            }
             return parseText(textExtra)
         }
+
         return null
     }
 
@@ -246,6 +251,16 @@ object CoordinateParser {
                 return ParsedLocation(LatLng(gcjLat, gcjLng), name)
             }
         }
+
+        // When no lat/lng numbers are found, extract clean address text (strip URLs and hashtags)
+        val cleanText = text.replace(Regex("""https?://\S+"""), "")
+            .replace(Regex("""#[^#\s]+#"""), "")
+            .trim()
+            .replace(Regex("""^[,\s\(\)\:：\-\|\n\r]+|[,\s\(\)\:：\-\|\n\r]+$"""), "")
+
+        if (cleanText.isNotEmpty()) {
+            return ParsedLocation(LatLng(0.0, 0.0), cleanText)
+        }
         return null
     }
 
@@ -254,24 +269,9 @@ object CoordinateParser {
         val encodedName = try { URLEncoder.encode(name, "UTF-8") } catch (e: Exception) { name }
 
         val geoUri = "geo:$wgsLat,$wgsLng?q=$wgsLat,$wgsLng($encodedName)"
-        val amapLink = "https://uri.amap.com/marker?position=${gcj02LatLng.longitude},${gcj02LatLng.latitude}&name=$encodedName"
-        val googleLink = "https://www.google.com/maps/search/?api=1&query=$wgsLat,$wgsLng"
+        val viewIntent = Intent(Intent.ACTION_VIEW, Uri.parse(geoUri))
 
-        val shareText = """
-            $name
-            ${String.format("%.6f, %.6f", wgsLat, wgsLng)}
-            $geoUri
-            $amapLink
-            $googleLink
-        """.trimIndent()
-
-        val sendIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_SUBJECT, name)
-            putExtra(Intent.EXTRA_TEXT, shareText)
-        }
-
-        context.startActivity(Intent.createChooser(sendIntent, context.getString(R.string.share_location)))
+        context.startActivity(Intent.createChooser(viewIntent, context.getString(R.string.share_location)))
     }
 
     private fun bd09ToGcj02(bdLat: Double, bdLng: Double): Pair<Double, Double> {
