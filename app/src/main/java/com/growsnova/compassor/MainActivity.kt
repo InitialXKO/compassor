@@ -255,6 +255,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         mapView.onCreate(savedInstanceState)
         aMap = mapView.map
         mapManager.initialize(aMap)
+        mapManager.setOnMyLocationClickListener { showMyLocationOptionsDialog() }
 
         aMap.setOnMapLongClickListener { latLng -> showMapLongClickOptionsDialog(latLng) }
         aMap.setOnMapTouchListener { event ->
@@ -617,6 +618,23 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
+    private fun showMyLocationOptionsDialog() {
+        val userLoc = locationViewModel.currentLocation.value ?: run {
+            DialogUtils.showErrorToast(this, getString(R.string.location_unavailable))
+            return
+        }
+        val options = arrayOf(getString(R.string.save_location), getString(R.string.share_location), getString(R.string.open_in_external_maps))
+        navigationViewModel.reverseGeocode(userLoc) { name ->
+            DialogUtils.showOptionsDialog(this, name, options) { which ->
+                when (which) {
+                    0 -> showSaveWaypointDialog(userLoc, defaultName = name)
+                    1 -> ShareUtils.shareWaypointText(this, name, userLoc.latitude, userLoc.longitude)
+                    2 -> ShareUtils.openInMaps(this, name, userLoc.latitude, userLoc.longitude)
+                }
+            }
+        }
+    }
+
     private fun showMapLongClickOptionsDialog(latLng: LatLng) {
         val options = arrayOf(getString(R.string.save_location), getString(R.string.set_destination), getString(R.string.open_in_external_maps))
         DialogUtils.showOptionsDialog(this, getString(R.string.select_action), options) { which ->
@@ -744,34 +762,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onNavigationItemSelected(item: android.view.MenuItem): Boolean {
         when (item.itemId) {
-            R.id.nav_save_location -> {
-                locationViewModel.currentLocation.value?.let { latLng ->
-                    navigationViewModel.reverseGeocode(latLng) { name -> showSaveWaypointDialog(latLng, defaultName = name) }
-                } ?: DialogUtils.showErrorToast(this, getString(R.string.location_unavailable))
-            }
-            R.id.nav_share_location -> {
-                val currentTarget = navigationViewModel.targetLocation.value
-                val userLoc = locationViewModel.currentLocation.value
-                if (currentTarget != null) {
-                    ShareUtils.shareWaypointText(this, currentTarget.second, currentTarget.first.latitude, currentTarget.first.longitude)
-                } else if (userLoc != null) {
-                    navigationViewModel.reverseGeocode(userLoc) { name ->
-                        ShareUtils.shareWaypointText(this, name, userLoc.latitude, userLoc.longitude)
-                    }
-                } else {
-                    DialogUtils.showErrorToast(this, getString(R.string.location_unavailable))
-                }
-            }
-            R.id.nav_open_current_location_in_maps -> {
-                val userLoc = locationViewModel.currentLocation.value
-                if (userLoc != null) {
-                    navigationViewModel.reverseGeocode(userLoc) { name ->
-                        ShareUtils.openInMaps(this, name, userLoc.latitude, userLoc.longitude)
-                    }
-                } else {
-                    DialogUtils.showErrorToast(this, getString(R.string.location_unavailable))
-                }
-            }
             R.id.nav_manage_waypoints -> showWaypointManagementDialog()
             R.id.nav_manage_routes -> showRouteManagementDialog()
             R.id.nav_change_skin -> showSkinSelectionDialog()
@@ -1076,12 +1066,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             intArrayOf()
         )
 
-        val itemShapeDrawable = android.graphics.drawable.GradientDrawable().apply {
-            shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-            cornerRadius = 4f * resources.displayMetrics.density
-            setColor((skin.compassRingColor and 0x00FFFFFF) or 0x30000000)
-        }
-        navigationView.itemBackground = itemShapeDrawable
+        navigationView.itemBackground = null
 
         val textColors = intArrayOf(skin.compassRingColor, skin.compassRingColor, skin.distanceTextColor)
         val iconColors = intArrayOf(skin.compassRingColor, skin.compassRingColor, skin.infoTextColor)

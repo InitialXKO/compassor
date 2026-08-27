@@ -2,15 +2,6 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <group android:checkableBehavior="single">
         <item
-            android:id="@+id/nav_save_location"
-            android:title="@string/save_location" />
-        <item
-            android:id="@+id/nav_share_location"
-            android:title="@string/share_location" />
-        <item
-            android:id="@+id/nav_open_current_location_in_maps"
-            android:title="@string/open_current_location_in_maps" />
-        <item
             android:id="@+id/nav_manage_waypoints"
             android:title="@string/manage_waypoints" />
         <item

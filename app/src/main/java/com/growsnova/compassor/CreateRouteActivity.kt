@@ -27,6 +27,11 @@ class CreateRouteActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_create_route)
 
+        val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
+        setSupportActionBar(toolbar)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        toolbar.setNavigationOnClickListener { finish() }
+
         routeBeingEdited = intent.getSerializableExtraCompat<Route>("route_to_edit")
         routeBeingEdited?.let {
             title = getString(R.string.edit_route)

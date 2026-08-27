@@ -20,6 +20,7 @@ class MapManager @Inject constructor(
     private val waypointMarkers = mutableMapOf<Long, Marker>()
     private var targetMarker: Marker? = null
     private var targetMarkerClickListener: (() -> Unit)? = null
+    private var myLocationClickListener: (() -> Unit)? = null
     private var completedPolyline: Polyline? = null
     private var remainingPolyline: Polyline? = null
     private var guidancePolyline: Polyline? = null
@@ -33,6 +34,13 @@ class MapManager @Inject constructor(
         this.aMap = map
         setupMapSettings()
         setupLocationSource()
+    }
+
+    fun setOnMyLocationClickListener(listener: () -> Unit) {
+        this.myLocationClickListener = listener
+        aMap?.setOnMyLocationChangeListener { _ ->
+            myLocationClickListener?.invoke()
+        }
     }
 
     fun applyMapStyle(isNightMode: Boolean) {
