@@ -103,6 +103,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     @Inject
     lateinit var navigationRepository: NavigationRepository
 
+    @Inject
+    lateinit var soundManager: com.growsnova.compassor.manager.SoundManager
+
+    @Inject
+    lateinit var wearDataSender: com.growsnova.compassor.wear.WearDataSender
+
     private val createRouteLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             result.data?.let { handleCreateRouteResult(it) }
@@ -117,6 +123,17 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private val skinPickerLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { importSkinFromFile(it) }
+    }
+
+    private var routeToExport: Route? = null
+    private val exportRouteLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        uri?.let { route ->
+            routeToExport?.let { exportRouteToFile(it, uri) }
+        }
+    }
+
+    private val importRouteLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let { importRouteFromFile(it) }
     }
 
     private val takePhotoLauncher = registerForActivityResult(ActivityResultContracts.TakePicture()) { success ->
@@ -149,6 +166,40 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         setupObservers()
         checkAndRequestPermissions()
         handleNavigationIntent()
+        handleIncomingLocationIntent(intent)
+    }
+
+    override fun onNewIntent(intent: android.content.Intent?) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIncomingLocationIntent(intent)
+    }
+
+    private fun handleIncomingLocationIntent(intent: android.content.Intent?) {
+        val parsed = CoordinateParser.parseIntent(intent)
+        if (parsed != null) {
+            if (parsed.gcj02LatLng.latitude == 0.0 && parsed.gcj02LatLng.longitude == 0.0) {
+                // Incoming text address without coordinates: trigger POI search automatically
+                navigationViewModel.searchPOI(parsed.name, locationViewModel.currentLocation.value)
+            } else {
+                val options = arrayOf(getString(R.string.start_navigation), getString(R.string.save_location))
+                DialogUtils.showOptionsDialog(
+                    this,
+                    getString(R.string.incoming_location_dialog_title, parsed.name),
+                    options
+                ) { which ->
+                    when (which) {
+                        0 -> {
+                            navigationViewModel.setTarget(parsed.gcj02LatLng, parsed.name)
+                            DialogUtils.showSuccessToast(this, getString(R.string.nav_target_format, parsed.name))
+                        }
+                        1 -> {
+                            showSaveWaypointDialog(parsed.gcj02LatLng, defaultName = parsed.name)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private fun initViews(savedInstanceState: Bundle?) {
@@ -204,6 +255,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         mapView.onCreate(savedInstanceState)
         aMap = mapView.map
         mapManager.initialize(aMap)
+        mapManager.setOnMyLocationClickListener { showMyLocationOptionsDialog() }
 
         aMap.setOnMapLongClickListener { latLng -> showMapLongClickOptionsDialog(latLng) }
         aMap.setOnMapTouchListener { event ->
@@ -347,6 +399,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
                             val radarHeight = (220 * resources.displayMetrics.density).toInt()
                             mapManager.updatePadding(bottom = radarHeight)
+
+                            com.growsnova.compassor.service.NavigationService.stop(this@MainActivity)
                         }
                     }
                 }
@@ -450,10 +504,30 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         updateNavButtonsVisibility(navigationViewModel.currentRoute.value)
 
+        // Update foreground navigation notification & Wear OS DataLayer
+        val azimuth = locationViewModel.azimuth.value
+        val skinKey = navigationRepository.getSkinName()
+        val target = navigationViewModel.targetLocation.value
+        val myLoc = locationViewModel.currentLocation.value
+        val bearing = if (target != null && myLoc != null) {
+            val results = FloatArray(2)
+            android.location.Location.distanceBetween(myLoc.latitude, myLoc.longitude, target.first.latitude, target.first.longitude, results)
+            (results[1] + 360f) % 360f
+        } else {
+            0f
+        }
+
+        if (navigationViewModel.targetLocation.value != null) {
+            com.growsnova.compassor.service.NavigationService.startOrUpdate(this, update.targetName, update.distance, azimuth)
+        }
+        wearDataSender.sendNavigationData(update.targetName, update.distance, bearing, skinKey)
+
         if (update.nextWaypointReached) {
+            soundManager.playArrivalTone()
             DialogUtils.showToast(this, getString(R.string.next_waypoint_notification, update.targetName))
         }
         if (update.routeCompleted) {
+            soundManager.playArrivalTone()
             DialogUtils.showToast(this, getString(R.string.route_completed))
         }
     }
@@ -545,30 +619,41 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun showTargetMarkerOptionsDialog(latLng: LatLng, name: String) {
-        val savedWaypoint = mapViewModel.waypoints.value.find {
-            val dist = FloatArray(1)
-            android.location.Location.distanceBetween(latLng.latitude, latLng.longitude, it.latitude, it.longitude, dist)
-            dist[0] < 5
+        val options = arrayOf(getString(R.string.save_location), getString(R.string.share_location), getString(R.string.open_in_external_maps), getString(R.string.stop_navigation))
+        DialogUtils.showOptionsDialog(this, name, options) { which ->
+            when (which) {
+                0 -> showSaveWaypointDialog(latLng, defaultName = name)
+                1 -> ShareUtils.shareWaypointText(this, name, latLng.latitude, latLng.longitude)
+                2 -> ShareUtils.openInMaps(this, name, latLng.latitude, latLng.longitude)
+                3 -> navigationViewModel.stopNavigation()
+            }
         }
-        if (savedWaypoint != null) {
-            showWaypointOptionsDialog(savedWaypoint)
-        } else {
-            val options = arrayOf(getString(R.string.save_location), getString(R.string.stop_navigation))
+    }
+
+    private fun showMyLocationOptionsDialog() {
+        val userLoc = locationViewModel.currentLocation.value ?: run {
+            DialogUtils.showErrorToast(this, getString(R.string.location_unavailable))
+            return
+        }
+        val options = arrayOf(getString(R.string.save_location), getString(R.string.share_location), getString(R.string.open_in_external_maps))
+        navigationViewModel.reverseGeocode(userLoc) { name ->
             DialogUtils.showOptionsDialog(this, name, options) { which ->
                 when (which) {
-                    0 -> showSaveWaypointDialog(latLng, defaultName = name)
-                    1 -> navigationViewModel.stopNavigation()
+                    0 -> showSaveWaypointDialog(userLoc, defaultName = name)
+                    1 -> ShareUtils.shareWaypointText(this, name, userLoc.latitude, userLoc.longitude)
+                    2 -> ShareUtils.openInMaps(this, name, userLoc.latitude, userLoc.longitude)
                 }
             }
         }
     }
 
     private fun showMapLongClickOptionsDialog(latLng: LatLng) {
-        val options = arrayOf(getString(R.string.save_location), getString(R.string.set_destination))
+        val options = arrayOf(getString(R.string.save_location), getString(R.string.set_destination), getString(R.string.open_in_external_maps))
         DialogUtils.showOptionsDialog(this, getString(R.string.select_action), options) { which ->
             when (which) {
                 0 -> navigationViewModel.reverseGeocode(latLng) { name -> showSaveWaypointDialog(latLng, defaultName = name) }
                 1 -> navigationViewModel.reverseGeocode(latLng) { name -> navigationViewModel.setTarget(latLng, name) }
+                2 -> navigationViewModel.reverseGeocode(latLng) { name -> ShareUtils.openInMaps(this, name, latLng.latitude, latLng.longitude) }
             }
         }
     }
@@ -689,11 +774,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     override fun onNavigationItemSelected(item: android.view.MenuItem): Boolean {
         when (item.itemId) {
-            R.id.nav_save_location -> {
-                locationViewModel.currentLocation.value?.let { latLng ->
-                    navigationViewModel.reverseGeocode(latLng) { name -> showSaveWaypointDialog(latLng, defaultName = name) }
-                } ?: DialogUtils.showErrorToast(this, getString(R.string.location_unavailable))
-            }
             R.id.nav_manage_waypoints -> showWaypointManagementDialog()
             R.id.nav_manage_routes -> showRouteManagementDialog()
             R.id.nav_change_skin -> showSkinSelectionDialog()
@@ -708,10 +788,82 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val displayInfo = waypoints.map { waypoint ->
             val routes = navigationViewModel.routes.value.filter { it.waypoints.any { w -> w.id == waypoint.id } }
             waypoint.name + if (routes.isNotEmpty()) getString(R.string.in_routes, routes.joinToString { it.name }) else ""
-        }.toTypedArray()
+        }
+        val combinedOptions = displayInfo + listOf(getString(R.string.export_waypoints), getString(R.string.import_waypoints))
 
-        DialogUtils.showOptionsDialog(this, getString(R.string.manage_waypoints_title), displayInfo) { which ->
-            showWaypointOptionsDialog(waypoints[which])
+        DialogUtils.showOptionsDialog(this, getString(R.string.manage_waypoints_title), combinedOptions.toTypedArray()) { which ->
+            if (which < waypoints.size) {
+                showWaypointOptionsDialog(waypoints[which])
+            } else if (which == waypoints.size) {
+                // Export waypoints option
+                showExportWaypointsFormatDialog()
+            } else {
+                // Import waypoints option
+                importWaypointsLauncher.launch(arrayOf("application/json", "application/xml", "text/xml", "*/*"))
+            }
+        }
+    }
+
+    private var exportWaypointsType: String? = null
+    private val exportWaypointsLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("*/*")) { uri ->
+        uri?.let { exportWaypointsToFile(it) }
+    }
+
+    private val importWaypointsLauncher = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        uri?.let { importWaypointsFromFile(it) }
+    }
+
+    private fun showExportWaypointsFormatDialog() {
+        val formats = arrayOf(getString(R.string.export_geojson), getString(R.string.export_kml))
+        DialogUtils.showOptionsDialog(this, getString(R.string.export_waypoints), formats) { which ->
+            when (which) {
+                0 -> {
+                    exportWaypointsType = "geojson"
+                    exportWaypointsLauncher.launch("compassor_waypoints.geojson")
+                }
+                1 -> {
+                    exportWaypointsType = "kml"
+                    exportWaypointsLauncher.launch("compassor_waypoints.kml")
+                }
+            }
+        }
+    }
+
+    private fun exportWaypointsToFile(uri: android.net.Uri) {
+        try {
+            contentResolver.openOutputStream(uri)?.use { outputStream ->
+                val waypoints = mapViewModel.waypoints.value
+                val content = if (exportWaypointsType == "kml") {
+                    KmlUtils.exportWaypointsToKml(waypoints)
+                } else {
+                    GeoJsonUtils.exportWaypointsToGeoJson(waypoints)
+                }
+                outputStream.write(content.toByteArray(Charsets.UTF_8))
+                DialogUtils.showSuccessToast(this, getString(R.string.waypoints_exported))
+            }
+        } catch (e: Exception) {
+            DialogUtils.showErrorToast(this, getString(R.string.import_failed))
+        }
+    }
+
+    private fun importWaypointsFromFile(uri: android.net.Uri) {
+        try {
+            contentResolver.openInputStream(uri)?.use { inputStream ->
+                val content = inputStream.reader().readText()
+                val imported = if (content.trim().startsWith("<?xml") || content.trim().startsWith("<kml")) {
+                    KmlUtils.importKmlToWaypoints(content)
+                } else {
+                    GeoJsonUtils.importGeoJsonToWaypoints(content)
+                }
+                if (imported.isNotEmpty()) {
+                    imported.forEach { navigationViewModel.addWaypoint(it) }
+                    DialogUtils.showSuccessToast(this, getString(R.string.waypoints_imported, imported.size))
+                } else {
+                    DialogUtils.showErrorToast(this, getString(R.string.import_failed))
+                }
+            }
+        } catch (e: Exception) {
+            DialogUtils.showErrorToast(this, getString(R.string.import_failed))
         }
     }
 
@@ -745,6 +897,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 navigationViewModel.setTarget(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
             }
         }
+        view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnOpenInMaps).apply {
+            applyTouchScale()
+            setOnClickListener {
+                dialog.dismiss()
+                ShareUtils.openInMaps(this@MainActivity, waypoint.name, waypoint.latitude, waypoint.longitude)
+            }
+        }
         view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnViewDetails).apply {
             applyTouchScale()
             setOnClickListener {
@@ -757,6 +916,17 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             setOnClickListener {
                 dialog.dismiss()
                 confirmDeleteWaypoint(waypoint)
+            }
+        }
+
+        // Add options button for opening in external maps from waypoint card
+        view.findViewById<View>(R.id.waypointName).setOnClickListener {
+            val options = arrayOf(getString(R.string.open_in_external_maps), getString(R.string.share_location))
+            DialogUtils.showOptionsDialog(this, waypoint.name, options) { which ->
+                when (which) {
+                    0 -> ShareUtils.openInMaps(this, waypoint.name, waypoint.latitude, waypoint.longitude)
+                    1 -> ShareUtils.shareWaypointText(this, waypoint.name, waypoint.latitude, waypoint.longitude)
+                }
             }
         }
 
@@ -777,21 +947,45 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
     private fun showRouteManagementDialog() {
         val routes = navigationViewModel.routes.value
-        val names = routes.map { it.name }.toTypedArray()
-        DialogUtils.showListDialog(this, getString(R.string.manage_routes), names,
-            onItemSelected = { showRouteOptionsDialog(routes[it]) },
-            positiveButtonText = R.string.create_route,
-            onPositive = { launchCreateRoute() }
-        )
+        val options = arrayOf(getString(R.string.create_route), getString(R.string.import_route))
+
+        val dialogView = layoutInflater.inflate(R.layout.dialog_input, null)
+        // Instead of plain list dialog, let's offer list of routes plus Import and Create buttons
+        val routeNames = routes.map { it.name }.toTypedArray()
+        if (routeNames.isEmpty()) {
+            DialogUtils.showOptionsDialog(this, getString(R.string.manage_routes), options) { which ->
+                when (which) {
+                    0 -> launchCreateRoute()
+                    1 -> importRouteLauncher.launch(arrayOf("application/json", "*/*"))
+                }
+            }
+        } else {
+            val combinedOptions = routeNames + arrayOf(getString(R.string.import_route))
+            DialogUtils.showListDialog(this, getString(R.string.manage_routes), combinedOptions,
+                onItemSelected = { which ->
+                    if (which < routes.size) {
+                        showRouteOptionsDialog(routes[which])
+                    } else {
+                        importRouteLauncher.launch(arrayOf("application/json", "*/*"))
+                    }
+                },
+                positiveButtonText = R.string.create_route,
+                onPositive = { launchCreateRoute() }
+            )
+        }
     }
 
     private fun showRouteOptionsDialog(route: Route) {
-        val options = arrayOf(getString(R.string.start_navigation), getString(R.string.edit_route), getString(R.string.delete_route))
+        val options = arrayOf(getString(R.string.start_navigation), getString(R.string.edit_route), getString(R.string.export_route), getString(R.string.delete_route))
         DialogUtils.showOptionsDialog(this, route.name, options) { which ->
             when (which) {
                 0 -> navigationViewModel.startRouteNavigation(route, locationViewModel.currentLocation.value)
                 1 -> launchEditRoute(route)
-                2 -> navigationViewModel.deleteRoute(route)
+                2 -> {
+                    routeToExport = route
+                    exportRouteLauncher.launch("${route.name}.json")
+                }
+                3 -> navigationViewModel.deleteRoute(route)
             }
         }
     }
@@ -884,12 +1078,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             intArrayOf()
         )
 
-        val itemShapeDrawable = android.graphics.drawable.GradientDrawable().apply {
-            shape = android.graphics.drawable.GradientDrawable.RECTANGLE
-            cornerRadius = 4f * resources.displayMetrics.density
-            setColor((skin.compassRingColor and 0x00FFFFFF) or 0x30000000)
-        }
-        navigationView.itemBackground = itemShapeDrawable
+        navigationView.itemBackground = null
 
         val textColors = intArrayOf(skin.compassRingColor, skin.compassRingColor, skin.distanceTextColor)
         val iconColors = intArrayOf(skin.compassRingColor, skin.compassRingColor, skin.infoTextColor)
@@ -914,6 +1103,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         val isNightMode = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
         mapManager.applyMapStyle(isNightMode)
+
+        // 6. Sync theme skin to Wear OS watch
+        wearDataSender.sendSkinKey(skinName)
     }
 
     private fun showSettingsDialog() {
@@ -946,6 +1138,43 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
+    }
+
+    private fun exportRouteToFile(route: Route, uri: android.net.Uri) {
+        try {
+            contentResolver.openOutputStream(uri)?.use { outputStream ->
+                val json = RouteJsonUtils.exportRouteToJson(route)
+                outputStream.write(json.toByteArray(Charsets.UTF_8))
+                DialogUtils.showSuccessToast(this, getString(R.string.route_exported))
+            }
+        } catch (e: Exception) {
+            DialogUtils.showErrorToast(this, getString(R.string.skin_import_failed))
+        }
+    }
+
+    private fun importRouteFromFile(uri: android.net.Uri) {
+        try {
+            contentResolver.openInputStream(uri)?.use { inputStream ->
+                val jsonStr = inputStream.reader().readText()
+                val imported = RouteJsonUtils.importRouteFromJson(jsonStr)
+                if (imported != null) {
+                    val (route, waypoints) = imported
+                    navigationViewModel.saveNewRoute(route, waypoints, startNav = false)
+                    DialogUtils.showConfirmationDialog(
+                        this,
+                        getString(R.string.route_imported, route.name),
+                        getString(R.string.start_navigation) + "?",
+                        onPositive = {
+                            navigationViewModel.startRouteNavigation(route, locationViewModel.currentLocation.value)
+                        }
+                    )
+                } else {
+                    DialogUtils.showErrorToast(this, getString(R.string.route_import_failed))
+                }
+            }
+        } catch (e: Exception) {
+            DialogUtils.showErrorToast(this, getString(R.string.route_import_failed))
+        }
     }
 
     private fun importSkinFromFile(uri: android.net.Uri) {

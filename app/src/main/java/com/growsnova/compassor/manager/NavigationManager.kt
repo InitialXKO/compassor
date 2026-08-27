@@ -47,6 +47,14 @@ class NavigationManager @Inject constructor(
         saveState()
     }
 
+    fun navigateToExternalLocation(latLng: LatLng, name: String) {
+        _currentRoute.value = null
+        _currentWaypointIndex.value = -1
+        _navStartLocation.value = null
+        updateTargetInternal(latLng, name)
+        saveState()
+    }
+
     private fun updateTargetInternal(latLng: LatLng, name: String) {
         _targetLocation.value = Pair(latLng, name)
     }

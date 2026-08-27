@@ -145,4 +145,22 @@
     <string name="basement_floor_format">B%1$d</string>
     <string name="location_disabled_hint">定位服务已关闭，请在设置中开启</string>
     <string name="open_settings">去开启</string>
+    <string name="share_location">分享位置</string>
+    <string name="open_current_location_in_maps">地图打开当前位置</string>
+    <string name="open_in_external_maps">在外部地图中打开</string>
+    <string name="incoming_location_dialog_title">收到位置分享: %s</string>
+    <string name="export_route">导出路线</string>
+    <string name="import_route">导入路线</string>
+    <string name="export_waypoints">导出地点</string>
+    <string name="import_waypoints">导入地点</string>
+    <string name="export_geojson">导出 GeoJSON</string>
+    <string name="export_kml">导出 KML</string>
+    <string name="export_json">导出 JSON</string>
+    <string name="import_file">导入文件 (JSON/GeoJSON/KML)</string>
+    <string name="waypoints_exported">地点数据已导出</string>
+    <string name="waypoints_imported">%d 个地点已成功导入</string>
+    <string name="import_failed">文件导入失败</string>
+    <string name="route_exported">路线已导出</string>
+    <string name="route_imported">路线已导入: %s</string>
+    <string name="route_import_failed">路线导入失败</string>
 </resources>

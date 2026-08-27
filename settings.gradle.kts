@@ -17,4 +17,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "Compassor"
-include(":app")
+include(":app", ":wear", ":common")
