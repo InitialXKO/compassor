@@ -38,8 +38,19 @@ class MapManager @Inject constructor(
 
     fun setOnMyLocationClickListener(listener: () -> Unit) {
         this.myLocationClickListener = listener
-        aMap?.setOnMyLocationChangeListener { _ ->
-            myLocationClickListener?.invoke()
+        aMap?.addOnMapClickListener { clickLatLng ->
+            val userLoc = lastLatLng
+            if (userLoc != null) {
+                val dist = FloatArray(1)
+                android.location.Location.distanceBetween(
+                    userLoc.latitude, userLoc.longitude,
+                    clickLatLng.latitude, clickLatLng.longitude,
+                    dist
+                )
+                if (dist[0] < 35f) {
+                    myLocationClickListener?.invoke()
+                }
+            }
         }
     }
 
