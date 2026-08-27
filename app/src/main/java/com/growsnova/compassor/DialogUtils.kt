@@ -62,6 +62,92 @@ object DialogUtils {
     }
 
     /**
+     * Option item representation with label and optional icon resource ID.
+     */
+    data class OptionItem(
+        val label: String,
+        val iconResId: Int? = null,
+        val isDestructive: Boolean = false
+    )
+
+    /**
+     * Shows a standardized custom menu dialog matching waypoint options menu style (with title, divider line, icons).
+     */
+    fun showStandardMenuDialog(
+        context: Context,
+        title: String,
+        options: List<OptionItem>,
+        floorText: String? = null,
+        onOptionSelected: (Int) -> Unit
+    ) {
+        val view = LayoutInflater.from(context).inflate(R.layout.dialog_custom_options, null)
+        val titleView = view.findViewById<android.widget.TextView>(R.id.dialogTitle)
+        val floorView = view.findViewById<android.widget.TextView>(R.id.dialogFloor)
+        val optionsContainer = view.findViewById<android.widget.LinearLayout>(R.id.optionsContainer)
+
+        titleView.text = title
+        if (floorText != null) {
+            floorView.text = floorText
+            floorView.visibility = android.view.View.VISIBLE
+        } else {
+            floorView.visibility = android.view.View.GONE
+        }
+
+        val alertDialog = MaterialAlertDialogBuilder(context)
+            .setView(view)
+            .create()
+
+        options.forEachIndexed { index, option ->
+            val button = com.google.android.material.button.MaterialButton(
+                context,
+                null,
+                com.google.android.material.R.attr.borderlessButtonStyle
+            ).apply {
+                layoutParams = android.widget.LinearLayout.LayoutParams(
+                    android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                    android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                gravity = android.view.Gravity.START or android.view.Gravity.CENTER_VERTICAL
+                text = option.label
+                option.iconResId?.let { iconRes ->
+                    setIconResource(iconRes)
+                    iconGravity = com.google.android.material.button.MaterialButton.ICON_GRAVITY_TEXT_START
+                }
+                if (option.isDestructive) {
+                    val errorColor = getThemeColor(context, com.google.android.material.R.attr.colorError)
+                    setTextColor(errorColor)
+                    iconTint = android.content.res.ColorStateList.valueOf(errorColor)
+                } else {
+                    val primaryColor = getThemeColor(context, com.google.android.material.R.attr.colorPrimary)
+                    val onSurfaceColor = getThemeColor(context, com.google.android.material.R.attr.colorOnSurface)
+                    setTextColor(onSurfaceColor)
+                    iconTint = android.content.res.ColorStateList.valueOf(primaryColor)
+                }
+                applyTouchScale()
+                setOnClickListener {
+                    alertDialog.dismiss()
+                    onOptionSelected(index)
+                }
+            }
+            optionsContainer.addView(button)
+        }
+
+        alertDialog.show()
+    }
+
+    private fun getThemeColor(context: Context, attr: Int): Int {
+        val typedValue = android.util.TypedValue()
+        if (context.theme.resolveAttribute(attr, typedValue, true)) {
+            return if (typedValue.resourceId != 0) {
+                androidx.core.content.ContextCompat.getColor(context, typedValue.resourceId)
+            } else {
+                typedValue.data
+            }
+        }
+        return android.graphics.Color.BLACK
+    }
+
+    /**
      * Shows a Material Design 3 options dialog
      */
     fun showOptionsDialog(
@@ -70,12 +156,29 @@ object DialogUtils {
         options: Array<String>,
         onOptionSelected: (Int) -> Unit
     ) {
-        MaterialAlertDialogBuilder(context)
-            .setTitle(title)
-            .setItems(options) { _, which ->
-                onOptionSelected(which)
+        val optionItems = options.map { option ->
+            val (iconRes, isDestructive) = when {
+                option == context.getString(R.string.start_navigation) || option == context.getString(R.string.set_destination) ->
+                    Pair(android.R.drawable.ic_menu_mylocation, false)
+                option == context.getString(R.string.save_location) ->
+                    Pair(android.R.drawable.ic_menu_save, false)
+                option == context.getString(R.string.share_location) ->
+                    Pair(android.R.drawable.ic_menu_share, false)
+                option == context.getString(R.string.open_in_external_maps) ->
+                    Pair(android.R.drawable.ic_menu_mapmode, false)
+                option == context.getString(R.string.view_details) || option == context.getString(R.string.edit_route) ->
+                    Pair(android.R.drawable.ic_menu_info_details, false)
+                option == context.getString(R.string.export_route) || option == context.getString(R.string.export_waypoints) ->
+                    Pair(android.R.drawable.ic_menu_upload, false)
+                option == context.getString(R.string.import_waypoints) || option == context.getString(R.string.import_route) ->
+                    Pair(android.R.drawable.ic_menu_add, false)
+                option == context.getString(R.string.stop_navigation) || option == context.getString(R.string.delete) || option == context.getString(R.string.delete_route) ->
+                    Pair(android.R.drawable.ic_menu_delete, true)
+                else -> Pair(null, false)
             }
-            .show()
+            OptionItem(label = option, iconResId = iconRes, isDestructive = isDestructive)
+        }
+        showStandardMenuDialog(context, title, optionItems, onOptionSelected = onOptionSelected)
     }
 
     /**
