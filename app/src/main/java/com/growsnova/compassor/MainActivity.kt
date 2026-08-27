@@ -595,12 +595,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (savedWaypoint != null) {
             showWaypointOptionsDialog(savedWaypoint)
         } else {
-            val options = arrayOf(getString(R.string.save_location), getString(R.string.share_location), getString(R.string.stop_navigation))
+            val options = arrayOf(getString(R.string.save_location), getString(R.string.share_location), "在地图中打开", getString(R.string.stop_navigation))
             DialogUtils.showOptionsDialog(this, name, options) { which ->
                 when (which) {
                     0 -> showSaveWaypointDialog(latLng, defaultName = name)
-                    1 -> CoordinateParser.shareLocation(this, latLng, name)
-                    2 -> navigationViewModel.stopNavigation()
+                    1 -> ShareUtils.shareWaypointText(this, name, latLng.latitude, latLng.longitude)
+                    2 -> ShareUtils.openInMaps(this, name, latLng.latitude, latLng.longitude)
+                    3 -> navigationViewModel.stopNavigation()
                 }
             }
         }
@@ -741,10 +742,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 val currentTarget = navigationViewModel.targetLocation.value
                 val userLoc = locationViewModel.currentLocation.value
                 if (currentTarget != null) {
-                    CoordinateParser.shareLocation(this, currentTarget.first, currentTarget.second)
+                    ShareUtils.shareWaypointText(this, currentTarget.second, currentTarget.first.latitude, currentTarget.first.longitude)
                 } else if (userLoc != null) {
                     navigationViewModel.reverseGeocode(userLoc) { name ->
-                        CoordinateParser.shareLocation(this, userLoc, name)
+                        ShareUtils.shareWaypointText(this, name, userLoc.latitude, userLoc.longitude)
                     }
                 } else {
                     DialogUtils.showErrorToast(this, getString(R.string.location_unavailable))
