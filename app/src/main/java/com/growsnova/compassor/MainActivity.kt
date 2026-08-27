@@ -606,22 +606,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     private fun showTargetMarkerOptionsDialog(latLng: LatLng, name: String) {
-        val savedWaypoint = mapViewModel.waypoints.value.find {
-            val dist = FloatArray(1)
-            android.location.Location.distanceBetween(latLng.latitude, latLng.longitude, it.latitude, it.longitude, dist)
-            dist[0] < 5
-        }
-        if (savedWaypoint != null) {
-            showWaypointOptionsDialog(savedWaypoint)
-        } else {
-            val options = arrayOf(getString(R.string.save_location), getString(R.string.share_location), getString(R.string.open_in_external_maps), getString(R.string.stop_navigation))
-            DialogUtils.showOptionsDialog(this, name, options) { which ->
-                when (which) {
-                    0 -> showSaveWaypointDialog(latLng, defaultName = name)
-                    1 -> ShareUtils.shareWaypointText(this, name, latLng.latitude, latLng.longitude)
-                    2 -> ShareUtils.openInMaps(this, name, latLng.latitude, latLng.longitude)
-                    3 -> navigationViewModel.stopNavigation()
-                }
+        val options = arrayOf(getString(R.string.save_location), getString(R.string.share_location), getString(R.string.open_in_external_maps), getString(R.string.stop_navigation))
+        DialogUtils.showOptionsDialog(this, name, options) { which ->
+            when (which) {
+                0 -> showSaveWaypointDialog(latLng, defaultName = name)
+                1 -> ShareUtils.shareWaypointText(this, name, latLng.latitude, latLng.longitude)
+                2 -> ShareUtils.openInMaps(this, name, latLng.latitude, latLng.longitude)
+                3 -> navigationViewModel.stopNavigation()
             }
         }
     }
@@ -902,6 +893,13 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             setOnClickListener {
                 dialog.dismiss()
                 navigationViewModel.setTarget(LatLng(waypoint.latitude, waypoint.longitude), waypoint.name)
+            }
+        }
+        view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnOpenInMaps).apply {
+            applyTouchScale()
+            setOnClickListener {
+                dialog.dismiss()
+                ShareUtils.openInMaps(this@MainActivity, waypoint.name, waypoint.latitude, waypoint.longitude)
             }
         }
         view.findViewById<com.google.android.material.button.MaterialButton>(R.id.btnViewDetails).apply {

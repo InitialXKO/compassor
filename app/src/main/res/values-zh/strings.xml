@@ -114,7 +114,7 @@
     <string name="skin_deep_sea_desc">深渊湛蓝与生物荧光青</string>
     <string name="skin_vintage_macaron">马卡龙柔粉</string>
     <string name="skin_vintage_macaron_desc">梦幻柔和马卡龙薄荷与薰衣草</string>
-    <string name="open_current_location_in_maps">在外部地图中打开当前位置</string>
+    <string name="open_current_location_in_maps">地图打开当前位置</string>
     <string name="open_in_external_maps">在外部地图中打开</string>
     <string name="incoming_location_dialog_title">收到位置分享: %s</string>
 </resources>

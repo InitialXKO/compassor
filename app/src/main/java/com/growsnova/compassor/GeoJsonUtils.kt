@@ -123,7 +123,7 @@ object GeoJsonUtils {
                     if (coords.size() >= 2) {
                         val wgsLng = coords.get(0).asDouble
                         val wgsLat = coords.get(1).asDouble
-                        val (gcjLat, gcjLng) = CoordTransform.wgs84ToGcj02(wgsLat, wgsLng)
+                            val (gcjLat, gcjLng) = CoordTransform.wgs84ToGcj02(wgsLat, wgsLng)
 
                         val props = feature.getAsJsonObject("properties")
                         val name = props?.get("name")?.asString ?: "GeoJSON地点"

@@ -132,13 +132,15 @@ class CoordinateParserTest {
         val originalGcjLng = 120.1421
 
         val (wgsLat, wgsLng) = CoordTransform.gcj02ToWgs84(originalGcjLat, originalGcjLng)
+        val encodedName = java.net.URLEncoder.encode(targetName, "UTF-8")
         val shareText = """
             $targetName
-            ${String.format("%.6f, %.6f", wgsLat, wgsLng)} (WGS-84)
-            https://www.amap.com/place/$originalGcjLat,$originalGcjLng
-        """.trimIndent()
+            ${String.format(java.util.Locale.US, "%.6f, %.6f", wgsLat, wgsLng)} (WGS-84)
+            geo:%.6f,%.6f?q=%.6f,%.6f(%s)
+            https://uri.amap.com/marker?position=%.6f,%.6f&name=%s
+        """.trimIndent().format(java.util.Locale.US, wgsLat, wgsLng, wgsLat, wgsLng, encodedName, originalGcjLng, originalGcjLat, encodedName)
 
-        val parsed = CoordinateParser.parseText(shareText)
+        val parsed = CoordinateParser.parseUriString(shareText)
         assertNotNull(parsed)
         assertEquals(originalGcjLat, parsed!!.gcj02LatLng.latitude, 0.001)
         assertEquals(originalGcjLng, parsed.gcj02LatLng.longitude, 0.001)

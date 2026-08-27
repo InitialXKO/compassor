@@ -146,7 +146,7 @@
     <string name="location_disabled_hint">定位服务已关闭，请在设置中开启</string>
     <string name="open_settings">去开启</string>
     <string name="share_location">分享位置</string>
-    <string name="open_current_location_in_maps">在外部地图中打开当前位置</string>
+    <string name="open_current_location_in_maps">地图打开当前位置</string>
     <string name="open_in_external_maps">在外部地图中打开</string>
     <string name="incoming_location_dialog_title">收到位置分享: %s</string>
     <string name="export_route">导出路线</string>
