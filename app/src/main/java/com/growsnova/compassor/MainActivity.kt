@@ -584,11 +584,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private fun setupAMapLocationStyle() {
         if (!::aMap.isInitialized) return
         try {
-            val primaryColor = getThemeColor(com.google.android.material.R.attr.colorPrimary)
+            val transparentBitmap = android.graphics.Bitmap.createBitmap(1, 1, android.graphics.Bitmap.Config.ARGB_8888)
             aMap.myLocationStyle = com.amap.api.maps.model.MyLocationStyle().apply {
                 myLocationType(com.amap.api.maps.model.MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE_NO_CENTER)
-                strokeColor(primaryColor)
-                radiusFillColor(primaryColor and 0x30FFFFFF)
+                myLocationIcon(BitmapDescriptorFactory.fromBitmap(transparentBitmap))
+                strokeColor(android.graphics.Color.TRANSPARENT)
+                radiusFillColor(android.graphics.Color.TRANSPARENT)
             }
             aMap.isMyLocationEnabled = true
         } catch (e: Exception) {
