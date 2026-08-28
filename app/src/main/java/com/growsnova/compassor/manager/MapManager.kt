@@ -41,14 +41,20 @@ class MapManager @Inject constructor(
         this.myLocationClickListener = listener
         aMap?.addOnMapClickListener { clickLatLng ->
             val userLoc = lastLatLng ?: return@addOnMapClickListener
+            val map = aMap ?: return@addOnMapClickListener
+
             val dist = FloatArray(1)
             android.location.Location.distanceBetween(
                 userLoc.latitude, userLoc.longitude,
                 clickLatLng.latitude, clickLatLng.longitude,
                 dist
             )
-            // Use geographic distance check only (e.g. within 50 meters) without screen coordinate calculations
-            if (dist[0] <= 50f) {
+
+            val touchRadiusPx = 40f * context.resources.displayMetrics.density
+            val scalePerPixel = map.scalePerPixel
+            val maxDistanceMeters = (touchRadiusPx * scalePerPixel).coerceAtLeast(35f)
+
+            if (dist[0] <= maxDistanceMeters) {
                 myLocationClickListener?.invoke()
             }
         }
