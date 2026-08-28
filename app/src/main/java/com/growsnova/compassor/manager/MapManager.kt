@@ -19,7 +19,6 @@ class MapManager @Inject constructor(
     private var aMap: AMap? = null
     private val waypointMarkers = mutableMapOf<Long, Marker>()
     private var targetMarker: Marker? = null
-    private var myLocationMarker: Marker? = null
     private var targetMarkerClickListener: (() -> Unit)? = null
     private var myLocationClickListener: (() -> Unit)? = null
     private var poiClickListener: ((Poi) -> Unit)? = null
@@ -40,6 +39,19 @@ class MapManager @Inject constructor(
 
     fun setOnMyLocationClickListener(listener: () -> Unit) {
         this.myLocationClickListener = listener
+        aMap?.addOnMapClickListener { clickLatLng ->
+            val userLoc = lastLatLng ?: return@addOnMapClickListener
+            val dist = FloatArray(1)
+            android.location.Location.distanceBetween(
+                userLoc.latitude, userLoc.longitude,
+                clickLatLng.latitude, clickLatLng.longitude,
+                dist
+            )
+            // Use geographic distance check only (e.g. within 50 meters) without screen coordinate calculations
+            if (dist[0] <= 50f) {
+                myLocationClickListener?.invoke()
+            }
+        }
     }
 
     fun setOnPoiClickListener(listener: (Poi) -> Unit) {
@@ -81,20 +93,6 @@ class MapManager @Inject constructor(
             currentAzimuth?.let { bearing = it }
         }
         locationListener?.onLocationChanged(location)
-
-        aMap?.let { map ->
-            if (myLocationMarker == null) {
-                myLocationMarker = map.addMarker(
-                    MarkerOptions()
-                        .position(latLng)
-                        .anchor(0.5f, 0.5f)
-                        .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE))
-                )
-            } else {
-                myLocationMarker?.position = latLng
-            }
-            currentAzimuth?.let { myLocationMarker?.rotateAngle = 360f - it }
-        }
 
         if (isFirstLocation) {
             isFirstLocation = false
@@ -187,9 +185,7 @@ class MapManager @Inject constructor(
         }
 
         map.setOnMarkerClickListener { marker ->
-            if (marker == myLocationMarker) {
-                myLocationClickListener?.invoke()
-            } else if (marker == targetMarker) {
+            if (marker == targetMarker) {
                 targetMarkerClickListener?.invoke()
             } else {
                 val waypointId = waypointMarkers.entries.find { it.value == marker }?.key
