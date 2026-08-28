@@ -22,7 +22,6 @@ class MapManager @Inject constructor(
     private var myLocationMarker: Marker? = null
     private var targetMarkerClickListener: (() -> Unit)? = null
     private var myLocationClickListener: (() -> Unit)? = null
-    private var poiClickListener: ((Poi) -> Unit)? = null
     private var completedPolyline: Polyline? = null
     private var remainingPolyline: Polyline? = null
     private var guidancePolyline: Polyline? = null
@@ -41,30 +40,18 @@ class MapManager @Inject constructor(
     fun setOnMyLocationClickListener(listener: () -> Unit) {
         this.myLocationClickListener = listener
         aMap?.addOnMapClickListener { clickLatLng ->
-            val userLoc = lastLatLng ?: return@addOnMapClickListener
-            val map = aMap ?: return@addOnMapClickListener
-
-            val dist = FloatArray(1)
-            android.location.Location.distanceBetween(
-                userLoc.latitude, userLoc.longitude,
-                clickLatLng.latitude, clickLatLng.longitude,
-                dist
-            )
-
-            val touchRadiusPx = 40f * context.resources.displayMetrics.density
-            val scalePerPixel = map.scalePerPixel
-            val maxDistanceMeters = (touchRadiusPx * scalePerPixel).coerceAtLeast(35f)
-
-            if (dist[0] <= maxDistanceMeters) {
-                myLocationClickListener?.invoke()
+            val userLoc = lastLatLng
+            if (userLoc != null) {
+                val dist = FloatArray(1)
+                android.location.Location.distanceBetween(
+                    userLoc.latitude, userLoc.longitude,
+                    clickLatLng.latitude, clickLatLng.longitude,
+                    dist
+                )
+                if (dist[0] < 35f) {
+                    myLocationClickListener?.invoke()
+                }
             }
-        }
-    }
-
-    fun setOnPoiClickListener(listener: (Poi) -> Unit) {
-        this.poiClickListener = listener
-        aMap?.setOnPOIClickListener { poi ->
-            poiClickListener?.invoke(poi)
         }
     }
 

@@ -100,7 +100,7 @@ class NearbyPoisFragment : Fragment(), PoiSearch.OnPoiSearchListener {
     }
 
     private fun updatePoiCount() {
-        // Option card header removed to unify internal styles across tabs
+        view?.findViewById<TextView>(R.id.poiCount)?.text = "${filteredPois.size} 个结果"
     }
 
     private fun searchNearbyPois() {
