@@ -152,4 +152,5 @@
     <string name="route_exported">경로를 내보냈습니다</string>
     <string name="route_imported">경로를 가져왔습니다: %s</string>
     <string name="route_import_failed">경로 가져오기 실패</string>
+    <string name="tracking_mode">추적 모드</string>
 </resources>

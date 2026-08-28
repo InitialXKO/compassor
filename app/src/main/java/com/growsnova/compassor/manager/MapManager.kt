@@ -157,6 +157,31 @@ class MapManager @Inject constructor(
         aMap?.setPointToCenter(centerX, centerY)
     }
 
+    fun updateTrackingCamera(latLng: LatLng, azimuth: Float? = null) {
+        val map = aMap ?: return
+        val maxZoom = map.maxZoomLevel
+        val currentAzimuth = azimuth ?: lastAzimuth ?: 0f
+        val cameraPosition = CameraPosition.Builder()
+            .target(latLng)
+            .zoom(maxZoom)
+            .tilt(60f)
+            .bearing(currentAzimuth)
+            .build()
+        map.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition))
+    }
+
+    fun restoreDefaultView(latLng: LatLng? = null) {
+        val map = aMap ?: return
+        val target = latLng ?: lastLatLng ?: map.cameraPosition.target ?: return
+        val cameraPosition = CameraPosition.Builder()
+            .target(target)
+            .zoom(16f)
+            .tilt(0f)
+            .bearing(0f)
+            .build()
+        map.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition))
+    }
+
     fun resetBearing() {
         aMap?.let { map ->
             val currentCamera = map.cameraPosition

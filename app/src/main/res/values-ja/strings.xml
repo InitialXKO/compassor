@@ -152,4 +152,5 @@
     <string name="route_exported">ルートをエクスポートしました</string>
     <string name="route_imported">ルートをインポートしました: %s</string>
     <string name="route_import_failed">ルートのインポートに失敗しました</string>
+    <string name="tracking_mode">追跡モード</string>
 </resources>
