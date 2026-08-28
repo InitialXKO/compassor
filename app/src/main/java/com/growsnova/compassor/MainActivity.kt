@@ -256,6 +256,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         aMap = mapView.map
         mapManager.initialize(aMap)
         mapManager.setOnMyLocationClickListener { showMyLocationOptionsDialog() }
+        mapManager.setOnPoiClickListener { poi ->
+            val latLng = LatLng(poi.coordinate.latitude, poi.coordinate.longitude)
+            showPoiOptionsDialog(poi.name, latLng)
+        }
 
         aMap.setOnMapLongClickListener { latLng -> showMapLongClickOptionsDialog(latLng) }
         aMap.setOnMapTouchListener { event ->
@@ -580,11 +584,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private fun setupAMapLocationStyle() {
         if (!::aMap.isInitialized) return
         try {
-            val primaryColor = getThemeColor(com.google.android.material.R.attr.colorPrimary)
+            val transparentBitmap = android.graphics.Bitmap.createBitmap(1, 1, android.graphics.Bitmap.Config.ARGB_8888)
             aMap.myLocationStyle = com.amap.api.maps.model.MyLocationStyle().apply {
                 myLocationType(com.amap.api.maps.model.MyLocationStyle.LOCATION_TYPE_LOCATION_ROTATE_NO_CENTER)
-                strokeColor(primaryColor)
-                radiusFillColor(primaryColor and 0x30FFFFFF)
+                myLocationIcon(BitmapDescriptorFactory.fromBitmap(transparentBitmap))
+                strokeColor(android.graphics.Color.TRANSPARENT)
+                radiusFillColor(android.graphics.Color.TRANSPARENT)
             }
             aMap.isMyLocationEnabled = true
         } catch (e: Exception) {
@@ -643,6 +648,18 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     1 -> ShareUtils.shareWaypointText(this, name, userLoc.latitude, userLoc.longitude)
                     2 -> ShareUtils.openInMaps(this, name, userLoc.latitude, userLoc.longitude)
                 }
+            }
+        }
+    }
+
+    private fun showPoiOptionsDialog(name: String, latLng: LatLng) {
+        val options = arrayOf(getString(R.string.set_destination), getString(R.string.save_location), getString(R.string.share_location), getString(R.string.open_in_external_maps))
+        DialogUtils.showOptionsDialog(this, name, options) { which ->
+            when (which) {
+                0 -> navigationViewModel.setTarget(latLng, name)
+                1 -> showSaveWaypointDialog(latLng, defaultName = name)
+                2 -> ShareUtils.shareWaypointText(this, name, latLng.latitude, latLng.longitude)
+                3 -> ShareUtils.openInMaps(this, name, latLng.latitude, latLng.longitude)
             }
         }
     }

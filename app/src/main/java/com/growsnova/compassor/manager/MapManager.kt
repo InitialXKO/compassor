@@ -19,8 +19,10 @@ class MapManager @Inject constructor(
     private var aMap: AMap? = null
     private val waypointMarkers = mutableMapOf<Long, Marker>()
     private var targetMarker: Marker? = null
+    private var myLocationMarker: Marker? = null
     private var targetMarkerClickListener: (() -> Unit)? = null
     private var myLocationClickListener: (() -> Unit)? = null
+    private var poiClickListener: ((Poi) -> Unit)? = null
     private var completedPolyline: Polyline? = null
     private var remainingPolyline: Polyline? = null
     private var guidancePolyline: Polyline? = null
@@ -38,19 +40,12 @@ class MapManager @Inject constructor(
 
     fun setOnMyLocationClickListener(listener: () -> Unit) {
         this.myLocationClickListener = listener
-        aMap?.addOnMapClickListener { clickLatLng ->
-            val userLoc = lastLatLng
-            if (userLoc != null) {
-                val dist = FloatArray(1)
-                android.location.Location.distanceBetween(
-                    userLoc.latitude, userLoc.longitude,
-                    clickLatLng.latitude, clickLatLng.longitude,
-                    dist
-                )
-                if (dist[0] < 35f) {
-                    myLocationClickListener?.invoke()
-                }
-            }
+    }
+
+    fun setOnPoiClickListener(listener: (Poi) -> Unit) {
+        this.poiClickListener = listener
+        aMap?.setOnPOIClickListener { poi ->
+            poiClickListener?.invoke(poi)
         }
     }
 
@@ -87,6 +82,8 @@ class MapManager @Inject constructor(
         }
         locationListener?.onLocationChanged(location)
 
+        updateMyLocationMarker(latLng, currentAzimuth)
+
         if (isFirstLocation) {
             isFirstLocation = false
             animateToLocation(latLng, 16f)
@@ -105,6 +102,41 @@ class MapManager @Inject constructor(
             bearing = azimuth
         }
         locationListener?.onLocationChanged(location)
+        updateMyLocationMarker(latLng, azimuth)
+    }
+
+    private fun updateMyLocationMarker(latLng: LatLng, azimuth: Float?) {
+        val map = aMap ?: return
+        if (myLocationMarker == null) {
+            val descriptor = getNavArrowBitmapDescriptor()
+            myLocationMarker = map.addMarker(
+                MarkerOptions()
+                    .position(latLng)
+                    .anchor(0.5f, 0.5f)
+                    .setFlat(true)
+                    .icon(descriptor)
+            )
+        } else {
+            myLocationMarker?.position = latLng
+        }
+        azimuth?.let {
+            myLocationMarker?.rotateAngle = 360f - it
+        }
+    }
+
+    private fun getNavArrowBitmapDescriptor(): BitmapDescriptor {
+        val drawable = androidx.core.content.ContextCompat.getDrawable(context, R.drawable.ic_nav_arrow)
+        if (drawable != null) {
+            val density = context.resources.displayMetrics.density
+            val width = (36 * density).toInt().coerceAtLeast(1)
+            val height = (36 * density).toInt().coerceAtLeast(1)
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(bitmap)
+            drawable.setBounds(0, 0, canvas.width, canvas.height)
+            drawable.draw(canvas)
+            return BitmapDescriptorFactory.fromBitmap(bitmap)
+        }
+        return BitmapDescriptorFactory.fromResource(R.drawable.ic_nav_arrow)
     }
 
     private fun setupMapSettings() {
@@ -178,7 +210,9 @@ class MapManager @Inject constructor(
         }
 
         map.setOnMarkerClickListener { marker ->
-            if (marker == targetMarker) {
+            if (marker == myLocationMarker) {
+                myLocationClickListener?.invoke()
+            } else if (marker == targetMarker) {
                 targetMarkerClickListener?.invoke()
             } else {
                 val waypointId = waypointMarkers.entries.find { it.value == marker }?.key
