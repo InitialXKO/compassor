@@ -19,7 +19,6 @@ class MapManager @Inject constructor(
     private var aMap: AMap? = null
     private val waypointMarkers = mutableMapOf<Long, Marker>()
     private var targetMarker: Marker? = null
-    private var myLocationMarker: Marker? = null
     private var targetMarkerClickListener: (() -> Unit)? = null
     private var myLocationClickListener: (() -> Unit)? = null
     private var completedPolyline: Polyline? = null
@@ -87,21 +86,6 @@ class MapManager @Inject constructor(
             currentAzimuth?.let { bearing = it }
         }
         locationListener?.onLocationChanged(location)
-
-        aMap?.let { map ->
-            if (myLocationMarker == null) {
-                myLocationMarker = map.addMarker(
-                    MarkerOptions()
-                        .position(latLng)
-                        .anchor(0.5f, 0.5f)
-                        .setFlat(true)
-                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_nav_arrow))
-                )
-            } else {
-                myLocationMarker?.position = latLng
-            }
-            currentAzimuth?.let { myLocationMarker?.rotateAngle = 360f - it }
-        }
 
         if (isFirstLocation) {
             isFirstLocation = false
@@ -194,9 +178,7 @@ class MapManager @Inject constructor(
         }
 
         map.setOnMarkerClickListener { marker ->
-            if (marker == myLocationMarker) {
-                myLocationClickListener?.invoke()
-            } else if (marker == targetMarker) {
+            if (marker == targetMarker) {
                 targetMarkerClickListener?.invoke()
             } else {
                 val waypointId = waypointMarkers.entries.find { it.value == marker }?.key
