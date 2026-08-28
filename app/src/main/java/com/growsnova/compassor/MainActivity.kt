@@ -256,10 +256,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         aMap = mapView.map
         mapManager.initialize(aMap)
         mapManager.setOnMyLocationClickListener { showMyLocationOptionsDialog() }
-        mapManager.setOnPoiClickListener { poi ->
-            val latLng = LatLng(poi.coordinate.latitude, poi.coordinate.longitude)
-            showPoiOptionsDialog(poi.name, latLng)
-        }
 
         aMap.setOnMapLongClickListener { latLng -> showMapLongClickOptionsDialog(latLng) }
         aMap.setOnMapTouchListener { event ->
@@ -647,18 +643,6 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                     1 -> ShareUtils.shareWaypointText(this, name, userLoc.latitude, userLoc.longitude)
                     2 -> ShareUtils.openInMaps(this, name, userLoc.latitude, userLoc.longitude)
                 }
-            }
-        }
-    }
-
-    private fun showPoiOptionsDialog(name: String, latLng: LatLng) {
-        val options = arrayOf(getString(R.string.set_destination), getString(R.string.save_location), getString(R.string.share_location), getString(R.string.open_in_external_maps))
-        DialogUtils.showOptionsDialog(this, name, options) { which ->
-            when (which) {
-                0 -> navigationViewModel.setTarget(latLng, name)
-                1 -> showSaveWaypointDialog(latLng, defaultName = name)
-                2 -> ShareUtils.shareWaypointText(this, name, latLng.latitude, latLng.longitude)
-                3 -> ShareUtils.openInMaps(this, name, latLng.latitude, latLng.longitude)
             }
         }
     }
