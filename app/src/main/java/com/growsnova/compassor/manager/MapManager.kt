@@ -40,25 +40,6 @@ class MapManager @Inject constructor(
 
     fun setOnMyLocationClickListener(listener: () -> Unit) {
         this.myLocationClickListener = listener
-        aMap?.addOnMapClickListener { clickLatLng ->
-            val userLoc = lastLatLng ?: return@addOnMapClickListener
-            val map = aMap ?: return@addOnMapClickListener
-
-            val dist = FloatArray(1)
-            android.location.Location.distanceBetween(
-                userLoc.latitude, userLoc.longitude,
-                clickLatLng.latitude, clickLatLng.longitude,
-                dist
-            )
-
-            val touchRadiusPx = 40f * context.resources.displayMetrics.density
-            val scalePerPixel = map.scalePerPixel
-            val maxDistanceMeters = (touchRadiusPx * scalePerPixel).coerceAtLeast(35f)
-
-            if (dist[0] <= maxDistanceMeters) {
-                myLocationClickListener?.invoke()
-            }
-        }
     }
 
     fun setOnPoiClickListener(listener: (Poi) -> Unit) {
@@ -101,20 +82,7 @@ class MapManager @Inject constructor(
         }
         locationListener?.onLocationChanged(location)
 
-        aMap?.let { map ->
-            if (myLocationMarker == null) {
-                myLocationMarker = map.addMarker(
-                    MarkerOptions()
-                        .position(latLng)
-                        .anchor(0.5f, 0.5f)
-                        .setFlat(true)
-                        .icon(BitmapDescriptorFactory.fromResource(R.drawable.ic_nav_arrow))
-                )
-            } else {
-                myLocationMarker?.position = latLng
-            }
-            currentAzimuth?.let { myLocationMarker?.rotateAngle = 360f - it }
-        }
+        updateMyLocationMarker(latLng, currentAzimuth)
 
         if (isFirstLocation) {
             isFirstLocation = false
@@ -134,6 +102,41 @@ class MapManager @Inject constructor(
             bearing = azimuth
         }
         locationListener?.onLocationChanged(location)
+        updateMyLocationMarker(latLng, azimuth)
+    }
+
+    private fun updateMyLocationMarker(latLng: LatLng, azimuth: Float?) {
+        val map = aMap ?: return
+        if (myLocationMarker == null) {
+            val descriptor = getNavArrowBitmapDescriptor()
+            myLocationMarker = map.addMarker(
+                MarkerOptions()
+                    .position(latLng)
+                    .anchor(0.5f, 0.5f)
+                    .setFlat(true)
+                    .icon(descriptor)
+            )
+        } else {
+            myLocationMarker?.position = latLng
+        }
+        azimuth?.let {
+            myLocationMarker?.rotateAngle = 360f - it
+        }
+    }
+
+    private fun getNavArrowBitmapDescriptor(): BitmapDescriptor {
+        val drawable = androidx.core.content.ContextCompat.getDrawable(context, R.drawable.ic_nav_arrow)
+        if (drawable != null) {
+            val density = context.resources.displayMetrics.density
+            val width = (36 * density).toInt().coerceAtLeast(1)
+            val height = (36 * density).toInt().coerceAtLeast(1)
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(bitmap)
+            drawable.setBounds(0, 0, canvas.width, canvas.height)
+            drawable.draw(canvas)
+            return BitmapDescriptorFactory.fromBitmap(bitmap)
+        }
+        return BitmapDescriptorFactory.fromResource(R.drawable.ic_nav_arrow)
     }
 
     private fun setupMapSettings() {
