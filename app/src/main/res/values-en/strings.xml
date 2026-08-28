@@ -150,4 +150,5 @@
     <string name="route_exported">Route exported</string>
     <string name="route_imported">Route imported: %s</string>
     <string name="route_import_failed">Failed to import route</string>
+    <string name="tracking_mode">Tracking Mode</string>
 </resources>

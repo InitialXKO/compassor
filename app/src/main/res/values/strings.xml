@@ -163,4 +163,5 @@
     <string name="route_exported">路线已导出</string>
     <string name="route_imported">路线已导入: %s</string>
     <string name="route_import_failed">路线导入失败</string>
+    <string name="tracking_mode">跟踪模式</string>
 </resources>

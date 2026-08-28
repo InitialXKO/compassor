@@ -22,6 +22,9 @@ class MapViewModel @Inject constructor(
     private val _isFollowMode = MutableStateFlow(true)
     val isFollowMode: StateFlow<Boolean> = _isFollowMode.asStateFlow()
 
+    private val _isTrackingMode = MutableStateFlow(false)
+    val isTrackingMode: StateFlow<Boolean> = _isTrackingMode.asStateFlow()
+
     private val _errorFlow = MutableSharedFlow<String>(replay = 0)
     val errorFlow: SharedFlow<String> = _errorFlow.asSharedFlow()
 
@@ -39,5 +42,19 @@ class MapViewModel @Inject constructor(
 
     fun setFollowMode(enabled: Boolean) {
         _isFollowMode.value = enabled
+        if (!enabled) {
+            _isTrackingMode.value = false
+        }
+    }
+
+    fun setTrackingMode(enabled: Boolean) {
+        _isTrackingMode.value = enabled
+        if (enabled) {
+            _isFollowMode.value = true
+        }
+    }
+
+    fun toggleTrackingMode() {
+        setTrackingMode(!_isTrackingMode.value)
     }
 }

@@ -323,7 +323,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         location?.let {
                             hideLocationDisabledSnackbar()
                             mapManager.updateMyLocation(it, locationViewModel.azimuth.value)
-                            if (mapViewModel.isFollowMode.value) {
+                            if (mapViewModel.isTrackingMode.value) {
+                                mapManager.updateTrackingCamera(it, locationViewModel.azimuth.value)
+                            } else if (mapViewModel.isFollowMode.value) {
                                 mapManager.animateToLocation(it)
                             }
                             navigationViewModel.updateLocation(it)
@@ -342,6 +344,24 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         radarView.setAzimuth(azimuth)
                         simpleCompassView.setAzimuth(azimuth)
                         mapManager.updateMyLocationAzimuth(azimuth)
+                        if (mapViewModel.isTrackingMode.value) {
+                            locationViewModel.currentLocation.value?.let { loc ->
+                                mapManager.updateTrackingCamera(loc, azimuth)
+                            }
+                        }
+                    }
+                }
+
+                launch {
+                    mapViewModel.isTrackingMode.collectLatest { isTracking ->
+                        invalidateOptionsMenu()
+                        if (isTracking) {
+                            locationViewModel.currentLocation.value?.let { loc ->
+                                mapManager.updateTrackingCamera(loc, locationViewModel.azimuth.value)
+                            }
+                        } else {
+                            mapManager.restoreDefaultView(locationViewModel.currentLocation.value)
+                        }
                     }
                 }
 
@@ -1270,10 +1290,33 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         }
     }
 
-    override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean { menuInflater.inflate(R.menu.main_menu, menu); return true }
+    override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        return true
+    }
+
+    override fun onPrepareOptionsMenu(menu: android.view.Menu): Boolean {
+        val trackingItem = menu.findItem(R.id.action_tracking_mode)
+        trackingItem?.let { item ->
+            val isTracking = mapViewModel.isTrackingMode.value
+            item.isChecked = isTracking
+            val tintColor = if (isTracking) {
+                getThemeColor(com.google.android.material.R.attr.colorPrimary)
+            } else {
+                getThemeColor(com.google.android.material.R.attr.colorOnSurface)
+            }
+            item.icon?.setTint(tintColor)
+        }
+        return super.onPrepareOptionsMenu(menu)
+    }
+
     override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean = when (item.itemId) {
-        R.id.action_reset_bearing -> { mapManager.resetBearing(); true }
-        R.id.action_search -> { showSearchDialog(); true }; else -> super.onOptionsItemSelected(item)
+        R.id.action_tracking_mode -> {
+            mapViewModel.toggleTrackingMode()
+            true
+        }
+        R.id.action_search -> { showSearchDialog(); true }
+        else -> super.onOptionsItemSelected(item)
     }
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {

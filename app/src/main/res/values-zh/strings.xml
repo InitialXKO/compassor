@@ -117,4 +117,5 @@
     <string name="open_current_location_in_maps">地图打开当前位置</string>
     <string name="open_in_external_maps">在外部地图中打开</string>
     <string name="incoming_location_dialog_title">收到位置分享: %s</string>
+    <string name="tracking_mode">跟踪模式</string>
 </resources>
