@@ -525,16 +525,76 @@ class MapManager @Inject constructor(
         }
     }
 
+    private var guidanceAnimator: android.animation.ValueAnimator? = null
+    private var lastGuidanceColor: Int = 0
+
     fun updateGuidanceLine(myLoc: LatLng, targetLoc: LatLng, color: Int) {
-        guidancePolyline?.remove()
-        guidancePolyline = aMap?.addPolyline(
-            PolylineOptions()
-                .add(myLoc, targetLoc)
-                .color(color and 0x80FFFFFF.toInt())
-                .width(6f)
-                .setDottedLine(true)
-                .setDottedLineType(PolylineOptions.DOTTEDLINE_TYPE_SQUARE)
-        )
+        val map = aMap ?: return
+        val density = context?.resources?.displayMetrics?.density ?: 2.75f
+
+        if (guidancePolyline == null || lastGuidanceColor != color) {
+            guidancePolyline?.remove()
+            lastGuidanceColor = color
+            val initialDescriptor = createMarchingAntsDescriptor(color, 0, density)
+            guidancePolyline = map.addPolyline(
+                PolylineOptions()
+                    .add(myLoc, targetLoc)
+                    .width(12f * density)
+                    .setCustomTexture(initialDescriptor)
+                    .setUseTexture(true)
+            )
+            startGuidanceAnimation(color, density)
+        } else {
+            val pts = java.util.ArrayList<LatLng>()
+            pts.add(myLoc)
+            pts.add(targetLoc)
+            guidancePolyline?.points = pts
+        }
+    }
+
+    private fun startGuidanceAnimation(color: Int, density: Float) {
+        guidanceAnimator?.cancel()
+        val patternWidth = (32 * density).toInt().coerceAtLeast(16)
+        guidanceAnimator = android.animation.ValueAnimator.ofInt(0, patternWidth).apply {
+            duration = 1000
+            repeatCount = android.animation.ValueAnimator.INFINITE
+            interpolator = android.view.animation.LinearInterpolator()
+            addUpdateListener { animator ->
+                val offset = animator.animatedValue as Int
+                val descriptor = createMarchingAntsDescriptor(color, offset, density)
+                guidancePolyline?.setCustomTextureList(listOf(descriptor))
+            }
+            start()
+        }
+    }
+
+    private fun stopGuidanceAnimation() {
+        guidanceAnimator?.cancel()
+        guidanceAnimator = null
+    }
+
+    private fun createMarchingAntsDescriptor(color: Int, offset: Int, density: Float): BitmapDescriptor {
+        val patternWidth = (32 * density).toInt().coerceAtLeast(16)
+        val patternHeight = (8 * density).toInt().coerceAtLeast(4)
+
+        val bitmap = Bitmap.createBitmap(patternWidth, patternHeight, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            this.color = color
+            style = android.graphics.Paint.Style.FILL
+        }
+
+        val dashWidth = patternWidth / 2f
+        val radius = patternHeight / 2f
+
+        for (i in -1..1) {
+            val startX = i * patternWidth + (offset % patternWidth)
+            val rect = android.graphics.RectF(startX.toFloat(), 0f, startX + dashWidth, patternHeight.toFloat())
+            canvas.drawRoundRect(rect, radius, radius, paint)
+        }
+
+        return BitmapDescriptorFactory.fromBitmap(bitmap)
     }
 
     fun clearRoute() {
@@ -547,6 +607,7 @@ class MapManager @Inject constructor(
     fun clearAllNavigation() {
         clearTarget()
         clearRoute()
+        stopGuidanceAnimation()
         guidancePolyline?.remove()
         guidancePolyline = null
     }
