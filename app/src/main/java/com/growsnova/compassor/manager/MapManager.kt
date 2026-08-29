@@ -576,7 +576,7 @@ class MapManager @Inject constructor(
             }
 
             for (i in -1..2) {
-                val startY = i * patternHeight + offset
+                val startY = i * patternHeight - offset
                 val rect = android.graphics.RectF(
                     marginX,
                     startY.toFloat(),
