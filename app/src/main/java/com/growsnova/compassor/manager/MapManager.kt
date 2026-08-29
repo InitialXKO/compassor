@@ -542,7 +542,7 @@ class MapManager @Inject constructor(
             guidancePolyline = map.addPolyline(
                 PolylineOptions()
                     .add(myLoc, targetLoc)
-                    .width(6f * density)
+                    .width(4f * density)
                     .setCustomTexture(initialFrame)
                     .setUseTexture(true)
             )
@@ -559,14 +559,14 @@ class MapManager @Inject constructor(
         guidanceTextureFrames.clear()
         lastGuidanceColor = color
         val numFrames = 8
-        val patternWidth = (16 * density).toInt().coerceAtLeast(16)
-        val patternHeight = (32 * density).toInt().coerceAtLeast(32)
+        val patternWidth = (12 * density).toInt().coerceAtLeast(12)
+        val patternHeight = (24 * density).toInt().coerceAtLeast(24)
         val dashHeight = patternHeight / 2f
-        val marginX = patternWidth * 0.2f
+        val marginX = patternWidth * 0.3f
         val cornerRadius = dashHeight * 0.2f
 
         for (frame in 0 until numFrames) {
-            val offset = (frame * patternHeight) / numFrames
+            val offset = ((numFrames - frame) * patternHeight) / numFrames
             val bitmap = Bitmap.createBitmap(patternWidth, patternHeight, Bitmap.Config.ARGB_8888)
             val canvas = android.graphics.Canvas(bitmap)
 
@@ -576,7 +576,7 @@ class MapManager @Inject constructor(
             }
 
             for (i in -1..2) {
-                val startY = i * patternHeight + offset
+                val startY = i * patternHeight - offset
                 val rect = android.graphics.RectF(
                     marginX,
                     startY.toFloat(),
