@@ -387,6 +387,7 @@ class MapManager @Inject constructor(
         latLng: LatLng,
         title: String,
         startLocation: LatLng? = null,
+        isTrackingMode: Boolean = false,
         onTargetClick: (() -> Unit)? = null
     ) {
         val map = aMap ?: return
@@ -398,7 +399,9 @@ class MapManager @Inject constructor(
                 .title(title)
                 .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
         )
-        zoomToFitStartAndTargets(startLocation ?: lastLatLng, listOf(latLng))
+        if (!isTrackingMode) {
+            zoomToFitStartAndTargets(startLocation ?: lastLatLng, listOf(latLng))
+        }
     }
 
     fun zoomToFitStartAndTargets(startLocation: LatLng?, targetLocations: List<LatLng>, paddingPx: Int = 180) {

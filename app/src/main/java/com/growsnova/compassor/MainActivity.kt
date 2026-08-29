@@ -380,7 +380,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                             updateNavButtonsVisibility(navigationViewModel.currentRoute.value)
                             val startLoc = locationViewModel.currentLocation.value
                             val routeWaypoints = navigationViewModel.currentRoute.value?.waypoints?.map { LatLng(it.latitude, it.longitude) }
-                            mapManager.setTargetLocation(target.first, target.second, startLocation = startLoc) {
+                            mapManager.setTargetLocation(
+                                target.first,
+                                target.second,
+                                startLocation = startLoc,
+                                isTrackingMode = mapViewModel.isTrackingMode.value
+                            ) {
                                 showTargetMarkerOptionsDialog(target.first, target.second)
                             }
                             if (mapViewModel.isTrackingMode.value && startLoc != null) {
