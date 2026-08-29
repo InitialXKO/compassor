@@ -542,7 +542,7 @@ class MapManager @Inject constructor(
             guidancePolyline = map.addPolyline(
                 PolylineOptions()
                     .add(myLoc, targetLoc)
-                    .width(10f * density)
+                    .width(6f * density)
                     .setCustomTexture(initialFrame)
                     .setUseTexture(true)
             )
@@ -559,14 +559,15 @@ class MapManager @Inject constructor(
         guidanceTextureFrames.clear()
         lastGuidanceColor = color
         val numFrames = 8
-        val size = (32 * density).toInt().coerceAtLeast(32)
-        val dashHeight = size / 2f
-        val marginX = size * 0.1f
-        val cornerRadius = (size / 8f).coerceAtLeast(2f)
+        val patternWidth = (16 * density).toInt().coerceAtLeast(16)
+        val patternHeight = (32 * density).toInt().coerceAtLeast(32)
+        val dashHeight = patternHeight / 2f
+        val marginX = patternWidth * 0.2f
+        val cornerRadius = dashHeight * 0.2f
 
         for (frame in 0 until numFrames) {
-            val offset = ((numFrames - frame) * size) / numFrames
-            val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+            val offset = (frame * patternHeight) / numFrames
+            val bitmap = Bitmap.createBitmap(patternWidth, patternHeight, Bitmap.Config.ARGB_8888)
             val canvas = android.graphics.Canvas(bitmap)
 
             val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
@@ -575,11 +576,11 @@ class MapManager @Inject constructor(
             }
 
             for (i in -1..2) {
-                val startY = i * size - offset
+                val startY = i * patternHeight + offset
                 val rect = android.graphics.RectF(
                     marginX,
                     startY.toFloat(),
-                    size - marginX,
+                    patternWidth - marginX,
                     startY + dashHeight
                 )
                 canvas.drawRoundRect(rect, cornerRadius, cornerRadius, paint)
