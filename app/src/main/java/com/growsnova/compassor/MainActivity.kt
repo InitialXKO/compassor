@@ -324,7 +324,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                             hideLocationDisabledSnackbar()
                             mapManager.updateMyLocation(it, locationViewModel.azimuth.value)
                             if (mapViewModel.isTrackingMode.value) {
-                                mapManager.updateTrackingCamera(it, locationViewModel.azimuth.value)
+                                val target = navigationViewModel.targetLocation.value?.first
+                                mapManager.updateTrackingCamera(it, locationViewModel.azimuth.value, target)
                             } else if (mapViewModel.isFollowMode.value) {
                                 mapManager.animateToLocation(it)
                             }
@@ -346,7 +347,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         mapManager.updateMyLocationAzimuth(azimuth)
                         if (mapViewModel.isTrackingMode.value) {
                             locationViewModel.currentLocation.value?.let { loc ->
-                                mapManager.updateTrackingCamera(loc, azimuth)
+                                val target = navigationViewModel.targetLocation.value?.first
+                                mapManager.updateTrackingCamera(loc, azimuth, target)
                             }
                         }
                     }
@@ -357,7 +359,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                         invalidateOptionsMenu()
                         if (isTracking) {
                             locationViewModel.currentLocation.value?.let { loc ->
-                                mapManager.updateTrackingCamera(loc, locationViewModel.azimuth.value)
+                                val target = navigationViewModel.targetLocation.value?.first
+                                mapManager.updateTrackingCamera(loc, locationViewModel.azimuth.value, target)
                             }
                         } else {
                             mapManager.restoreDefaultView(locationViewModel.currentLocation.value)
@@ -377,10 +380,17 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                             updateNavButtonsVisibility(navigationViewModel.currentRoute.value)
                             val startLoc = locationViewModel.currentLocation.value
                             val routeWaypoints = navigationViewModel.currentRoute.value?.waypoints?.map { LatLng(it.latitude, it.longitude) }
-                            mapManager.setTargetLocation(target.first, target.second, startLocation = startLoc) {
+                            mapManager.setTargetLocation(
+                                target.first,
+                                target.second,
+                                startLocation = startLoc,
+                                isTrackingMode = mapViewModel.isTrackingMode.value
+                            ) {
                                 showTargetMarkerOptionsDialog(target.first, target.second)
                             }
-                            if (routeWaypoints != null && routeWaypoints.isNotEmpty()) {
+                            if (mapViewModel.isTrackingMode.value && startLoc != null) {
+                                mapManager.updateTrackingCamera(startLoc, locationViewModel.azimuth.value, target.first)
+                            } else if (routeWaypoints != null && routeWaypoints.isNotEmpty()) {
                                 mapManager.zoomToFitStartAndTargets(startLoc, routeWaypoints)
                             }
                             window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)

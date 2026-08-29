@@ -14,7 +14,7 @@ import javax.inject.Inject
 
 @ActivityScoped
 class MapManager @Inject constructor(
-    @ActivityContext private val context: Context
+    @ActivityContext private val context: Context?
 ) {
     private var aMap: AMap? = null
     private val waypointMarkers = mutableMapOf<Long, Marker>()
@@ -31,6 +31,8 @@ class MapManager @Inject constructor(
     private var isFirstLocation = true
     private var lastLatLng: LatLng? = null
     private var lastAzimuth: Float? = null
+    private var topPaddingPx: Int = 0
+    private var bottomPaddingPx: Int = 0
 
     fun initialize(map: AMap) {
         this.aMap = map
@@ -125,9 +127,10 @@ class MapManager @Inject constructor(
     }
 
     private fun getNavArrowBitmapDescriptor(): BitmapDescriptor {
-        val drawable = androidx.core.content.ContextCompat.getDrawable(context, R.drawable.ic_nav_arrow)
+        val ctx = context ?: return BitmapDescriptorFactory.fromResource(R.drawable.ic_nav_arrow)
+        val drawable = androidx.core.content.ContextCompat.getDrawable(ctx, R.drawable.ic_nav_arrow)
         if (drawable != null) {
-            val density = context.resources.displayMetrics.density
+            val density = ctx.resources.displayMetrics.density
             val width = (36 * density).toInt().coerceAtLeast(1)
             val height = (36 * density).toInt().coerceAtLeast(1)
             val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
@@ -145,29 +148,142 @@ class MapManager @Inject constructor(
             uiSettings.isCompassEnabled = true
             uiSettings.isMyLocationButtonEnabled = true
         }
-        val isNight = (context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        val isNight = context?.resources?.configuration?.let {
+            (it.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        } ?: false
         applyMapStyle(isNight)
     }
 
     fun updatePadding(left: Int = 0, top: Int = 0, right: Int = 0, bottom: Int = 0) {
-        val width = context.resources.displayMetrics.widthPixels
-        val height = context.resources.displayMetrics.heightPixels
+        this.topPaddingPx = top
+        this.bottomPaddingPx = bottom
+        val width = context?.resources?.displayMetrics?.widthPixels ?: 1080
+        val height = context?.resources?.displayMetrics?.heightPixels ?: 2400
         val centerX = width / 2
         val centerY = (height - top - bottom) / 2 + top
         aMap?.setPointToCenter(centerX, centerY)
     }
 
-    fun updateTrackingCamera(latLng: LatLng, azimuth: Float? = null) {
+    fun updateTrackingCamera(
+        latLng: LatLng,
+        azimuth: Float? = null,
+        targetLocation: LatLng? = null,
+        targetLocations: List<LatLng>? = null
+    ) {
         val map = aMap ?: return
+        val minZoom = map.minZoomLevel
         val maxZoom = map.maxZoomLevel
         val currentAzimuth = azimuth ?: lastAzimuth ?: 0f
+
+        val targets = mutableListOf<LatLng>()
+        targetLocation?.let { targets.add(it) }
+        targetLocations?.let { targets.addAll(it) }
+
+        val zoomLevel = if (targets.isNotEmpty()) {
+            calculateTrackingZoomLevel(latLng, currentAzimuth, targets, minZoom, maxZoom)
+        } else {
+            maxZoom
+        }
+
         val cameraPosition = CameraPosition.Builder()
             .target(latLng)
-            .zoom(maxZoom)
+            .zoom(zoomLevel)
             .tilt(60f)
             .bearing(currentAzimuth)
             .build()
         map.moveCamera(CameraUpdateFactory.newCameraPosition(cameraPosition))
+    }
+
+    fun calculateTrackingZoomLevel(
+        userLatLng: LatLng,
+        azimuth: Float,
+        targetLocations: List<LatLng>,
+        minZoom: Float = 3f,
+        maxZoom: Float = 19f,
+        widthPixels: Int = context?.resources?.displayMetrics?.widthPixels ?: 1080,
+        heightPixels: Int = context?.resources?.displayMetrics?.heightPixels ?: 2400,
+        density: Float = context?.resources?.displayMetrics?.density ?: 2.75f
+    ): Float {
+        if (targetLocations.isEmpty()) return maxZoom
+
+        val centerX = widthPixels / 2.0
+        val centerY = if (topPaddingPx > 0 || bottomPaddingPx > 0) {
+            (heightPixels - topPaddingPx - bottomPaddingPx) / 2.0 + topPaddingPx
+        } else {
+            heightPixels / 2.0
+        }
+
+        val sidePaddingPx = (16 * density).toInt()
+        val marginPx = (40 * density).toInt()
+
+        val rLeft = centerX - sidePaddingPx - marginPx
+        val rRight = widthPixels - sidePaddingPx - centerX - marginPx
+        val rx = Math.max(50.0, Math.min(rLeft, rRight))
+
+        val rTop = centerY - topPaddingPx - marginPx
+        val rBottom = heightPixels - bottomPaddingPx - centerY - marginPx
+
+        var minRequiredZoom = maxZoom
+
+        val tiltFactor = Math.cos(Math.toRadians(60.0))
+
+        for (target in targetLocations) {
+            val distAndBearing = calculateDistanceAndBearing(
+                userLatLng.latitude, userLatLng.longitude,
+                target.latitude, target.longitude
+            )
+            val distance = distAndBearing[0]
+            val bearing = distAndBearing[1]
+
+            if (distance < 10f) continue
+
+            val thetaDeg = (bearing - azimuth + 360f) % 360f
+            val thetaRad = Math.toRadians(thetaDeg.toDouble())
+
+            val cosTheta = Math.cos(thetaRad)
+            val sinTheta = Math.sin(thetaRad)
+
+            val ry = Math.max(50.0, if (cosTheta >= 0) rTop else rBottom)
+
+            val reqH = Math.abs(distance * sinTheta) / rx
+            val reqV = Math.abs(distance * cosTheta) * tiltFactor / ry
+            val reqMetersPerPixel = Math.max(reqH, reqV)
+
+            if (reqMetersPerPixel <= 0) continue
+
+            val m0 = 156543.03392 * Math.cos(Math.toRadians(userLatLng.latitude))
+            val z = (Math.log(m0 / reqMetersPerPixel) / Math.log(2.0)).toFloat()
+
+            if (z < minRequiredZoom) {
+                minRequiredZoom = z
+            }
+        }
+
+        return minRequiredZoom.coerceIn(minZoom, maxZoom)
+    }
+
+    private fun calculateDistanceAndBearing(
+        lat1: Double, lon1: Double,
+        lat2: Double, lon2: Double
+    ): FloatArray {
+        val r = 6371000.0
+        val phi1 = Math.toRadians(lat1)
+        val phi2 = Math.toRadians(lat2)
+        val deltaPhi = Math.toRadians(lat2 - lat1)
+        val deltaLambda = Math.toRadians(lon2 - lon1)
+
+        val a = Math.sin(deltaPhi / 2.0) * Math.sin(deltaPhi / 2.0) +
+                Math.cos(phi1) * Math.cos(phi2) *
+                Math.sin(deltaLambda / 2.0) * Math.sin(deltaLambda / 2.0)
+        val c = 2.0 * Math.atan2(Math.sqrt(a), Math.sqrt(1.0 - a))
+        val distance = (r * c).toFloat()
+
+        val y = Math.sin(deltaLambda) * Math.cos(phi2)
+        val x = Math.cos(phi1) * Math.sin(phi2) -
+                Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLambda)
+        val bearing = ((Math.toDegrees(Math.atan2(y, x)) + 360.0) % 360.0).toFloat()
+
+        return floatArrayOf(distance, bearing)
     }
 
     fun restoreDefaultView(latLng: LatLng? = null) {
@@ -271,6 +387,7 @@ class MapManager @Inject constructor(
         latLng: LatLng,
         title: String,
         startLocation: LatLng? = null,
+        isTrackingMode: Boolean = false,
         onTargetClick: (() -> Unit)? = null
     ) {
         val map = aMap ?: return
@@ -282,7 +399,9 @@ class MapManager @Inject constructor(
                 .title(title)
                 .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
         )
-        zoomToFitStartAndTargets(startLocation ?: lastLatLng, listOf(latLng))
+        if (!isTrackingMode) {
+            zoomToFitStartAndTargets(startLocation ?: lastLatLng, listOf(latLng))
+        }
     }
 
     fun zoomToFitStartAndTargets(startLocation: LatLng?, targetLocations: List<LatLng>, paddingPx: Int = 180) {
@@ -406,16 +525,94 @@ class MapManager @Inject constructor(
         }
     }
 
+    private var guidanceAnimator: android.animation.ValueAnimator? = null
+    private var lastGuidanceColor: Int? = null
+    private val guidanceTextureFrames = mutableListOf<BitmapDescriptor>()
+
     fun updateGuidanceLine(myLoc: LatLng, targetLoc: LatLng, color: Int) {
-        guidancePolyline?.remove()
-        guidancePolyline = aMap?.addPolyline(
-            PolylineOptions()
-                .add(myLoc, targetLoc)
-                .color(color and 0x80FFFFFF.toInt())
-                .width(6f)
-                .setDottedLine(true)
-                .setDottedLineType(PolylineOptions.DOTTEDLINE_TYPE_SQUARE)
-        )
+        val map = aMap ?: return
+        val density = context?.resources?.displayMetrics?.density ?: 2.75f
+
+        if (lastGuidanceColor != color || guidanceTextureFrames.isEmpty()) {
+            prepareGuidanceTextures(color, density)
+        }
+
+        if (guidancePolyline == null) {
+            val initialFrame = guidanceTextureFrames.firstOrNull() ?: return
+            guidancePolyline = map.addPolyline(
+                PolylineOptions()
+                    .add(myLoc, targetLoc)
+                    .width(4f * density)
+                    .setCustomTexture(initialFrame)
+                    .setUseTexture(true)
+            )
+            startGuidanceAnimation()
+        } else {
+            val pts = java.util.ArrayList<LatLng>()
+            pts.add(myLoc)
+            pts.add(targetLoc)
+            guidancePolyline?.points = pts
+        }
+    }
+
+    private fun prepareGuidanceTextures(color: Int, density: Float) {
+        guidanceTextureFrames.clear()
+        lastGuidanceColor = color
+        val numFrames = 8
+        val patternWidth = (12 * density).toInt().coerceAtLeast(12)
+        val patternHeight = (24 * density).toInt().coerceAtLeast(24)
+        val dashHeight = patternHeight / 2f
+        val marginX = patternWidth * 0.3f
+        val cornerRadius = dashHeight * 0.2f
+
+        for (frame in 0 until numFrames) {
+            val offset = (frame * patternHeight) / numFrames
+            val bitmap = Bitmap.createBitmap(patternWidth, patternHeight, Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(bitmap)
+
+            val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                this.color = color
+                style = android.graphics.Paint.Style.FILL
+            }
+
+            for (i in -1..2) {
+                val startY = i * patternHeight - offset
+                val rect = android.graphics.RectF(
+                    marginX,
+                    startY.toFloat(),
+                    patternWidth - marginX,
+                    startY + dashHeight
+                )
+                canvas.drawRoundRect(rect, cornerRadius, cornerRadius, paint)
+            }
+
+            guidanceTextureFrames.add(BitmapDescriptorFactory.fromBitmap(bitmap))
+            bitmap.recycle()
+        }
+    }
+
+    private fun startGuidanceAnimation() {
+        if (guidanceAnimator?.isRunning == true) return
+        guidanceAnimator?.cancel()
+        guidanceAnimator = android.animation.ValueAnimator.ofInt(0, guidanceTextureFrames.size - 1).apply {
+            duration = 800
+            repeatCount = android.animation.ValueAnimator.INFINITE
+            interpolator = android.view.animation.LinearInterpolator()
+            addUpdateListener { animator ->
+                val index = animator.animatedValue as Int
+                if (index in guidanceTextureFrames.indices) {
+                    guidancePolyline?.setCustomTextureList(listOf(guidanceTextureFrames[index]))
+                }
+            }
+            start()
+        }
+    }
+
+    private fun stopGuidanceAnimation() {
+        guidanceAnimator?.cancel()
+        guidanceAnimator = null
+        guidanceTextureFrames.clear()
+        lastGuidanceColor = null
     }
 
     fun clearRoute() {
@@ -428,6 +625,7 @@ class MapManager @Inject constructor(
     fun clearAllNavigation() {
         clearTarget()
         clearRoute()
+        stopGuidanceAnimation()
         guidancePolyline?.remove()
         guidancePolyline = null
     }
