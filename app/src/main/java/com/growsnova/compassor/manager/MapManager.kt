@@ -566,7 +566,7 @@ class MapManager @Inject constructor(
         val cornerRadius = dashHeight * 0.2f
 
         for (frame in 0 until numFrames) {
-            val offset = ((numFrames - frame) * patternHeight) / numFrames
+            val offset = (frame * patternHeight) / numFrames
             val bitmap = Bitmap.createBitmap(patternWidth, patternHeight, Bitmap.Config.ARGB_8888)
             val canvas = android.graphics.Canvas(bitmap)
 
@@ -576,7 +576,7 @@ class MapManager @Inject constructor(
             }
 
             for (i in -1..2) {
-                val startY = i * patternHeight - offset
+                val startY = i * patternHeight + offset
                 val rect = android.graphics.RectF(
                     marginX,
                     startY.toFloat(),
