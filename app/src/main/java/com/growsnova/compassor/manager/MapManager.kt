@@ -559,14 +559,14 @@ class MapManager @Inject constructor(
         guidanceTextureFrames.clear()
         lastGuidanceColor = color
         val numFrames = 8
-        val patternWidth = (32 * density).toInt().coerceAtLeast(32)
-        val patternHeight = (8 * density).toInt().coerceAtLeast(8)
-        val dashWidth = patternWidth / 2f
-        val radius = patternHeight / 2f
+        val size = (32 * density).toInt().coerceAtLeast(32)
+        val dashHeight = size / 2f
+        val marginX = size * 0.1f
+        val cornerRadius = (size / 8f).coerceAtLeast(2f)
 
         for (frame in 0 until numFrames) {
-            val offset = ((numFrames - frame) * patternWidth) / numFrames
-            val bitmap = Bitmap.createBitmap(patternWidth, patternHeight, Bitmap.Config.ARGB_8888)
+            val offset = ((numFrames - frame) * size) / numFrames
+            val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
             val canvas = android.graphics.Canvas(bitmap)
 
             val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
@@ -575,9 +575,14 @@ class MapManager @Inject constructor(
             }
 
             for (i in -1..2) {
-                val startX = i * patternWidth - offset
-                val rect = android.graphics.RectF(startX.toFloat(), 0f, startX + dashWidth, patternHeight.toFloat())
-                canvas.drawRoundRect(rect, radius, radius, paint)
+                val startY = i * size - offset
+                val rect = android.graphics.RectF(
+                    marginX,
+                    startY.toFloat(),
+                    size - marginX,
+                    startY + dashHeight
+                )
+                canvas.drawRoundRect(rect, cornerRadius, cornerRadius, paint)
             }
 
             guidanceTextureFrames.add(BitmapDescriptorFactory.fromBitmap(bitmap))
