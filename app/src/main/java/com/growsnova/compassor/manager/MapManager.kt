@@ -16,7 +16,15 @@ import javax.inject.Inject
 class MapManager @Inject constructor(
     @ActivityContext private val context: Context?
 ) {
+    enum class MapTypeMode {
+        STANDARD,
+        SATELLITE,
+        NIGHT
+    }
+
     private var aMap: AMap? = null
+    private var currentMapTypeMode: MapTypeMode = MapTypeMode.STANDARD
+    private var isTrafficEnabled: Boolean = false
     private val waypointMarkers = mutableMapOf<Long, Marker>()
     private var targetMarker: Marker? = null
     private var myLocationMarker: Marker? = null
@@ -51,8 +59,28 @@ class MapManager @Inject constructor(
         }
     }
 
+    fun setMapTypeMode(mode: MapTypeMode, isNightMode: Boolean = false) {
+        this.currentMapTypeMode = mode
+        applyMapStyle(isNightMode)
+    }
+
+    fun getMapTypeMode(): MapTypeMode = currentMapTypeMode
+
+    fun setTrafficEnabled(enabled: Boolean) {
+        this.isTrafficEnabled = enabled
+        aMap?.isTrafficEnabled = enabled
+    }
+
+    fun isTrafficEnabled(): Boolean = isTrafficEnabled
+
     fun applyMapStyle(isNightMode: Boolean) {
-        aMap?.mapType = if (isNightMode) AMap.MAP_TYPE_NIGHT else AMap.MAP_TYPE_NORMAL
+        val map = aMap ?: return
+        map.mapType = when (currentMapTypeMode) {
+            MapTypeMode.SATELLITE -> AMap.MAP_TYPE_SATELLITE
+            MapTypeMode.NIGHT -> AMap.MAP_TYPE_NIGHT
+            MapTypeMode.STANDARD -> if (isNightMode) AMap.MAP_TYPE_NIGHT else AMap.MAP_TYPE_NORMAL
+        }
+        map.isTrafficEnabled = isTrafficEnabled
     }
 
     private fun setupLocationSource() {

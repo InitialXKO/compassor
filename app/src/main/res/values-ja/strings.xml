@@ -153,4 +153,11 @@
     <string name="route_imported">ルートをインポートしました: %s</string>
     <string name="route_import_failed">ルートのインポートに失敗しました</string>
     <string name="tracking_mode">追跡モード</string>
+    <string name="map_layers">マップレイヤー</string>
+    <string name="base_map_type">基本マップ</string>
+    <string name="overlay_layers">オーバーレイ</string>
+    <string name="standard_map">標準</string>
+    <string name="satellite_map">航空写真</string>
+    <string name="night_map">ナイト</string>
+    <string name="traffic_overlay">交通状況</string>
 </resources>

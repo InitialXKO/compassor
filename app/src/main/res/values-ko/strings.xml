@@ -153,4 +153,11 @@
     <string name="route_imported">경로를 가져왔습니다: %s</string>
     <string name="route_import_failed">경로 가져오기 실패</string>
     <string name="tracking_mode">추적 모드</string>
+    <string name="map_layers">지도 레이어</string>
+    <string name="base_map_type">기본 지도</string>
+    <string name="overlay_layers">오버레이</string>
+    <string name="standard_map">표준</string>
+    <string name="satellite_map">위성 지도</string>
+    <string name="night_map">야간</string>
+    <string name="traffic_overlay">실시간 교통</string>
 </resources>

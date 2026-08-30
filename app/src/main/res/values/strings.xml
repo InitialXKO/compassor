@@ -164,4 +164,11 @@
     <string name="route_imported">路线已导入: %s</string>
     <string name="route_import_failed">路线导入失败</string>
     <string name="tracking_mode">跟踪模式</string>
+    <string name="map_layers">地图图层</string>
+    <string name="base_map_type">底图类型</string>
+    <string name="overlay_layers">叠加图层</string>
+    <string name="standard_map">标准地图</string>
+    <string name="satellite_map">卫星图</string>
+    <string name="night_map">夜景图</string>
+    <string name="traffic_overlay">实时路况</string>
 </resources>

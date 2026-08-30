@@ -151,4 +151,11 @@
     <string name="route_imported">Route imported: %s</string>
     <string name="route_import_failed">Failed to import route</string>
     <string name="tracking_mode">Tracking Mode</string>
+    <string name="map_layers">Map Layers</string>
+    <string name="base_map_type">Base Map</string>
+    <string name="overlay_layers">Overlays</string>
+    <string name="standard_map">Standard</string>
+    <string name="satellite_map">Satellite</string>
+    <string name="night_map">Night Mode</string>
+    <string name="traffic_overlay">Traffic</string>
 </resources>

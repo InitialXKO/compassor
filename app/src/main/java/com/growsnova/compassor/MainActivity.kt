@@ -1257,6 +1257,70 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         outAnim.start()
     }
 
+    private fun showMapLayersDialog() {
+        val currentMode = mapManager.getMapTypeMode()
+        val isTrafficOn = mapManager.isTrafficEnabled()
+
+        val modeOptions = arrayOf(
+            getString(R.string.standard_map),
+            getString(R.string.satellite_map),
+            getString(R.string.night_map)
+        )
+        val selectedModeIndex = when (currentMode) {
+            MapManager.MapTypeMode.STANDARD -> 0
+            MapManager.MapTypeMode.SATELLITE -> 1
+            MapManager.MapTypeMode.NIGHT -> 2
+        }
+
+        val checkedItems = booleanArrayOf(isTrafficOn)
+        val overlayOptions = arrayOf(getString(R.string.traffic_overlay))
+
+        var chosenModeIndex = selectedModeIndex
+        var chosenTrafficState = isTrafficOn
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.base_map_type)
+            .setSingleChoiceItems(modeOptions, selectedModeIndex) { _, which ->
+                chosenModeIndex = which
+            }
+            .setNeutralButton(R.string.overlay_layers) { _, _ ->
+                showOverlayLayersDialog(chosenModeIndex, chosenTrafficState)
+            }
+            .setPositiveButton(R.string.confirm) { _, _ ->
+                applyMapLayerSelection(chosenModeIndex, chosenTrafficState)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun showOverlayLayersDialog(modeIndex: Int, isTraffic: Boolean) {
+        val overlayOptions = arrayOf(getString(R.string.traffic_overlay))
+        val checkedItems = booleanArrayOf(isTraffic)
+        var updatedTraffic = isTraffic
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.overlay_layers)
+            .setMultiChoiceItems(overlayOptions, checkedItems) { _, _, isChecked ->
+                updatedTraffic = isChecked
+            }
+            .setPositiveButton(R.string.confirm) { _, _ ->
+                applyMapLayerSelection(modeIndex, updatedTraffic)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    private fun applyMapLayerSelection(modeIndex: Int, isTraffic: Boolean) {
+        val selectedMode = when (modeIndex) {
+            1 -> MapManager.MapTypeMode.SATELLITE
+            2 -> MapManager.MapTypeMode.NIGHT
+            else -> MapManager.MapTypeMode.STANDARD
+        }
+        val isNight = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        mapManager.setMapTypeMode(selectedMode, isNight)
+        mapManager.setTrafficEnabled(isTraffic)
+    }
+
     private fun showSearchDialog() {
         navigationViewModel.loadRecentSearches()
 
@@ -1321,6 +1385,10 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     }
 
     override fun onOptionsItemSelected(item: android.view.MenuItem): Boolean = when (item.itemId) {
+        R.id.action_map_layers -> {
+            showMapLayersDialog()
+            true
+        }
         R.id.action_tracking_mode -> {
             mapViewModel.toggleTrackingMode()
             true
