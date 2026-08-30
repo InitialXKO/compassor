@@ -160,4 +160,5 @@
     <string name="satellite_map">航空写真</string>
     <string name="night_map">ナイト</string>
     <string name="traffic_overlay">交通状況</string>
+    <string name="indoor_overlay">屋内マップ</string>
 </resources>

@@ -25,6 +25,7 @@ class MapManager @Inject constructor(
     private var aMap: AMap? = null
     private var currentMapTypeMode: MapTypeMode = MapTypeMode.STANDARD
     private var isTrafficEnabled: Boolean = false
+    private var isIndoorEnabled: Boolean = true
     private val waypointMarkers = mutableMapOf<Long, Marker>()
     private var targetMarker: Marker? = null
     private var myLocationMarker: Marker? = null
@@ -73,6 +74,13 @@ class MapManager @Inject constructor(
 
     fun isTrafficEnabled(): Boolean = isTrafficEnabled
 
+    fun setIndoorEnabled(enabled: Boolean) {
+        this.isIndoorEnabled = enabled
+        aMap?.showIndoorMap(enabled)
+    }
+
+    fun isIndoorEnabled(): Boolean = isIndoorEnabled
+
     fun applyMapStyle(isNightMode: Boolean) {
         val map = aMap ?: return
         map.mapType = when (currentMapTypeMode) {
@@ -81,6 +89,7 @@ class MapManager @Inject constructor(
             MapTypeMode.STANDARD -> if (isNightMode) AMap.MAP_TYPE_NIGHT else AMap.MAP_TYPE_NORMAL
         }
         map.isTrafficEnabled = isTrafficEnabled
+        map.showIndoorMap(isIndoorEnabled)
     }
 
     private fun setupLocationSource() {
