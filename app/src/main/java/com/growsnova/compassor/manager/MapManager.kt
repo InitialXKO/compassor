@@ -27,6 +27,7 @@ class MapManager @Inject constructor(
     private var isTrafficEnabled: Boolean = false
     private var isIndoorEnabled: Boolean = true
     private var isBuildingsEnabled: Boolean = true
+    private var customBuildingOverlay: BuildingOverlay? = null
     private val waypointMarkers = mutableMapOf<Long, Marker>()
     private var targetMarker: Marker? = null
     private var myLocationMarker: Marker? = null
@@ -84,10 +85,34 @@ class MapManager @Inject constructor(
 
     fun setBuildingsEnabled(enabled: Boolean) {
         this.isBuildingsEnabled = enabled
-        aMap?.showBuildings(enabled)
+        val map = aMap
+        if (map != null) {
+            map.showBuildings(enabled)
+            updateCustomBuildingOverlay(map, enabled)
+        }
     }
 
     fun isBuildingsEnabled(): Boolean = isBuildingsEnabled
+
+    private fun updateCustomBuildingOverlay(map: AMap, enabled: Boolean) {
+        if (customBuildingOverlay == null && enabled) {
+            try {
+                val options = BuildingOverlayOptions().apply {
+                    setZIndex(10f)
+                    setBuildingHeightScale(2)
+                    setBuildingTopColor(android.graphics.Color.argb(180, 255, 255, 255))
+                    setBuildingSideColor(android.graphics.Color.argb(150, 200, 200, 200))
+                    setVisible(true)
+                }
+                val overlay = map.addBuildingOverlay()
+                overlay?.setDefaultOptions(options)
+                overlay?.setVisible(true)
+                customBuildingOverlay = overlay
+            } catch (_: Exception) { }
+        } else {
+            customBuildingOverlay?.setVisible(enabled)
+        }
+    }
 
     fun applyMapStyle(isNightMode: Boolean) {
         val map = aMap ?: return
@@ -99,6 +124,7 @@ class MapManager @Inject constructor(
         map.isTrafficEnabled = isTrafficEnabled
         map.showIndoorMap(isIndoorEnabled)
         map.showBuildings(isBuildingsEnabled)
+        updateCustomBuildingOverlay(map, isBuildingsEnabled)
     }
 
     private fun setupLocationSource() {
