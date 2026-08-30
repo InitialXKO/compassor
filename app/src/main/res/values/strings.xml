@@ -172,4 +172,5 @@
     <string name="night_map">夜景图</string>
     <string name="traffic_overlay">实时路况</string>
     <string name="indoor_overlay">室内地图</string>
+    <string name="buildings_overlay">3D建筑</string>
 </resources>

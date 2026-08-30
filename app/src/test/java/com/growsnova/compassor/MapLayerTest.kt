@@ -21,6 +21,7 @@ class MapLayerTest {
         assertEquals(MapManager.MapTypeMode.STANDARD, mapManager.getMapTypeMode())
         assertFalse(mapManager.isTrafficEnabled())
         assertTrue(mapManager.isIndoorEnabled())
+        assertTrue(mapManager.isBuildingsEnabled())
     }
 
     @Test
@@ -67,5 +68,16 @@ class MapLayerTest {
 
         mapManager.setIndoorEnabled(true)
         assertTrue(mapManager.isIndoorEnabled())
+    }
+
+    @Test
+    fun testBuildingsOverlayToggle() {
+        assertTrue(mapManager.isBuildingsEnabled())
+
+        mapManager.setBuildingsEnabled(false)
+        assertFalse(mapManager.isBuildingsEnabled())
+
+        mapManager.setBuildingsEnabled(true)
+        assertTrue(mapManager.isBuildingsEnabled())
     }
 }

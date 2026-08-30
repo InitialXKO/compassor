@@ -161,4 +161,5 @@
     <string name="night_map">ナイト</string>
     <string name="traffic_overlay">交通状況</string>
     <string name="indoor_overlay">屋内マップ</string>
+    <string name="buildings_overlay">3D 建物</string>
 </resources>

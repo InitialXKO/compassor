@@ -161,4 +161,5 @@
     <string name="night_map">야간</string>
     <string name="traffic_overlay">실시간 교통</string>
     <string name="indoor_overlay">실내 지도</string>
+    <string name="buildings_overlay">3D 건물</string>
 </resources>

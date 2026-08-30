@@ -1261,6 +1261,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val currentMode = mapManager.getMapTypeMode()
         val isTrafficOn = mapManager.isTrafficEnabled()
         val isIndoorOn = mapManager.isIndoorEnabled()
+        val isBuildingsOn = mapManager.isBuildingsEnabled()
 
         val modeOptions = arrayOf(
             getString(R.string.standard_map),
@@ -1276,6 +1277,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         var chosenModeIndex = selectedModeIndex
         var chosenTrafficState = isTrafficOn
         var chosenIndoorState = isIndoorOn
+        var chosenBuildingsState = isBuildingsOn
 
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.base_map_type)
@@ -1283,23 +1285,25 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 chosenModeIndex = which
             }
             .setNeutralButton(R.string.overlay_layers) { _, _ ->
-                showOverlayLayersDialog(chosenModeIndex, chosenTrafficState, chosenIndoorState)
+                showOverlayLayersDialog(chosenModeIndex, chosenTrafficState, chosenIndoorState, chosenBuildingsState)
             }
             .setPositiveButton(R.string.confirm) { _, _ ->
-                applyMapLayerSelection(chosenModeIndex, chosenTrafficState, chosenIndoorState)
+                applyMapLayerSelection(chosenModeIndex, chosenTrafficState, chosenIndoorState, chosenBuildingsState)
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
-    private fun showOverlayLayersDialog(modeIndex: Int, isTraffic: Boolean, isIndoor: Boolean) {
+    private fun showOverlayLayersDialog(modeIndex: Int, isTraffic: Boolean, isIndoor: Boolean, isBuildings: Boolean) {
         val overlayOptions = arrayOf(
             getString(R.string.traffic_overlay),
-            getString(R.string.indoor_overlay)
+            getString(R.string.indoor_overlay),
+            getString(R.string.buildings_overlay)
         )
-        val checkedItems = booleanArrayOf(isTraffic, isIndoor)
+        val checkedItems = booleanArrayOf(isTraffic, isIndoor, isBuildings)
         var updatedTraffic = isTraffic
         var updatedIndoor = isIndoor
+        var updatedBuildings = isBuildings
 
         MaterialAlertDialogBuilder(this)
             .setTitle(R.string.overlay_layers)
@@ -1307,16 +1311,17 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
                 when (which) {
                     0 -> updatedTraffic = isChecked
                     1 -> updatedIndoor = isChecked
+                    2 -> updatedBuildings = isChecked
                 }
             }
             .setPositiveButton(R.string.confirm) { _, _ ->
-                applyMapLayerSelection(modeIndex, updatedTraffic, updatedIndoor)
+                applyMapLayerSelection(modeIndex, updatedTraffic, updatedIndoor, updatedBuildings)
             }
             .setNegativeButton(R.string.cancel, null)
             .show()
     }
 
-    private fun applyMapLayerSelection(modeIndex: Int, isTraffic: Boolean, isIndoor: Boolean) {
+    private fun applyMapLayerSelection(modeIndex: Int, isTraffic: Boolean, isIndoor: Boolean, isBuildings: Boolean) {
         val selectedMode = when (modeIndex) {
             1 -> MapManager.MapTypeMode.SATELLITE
             2 -> MapManager.MapTypeMode.NIGHT
@@ -1326,6 +1331,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         mapManager.setMapTypeMode(selectedMode, isNight)
         mapManager.setTrafficEnabled(isTraffic)
         mapManager.setIndoorEnabled(isIndoor)
+        mapManager.setBuildingsEnabled(isBuildings)
     }
 
     private fun showSearchDialog() {

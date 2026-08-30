@@ -159,4 +159,5 @@
     <string name="night_map">Night Mode</string>
     <string name="traffic_overlay">Traffic</string>
     <string name="indoor_overlay">Indoor Map</string>
+    <string name="buildings_overlay">3D Buildings</string>
 </resources>
