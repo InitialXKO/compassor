@@ -79,6 +79,7 @@ class MapManager @Inject constructor(
     fun setIndoorEnabled(enabled: Boolean) {
         this.isIndoorEnabled = enabled
         aMap?.showIndoorMap(enabled)
+        aMap?.uiSettings?.isIndoorSwitchEnabled = enabled
     }
 
     fun isIndoorEnabled(): Boolean = isIndoorEnabled
@@ -219,6 +220,15 @@ class MapManager @Inject constructor(
             uiSettings.isZoomControlsEnabled = true
             uiSettings.isCompassEnabled = true
             uiSettings.isMyLocationButtonEnabled = true
+            uiSettings.isIndoorSwitchEnabled = isIndoorEnabled
+
+            setOnIndoorBuildingActiveListener { buildingInfo ->
+                if (buildingInfo != null && buildingInfo.activeFloorName != null) {
+                    uiSettings.isIndoorSwitchEnabled = isIndoorEnabled
+                } else {
+                    uiSettings.isIndoorSwitchEnabled = false
+                }
+            }
         }
         val isNight = context?.resources?.configuration?.let {
             (it.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
