@@ -215,6 +215,8 @@ class MapManager @Inject constructor(
         return BitmapDescriptorFactory.fromResource(R.drawable.ic_nav_arrow)
     }
 
+    private var activeIndoorBuilding: IndoorBuildingInfo? = null
+
     private fun setupMapSettings() {
         aMap?.apply {
             uiSettings.isZoomControlsEnabled = true
@@ -223,17 +225,32 @@ class MapManager @Inject constructor(
             uiSettings.isIndoorSwitchEnabled = isIndoorEnabled
 
             setOnIndoorBuildingActiveListener { buildingInfo ->
-                if (buildingInfo != null && buildingInfo.activeFloorName != null) {
-                    uiSettings.isIndoorSwitchEnabled = isIndoorEnabled
-                } else {
-                    uiSettings.isIndoorSwitchEnabled = false
-                }
+                activeIndoorBuilding = buildingInfo
+                updateIndoorSwitchState()
             }
+
+            setOnCameraChangeListener(object : AMap.OnCameraChangeListener {
+                override fun onCameraChange(position: CameraPosition?) {}
+                override fun onCameraChangeFinish(position: CameraPosition?) {
+                    updateIndoorSwitchState()
+                }
+            })
         }
         val isNight = context?.resources?.configuration?.let {
             (it.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
         } ?: false
         applyMapStyle(isNight)
+    }
+
+    private fun updateIndoorSwitchState() {
+        val map = aMap ?: return
+        val currentZoom = map.cameraPosition?.zoom ?: 0f
+        val hasActiveBuilding = activeIndoorBuilding != null && activeIndoorBuilding?.activeFloorName != null
+        if (currentZoom >= 17f && hasActiveBuilding) {
+            map.uiSettings.isIndoorSwitchEnabled = isIndoorEnabled
+        } else {
+            map.uiSettings.isIndoorSwitchEnabled = false
+        }
     }
 
     fun updatePadding(left: Int = 0, top: Int = 0, right: Int = 0, bottom: Int = 0) {

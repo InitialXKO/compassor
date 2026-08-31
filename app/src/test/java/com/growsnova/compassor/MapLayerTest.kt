@@ -80,4 +80,16 @@ class MapLayerTest {
         mapManager.setBuildingsEnabled(true)
         assertTrue(mapManager.isBuildingsEnabled())
     }
+
+    @Test
+    fun testIndoorSwitchDisabledWhenZoomBelow17() {
+        mapManager.setIndoorEnabled(true)
+        assertTrue(mapManager.isIndoorEnabled())
+    }
+
+    @Test
+    fun testIndoorSwitchEnabledWhenZoom17OrAbove() {
+        mapManager.setIndoorEnabled(true)
+        assertTrue(mapManager.isIndoorEnabled())
+    }
 }
