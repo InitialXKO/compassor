@@ -41,10 +41,18 @@ class NavigationService : Service() {
         }
 
         fun stop(context: Context) {
-            val intent = Intent(context, NavigationService::class.java).apply {
-                action = ACTION_STOP
-            }
-            context.startService(intent)
+            val intent = Intent(context, NavigationService::class.java)
+            context.stopService(intent)
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
         }
     }
 
