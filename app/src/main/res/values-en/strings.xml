@@ -163,7 +163,12 @@
     <string name="offline_map_unzipping">Unzipping</string>
     <string name="offline_map_paused">Paused</string>
     <string name="offline_map_waiting">Waiting</string>
-    <string name="offline_map_error">Error</string>
+    <string name="offline_map_error">Download Error</string>
+    <string name="offline_map_error_network">Network connection error</string>
+    <string name="offline_map_error_amap">AMap service error</string>
+    <string name="offline_map_error_sdcard">Storage/SD card error</string>
+    <string name="offline_map_error_start_failed">Failed to start download</string>
+    <string name="offline_map_error_format">%1$s download failed: %2$s</string>
     <string name="offline_map_not_downloaded">Not Downloaded</string>
     <string name="offline_map_completed">Download Complete</string>
     <string name="confirm_delete_offline_map">Are you sure you want to delete offline map for %s?</string>

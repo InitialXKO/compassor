@@ -177,6 +177,11 @@
     <string name="offline_map_paused">已暂停</string>
     <string name="offline_map_waiting">等待中</string>
     <string name="offline_map_error">下载出错</string>
+    <string name="offline_map_error_network">网络连接异常</string>
+    <string name="offline_map_error_amap">高德地图服务异常</string>
+    <string name="offline_map_error_sdcard">存储空间或SD卡读写异常</string>
+    <string name="offline_map_error_start_failed">启动下载失败</string>
+    <string name="offline_map_error_format">%1$s 下载失败: %2$s</string>
     <string name="offline_map_not_downloaded">未下载</string>
     <string name="offline_map_completed">下载完成</string>
     <string name="confirm_delete_offline_map">确定要删除 %s 的离线地图数据吗？</string>

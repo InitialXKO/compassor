@@ -148,6 +148,16 @@ class OfflineMapActivity : AppCompatActivity(), OfflineMapManager.OfflineMapDown
 
     override fun onDownload(status: Int, completeCode: Int, name: String?) {
         runOnUiThread {
+            if (status == OfflineMapStatus.EXCEPTION_NETWORK_LOADING ||
+                status == OfflineMapStatus.EXCEPTION_AMAP ||
+                status == OfflineMapStatus.EXCEPTION_SDCARD ||
+                status == OfflineMapStatus.START_DOWNLOAD_FAILD ||
+                status == OfflineMapStatus.ERROR
+            ) {
+                val reason = OfflineMapAdapter.getErrorReasonText(this, status)
+                val cityName = name ?: getString(R.string.offline_maps)
+                DialogUtils.showErrorToast(this, getString(R.string.offline_map_error_format, cityName, reason))
+            }
             refreshData()
         }
     }

@@ -117,11 +117,13 @@ class OfflineMapAdapter(
                 OfflineMapStatus.EXCEPTION_NETWORK_LOADING,
                 OfflineMapStatus.EXCEPTION_AMAP,
                 OfflineMapStatus.EXCEPTION_SDCARD,
+                OfflineMapStatus.START_DOWNLOAD_FAILD,
                 OfflineMapStatus.ERROR -> {
                     progressContainer.visibility = View.VISIBLE
                     progressIndicator.isIndeterminate = false
                     progressIndicator.progress = item.completeCode
-                    statusText.text = context.getString(R.string.offline_map_error)
+                    val errorReason = getErrorReasonText(context, item.state)
+                    statusText.text = errorReason
                     actionButton.visibility = View.VISIBLE
                     actionButton.isEnabled = true
                     actionButton.text = context.getString(R.string.offline_map_download)
@@ -154,6 +156,18 @@ class OfflineMapAdapter(
             if (bytes <= 0) return ""
             val mb = bytes.toDouble() / (1024 * 1024)
             return "%.1f MB".format(mb)
+        }
+    }
+
+    companion object {
+        fun getErrorReasonText(context: Context, state: Int): String {
+            return when (state) {
+                OfflineMapStatus.EXCEPTION_NETWORK_LOADING -> context.getString(R.string.offline_map_error_network)
+                OfflineMapStatus.EXCEPTION_AMAP -> context.getString(R.string.offline_map_error_amap)
+                OfflineMapStatus.EXCEPTION_SDCARD -> context.getString(R.string.offline_map_error_sdcard)
+                OfflineMapStatus.START_DOWNLOAD_FAILD -> context.getString(R.string.offline_map_error_start_failed)
+                else -> context.getString(R.string.offline_map_error)
+            }
         }
     }
 }

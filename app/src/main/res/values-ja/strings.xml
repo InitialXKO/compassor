@@ -165,7 +165,12 @@
     <string name="offline_map_unzipping">解凍中</string>
     <string name="offline_map_paused">一時停止中</string>
     <string name="offline_map_waiting">待機中</string>
-    <string name="offline_map_error">エラー</string>
+    <string name="offline_map_error">ダウンロードエラー</string>
+    <string name="offline_map_error_network">网络接続エラー</string>
+    <string name="offline_map_error_amap">高徳マップサービスエラー</string>
+    <string name="offline_map_error_sdcard">ストレージ/SDカード読み書きエラー</string>
+    <string name="offline_map_error_start_failed">ダウンロードの開始に失敗しました</string>
+    <string name="offline_map_error_format">%1$s のダウンロードに失敗しました: %2$s</string>
     <string name="offline_map_not_downloaded">未ダウンロード</string>
     <string name="offline_map_completed">ダウンロード完了</string>
     <string name="confirm_delete_offline_map">%s のオフラインマップデータを削除しますか？</string>

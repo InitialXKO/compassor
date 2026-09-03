@@ -38,5 +38,9 @@ class OfflineMapTest {
         assertEquals(0, OfflineMapStatus.LOADING)
         assertEquals(3, OfflineMapStatus.PAUSE)
         assertEquals(-1, OfflineMapStatus.ERROR)
+        assertEquals(101, OfflineMapStatus.EXCEPTION_NETWORK_LOADING)
+        assertEquals(102, OfflineMapStatus.EXCEPTION_AMAP)
+        assertEquals(103, OfflineMapStatus.EXCEPTION_SDCARD)
+        assertEquals(1002, OfflineMapStatus.START_DOWNLOAD_FAILD)
     }
 }

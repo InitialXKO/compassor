@@ -165,7 +165,12 @@
     <string name="offline_map_unzipping">압축 해제 중</string>
     <string name="offline_map_paused">일시정지됨</string>
     <string name="offline_map_waiting">대기 중</string>
-    <string name="offline_map_error">오류</string>
+    <string name="offline_map_error">다운로드 오류</string>
+    <string name="offline_map_error_network">네트워크 연결 오류</string>
+    <string name="offline_map_error_amap">AMap 서비스 오류</string>
+    <string name="offline_map_error_sdcard">저장공간/SD 카드 오류</string>
+    <string name="offline_map_error_start_failed">다운로드 시작 실패</string>
+    <string name="offline_map_error_format">%1$s 다운로드 실패: %2$s</string>
     <string name="offline_map_not_downloaded">다운로드되지 않음</string>
     <string name="offline_map_completed">다운로드 완료</string>
     <string name="confirm_delete_offline_map">%s의 오프라인 지도 데이터를 삭제하시겠습니까?</string>
