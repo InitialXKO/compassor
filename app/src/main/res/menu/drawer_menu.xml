@@ -11,6 +11,9 @@
             android:id="@+id/nav_change_skin"
             android:title="@string/change_skin" />
         <item
+            android:id="@+id/nav_offline_maps"
+            android:title="@string/offline_maps" />
+        <item
             android:id="@+id/nav_settings"
             android:title="@string/settings" />
     </group>
