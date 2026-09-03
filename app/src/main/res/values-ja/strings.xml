@@ -153,4 +153,21 @@
     <string name="route_imported">ルートをインポートしました: %s</string>
     <string name="route_import_failed">ルートのインポートに失敗しました</string>
     <string name="tracking_mode">追跡モード</string>
+    <string name="offline_maps">オフラインマップ</string>
+    <string name="offline_maps_title">オフラインマップ管理</string>
+    <string name="offline_map_downloaded">ダウンロード済み</string>
+    <string name="offline_map_all">全地域</string>
+    <string name="offline_map_download">ダウンロード</string>
+    <string name="offline_map_pause">一時停止</string>
+    <string name="offline_map_resume">再開</string>
+    <string name="offline_map_update">更新</string>
+    <string name="offline_map_downloading">ダウンロード中 (%1$d%%)</string>
+    <string name="offline_map_unzipping">解凍中</string>
+    <string name="offline_map_paused">一時停止中</string>
+    <string name="offline_map_waiting">待機中</string>
+    <string name="offline_map_error">エラー</string>
+    <string name="offline_map_not_downloaded">未ダウンロード</string>
+    <string name="offline_map_completed">ダウンロード完了</string>
+    <string name="confirm_delete_offline_map">%s のオフラインマップデータを削除しますか？</string>
+    <string name="offline_map_deleted">オフラインマップを削除しました: %s</string>
 </resources>

@@ -151,4 +151,21 @@
     <string name="route_imported">Route imported: %s</string>
     <string name="route_import_failed">Failed to import route</string>
     <string name="tracking_mode">Tracking Mode</string>
+    <string name="offline_maps">Offline Maps</string>
+    <string name="offline_maps_title">Offline Map Management</string>
+    <string name="offline_map_downloaded">Downloaded</string>
+    <string name="offline_map_all">All Regions</string>
+    <string name="offline_map_download">Download</string>
+    <string name="offline_map_pause">Pause</string>
+    <string name="offline_map_resume">Resume</string>
+    <string name="offline_map_update">Update</string>
+    <string name="offline_map_downloading">Downloading (%1$d%%)</string>
+    <string name="offline_map_unzipping">Unzipping</string>
+    <string name="offline_map_paused">Paused</string>
+    <string name="offline_map_waiting">Waiting</string>
+    <string name="offline_map_error">Error</string>
+    <string name="offline_map_not_downloaded">Not Downloaded</string>
+    <string name="offline_map_completed">Download Complete</string>
+    <string name="confirm_delete_offline_map">Are you sure you want to delete offline map for %s?</string>
+    <string name="offline_map_deleted">Offline map deleted: %s</string>
 </resources>

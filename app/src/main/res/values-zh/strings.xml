@@ -118,4 +118,21 @@
     <string name="open_in_external_maps">在外部地图中打开</string>
     <string name="incoming_location_dialog_title">收到位置分享: %s</string>
     <string name="tracking_mode">跟踪模式</string>
+    <string name="offline_maps">离线地图</string>
+    <string name="offline_maps_title">离线地图管理</string>
+    <string name="offline_map_downloaded">已下载</string>
+    <string name="offline_map_all">全国列表</string>
+    <string name="offline_map_download">下载</string>
+    <string name="offline_map_pause">暂停</string>
+    <string name="offline_map_resume">继续</string>
+    <string name="offline_map_update">更新</string>
+    <string name="offline_map_downloading">下载中 (%1$d%%)</string>
+    <string name="offline_map_unzipping">解压中</string>
+    <string name="offline_map_paused">已暂停</string>
+    <string name="offline_map_waiting">等待中</string>
+    <string name="offline_map_error">下载出错</string>
+    <string name="offline_map_not_downloaded">未下载</string>
+    <string name="offline_map_completed">下载完成</string>
+    <string name="confirm_delete_offline_map">确定要删除 %s 的离线地图数据吗？</string>
+    <string name="offline_map_deleted">离线地图已删除: %s</string>
 </resources>

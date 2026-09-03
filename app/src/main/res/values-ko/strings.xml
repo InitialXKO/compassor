@@ -153,4 +153,21 @@
     <string name="route_imported">경로를 가져왔습니다: %s</string>
     <string name="route_import_failed">경로 가져오기 실패</string>
     <string name="tracking_mode">추적 모드</string>
+    <string name="offline_maps">오프라인 지도</string>
+    <string name="offline_maps_title">오프라인 지도 관리</string>
+    <string name="offline_map_downloaded">다운로드됨</string>
+    <string name="offline_map_all">전체 지역</string>
+    <string name="offline_map_download">다운로드</string>
+    <string name="offline_map_pause">일시정지</string>
+    <string name="offline_map_resume">재개</string>
+    <string name="offline_map_update">업데이트</string>
+    <string name="offline_map_downloading">다운로드 중 (%1$d%%)</string>
+    <string name="offline_map_unzipping">압축 해제 중</string>
+    <string name="offline_map_paused">일시정지됨</string>
+    <string name="offline_map_waiting">대기 중</string>
+    <string name="offline_map_error">오류</string>
+    <string name="offline_map_not_downloaded">다운로드되지 않음</string>
+    <string name="offline_map_completed">다운로드 완료</string>
+    <string name="confirm_delete_offline_map">%s의 오프라인 지도 데이터를 삭제하시겠습니까?</string>
+    <string name="offline_map_deleted">오프라인 지도가 삭제되었습니다: %s</string>
 </resources>

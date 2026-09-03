@@ -824,10 +824,15 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             R.id.nav_manage_waypoints -> showWaypointManagementDialog()
             R.id.nav_manage_routes -> showRouteManagementDialog()
             R.id.nav_change_skin -> showSkinSelectionDialog()
+            R.id.nav_offline_maps -> showOfflineMaps()
             R.id.nav_settings -> showSettingsDialog()
         }
         drawerLayout.closeDrawer(GravityCompat.START)
         return true
+    }
+
+    private fun showOfflineMaps() {
+        startActivity(android.content.Intent(this, OfflineMapActivity::class.java))
     }
 
     private fun showWaypointManagementDialog() {
